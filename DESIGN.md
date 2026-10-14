@@ -26,7 +26,7 @@
 - Reflexivity — A = A
 - Symmetry — If A = B then B = A
 - Transitivity of = — If A = B and B = C then A = C
-- Substitution (Leibniz) — If A = B, replace A with B anywhere
+- Substitution (Leibniz) — If A = B, replace A with B or B with A anywhere (both directions)
 - Transitivity of >, <, >= — If A > B and B > C then A > C
 
 ### C. Predicate Logic
@@ -35,7 +35,11 @@
 - Universal Generalization — If it holds for arbitrary c, it holds for all X
 - Unification — Does B in fact 1 equal B in fact 2? If yes, link them
 
-### D. Minimal State Logic
+### D. Type Hierarchy
+- Subtype Transitivity — If X is Y and Y->Z, then X->Z
+- Is Transitivity — If X is Y and Y is Z, then X is Z
+
+### E. Minimal State Logic
 - Negation as Failure — If searched tape and didn't find P, assume not P with low confidence
 - Contradiction Detection — If tape has P and not P, flag it, don't explode, ask for priority
 
@@ -58,27 +62,57 @@
 
 ## File Structure
 
+### Current (V0.2)
 ```
 kernel/
   __init__.py
-  facts.py              # Fact, Rule, Belief dataclasses
-  engine.py             # Forward-chaining inference engine
-  foundations.py        # Layer 1: immutable rules
-  acquired.py           # Layer 2: learned rules, grows over time
-  graph.py              # Knowledge graph (networkx) - deduced knowledge
-  source_graph.py       # Separate graph for book/source material
+  facts.py              # Fact, Belief dataclasses
+  engine.py             # Predicate-indexed agenda inference engine (O(n), thread-safe)
+  foundations.py        # Layer 1: 16 immutable rules
+  graph.py              # Knowledge graph (MultiDiGraph) - deduced knowledge
   contradictions.py     # Confidence-based conflict resolution
-  unification.py        # Pattern matching between facts
+  unification.py        # Pattern matching with occurs check
+```
+
+### Future (V0.3+)
+```
+kernel/
+  source_graph.py       # Separate graph for book/source material
+  acquired.py           # Layer 2: learned rules, grows over time
   abduction.py         # Best-explanation reasoning
   analogy.py            # Cross-domain mapping
 ```
 
 ---
 
+## Inference Engine Design
+
+### Predicate-Indexed Agenda System
+
+The engine uses a work queue (agenda) and predicate indexing for O(n) inference:
+
+1. **Index** — facts stored in sets by predicate type (`index["is"]`, `index["implies"]`, etc.)
+2. **Agenda** — new facts go into a deque. Each fact is processed exactly once.
+3. **Rules check only relevant predicates** — modus_ponens only checks `index["implies"]` × `index["is"]`, not all facts.
+
+This replaces the old O(n³) approach where every fact was checked against every other fact in every iteration.
+
+### Thread Safety
+
+All mutating and reading operations are protected by `threading.RLock()`:
+- `add_fact()` — safe concurrent writes
+- `retract()` — safe removal with dependent cleanup
+- `infer()` — safe inference
+- `query()` — safe reads
+
+See `docs/design/thread-safety.md` for full design (RLock + actor-model alternatives).
+
+---
+
 ## Two-Graph System
 
 - **graph.py** — "What I have deduced and can reason over" (derived knowledge)
-- **source_graph.py** — "What the book actually said" (raw extracted facts with provenance)
+- **source_graph.py** — "What the book actually said" (raw extracted facts with provenance) [V0.3]
 
 Verification chain: `deduced fact → source fact → book passage`
 
@@ -133,6 +167,8 @@ Periodically re-test against earlier chunks. Strengthen or weaken connections ba
 4. **Reasoning trace storage** — every deduction stores its proof chain for error tracing
 5. **Self-model** — kernel maintains model of what it knows and doesn't know; "I don't know" is valid output
 6. **Question generation** — system proactively generates questions about knowledge gaps
+7. **Thread-safe by default** — all mutating operations protected by RLock
+8. **O(n) inference** — predicate-indexed agenda system, no redundant re-scanning
 
 ---
 
