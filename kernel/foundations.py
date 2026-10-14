@@ -77,6 +77,23 @@ def subtype_transitivity(x_is_y: Fact, y_implies_z: Fact) -> Fact | None:
     return None
 
 
+def is_transitivity(x_is_y: Fact, y_is_z: Fact) -> Fact | None:
+    """If X is Y and Y is Z, then X is Z. Type hierarchy transitivity."""
+    if (
+        x_is_y.predicate == "is"
+        and y_is_z.predicate == "is"
+        and x_is_y.object == y_is_z.subject
+    ):
+        return Fact(
+            subject=x_is_y.subject,
+            predicate="is",
+            object=y_is_z.object,
+            confidence=x_is_y.confidence * y_is_z.confidence,
+            source=Source.DEDUCED,
+        )
+    return None
+
+
 def universal_instantiation(all_x_are_y: Fact, a_is_x: Fact) -> Fact | None:
     """If All X are Y, and a is X, then a is Y."""
     if (
@@ -107,27 +124,44 @@ def existential_generalization(a_is_x: Fact) -> Fact | None:
     return None
 
 
-def equality_substitution(a_equals_b: Fact, fact_with_a: Fact) -> Fact | None:
-    """If A = B, replace A with B in any fact. Leibniz's law."""
+def equality_substitution(a_equals_b: Fact, fact_with_a: Fact) -> list[Fact]:
+    """If A = B, replace A with B or B with A in any fact. Leibniz's law with symmetry."""
     if a_equals_b.predicate != "equals":
-        return None
+        return []
+    results = []
     if fact_with_a.subject == a_equals_b.subject:
-        return Fact(
+        results.append(Fact(
             subject=a_equals_b.object,
             predicate=fact_with_a.predicate,
             object=fact_with_a.object,
             confidence=a_equals_b.confidence * fact_with_a.confidence * 0.95,
             source=Source.DEDUCED,
-        )
+        ))
+    if fact_with_a.subject == a_equals_b.object:
+        results.append(Fact(
+            subject=a_equals_b.subject,
+            predicate=fact_with_a.predicate,
+            object=fact_with_a.object,
+            confidence=a_equals_b.confidence * fact_with_a.confidence * 0.95,
+            source=Source.DEDUCED,
+        ))
     if fact_with_a.object == a_equals_b.subject:
-        return Fact(
+        results.append(Fact(
             subject=fact_with_a.subject,
             predicate=fact_with_a.predicate,
             object=a_equals_b.object,
             confidence=a_equals_b.confidence * fact_with_a.confidence * 0.95,
             source=Source.DEDUCED,
-        )
-    return None
+        ))
+    if fact_with_a.object == a_equals_b.object:
+        results.append(Fact(
+            subject=fact_with_a.subject,
+            predicate=fact_with_a.predicate,
+            object=a_equals_b.subject,
+            confidence=a_equals_b.confidence * fact_with_a.confidence * 0.95,
+            source=Source.DEDUCED,
+        ))
+    return results
 
 
 def disjunctive_syllogism(a_or_b: Fact, not_a: Fact) -> Fact | None:

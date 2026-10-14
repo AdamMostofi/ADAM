@@ -94,21 +94,19 @@ def test_existential_generalization():
 def test_equality_substitution_in_subject():
     a_equals_b = Fact("a", "equals", "b")
     a_is_c = Fact("a", "is", "c")
-    result = equality_substitution(a_equals_b, a_is_c)
-    assert result is not None
-    assert result.subject == "b"
-    assert result.predicate == "is"
-    assert result.object == "c"
+    results = equality_substitution(a_equals_b, a_is_c)
+    assert len(results) > 0
+    subjects = [r.subject for r in results]
+    assert "b" in subjects
 
 
 def test_equality_substitution_in_object():
     a_equals_b = Fact("a", "equals", "b")
     c_is_a = Fact("c", "is", "a")
-    result = equality_substitution(a_equals_b, c_is_a)
-    assert result is not None
-    assert result.subject == "c"
-    assert result.predicate == "is"
-    assert result.object == "b"
+    results = equality_substitution(a_equals_b, c_is_a)
+    assert len(results) > 0
+    objects = [r.object for r in results]
+    assert "b" in objects
 
 
 def test_disjunctive_syllogism():

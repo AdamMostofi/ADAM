@@ -16,6 +16,7 @@ from kernel.foundations import (
     double_negation,
     equality_substitution,
     existential_generalization,
+    is_transitivity,
     modus_ponens,
     modus_tollens,
     subtype_transitivity,
@@ -90,9 +91,11 @@ class InferenceEngine:
             return "transitivity"
         if result.predicate == "implies" and source_fact.predicate == "is":
             return "subtype_transitivity"
+        if result.predicate == "is" and source_fact.predicate == "is":
+            return "is_transitivity"
         if result.predicate == "is" and source_fact.predicate == "all_are":
             return "universal_instantiation"
-        if result.predicate == "is" and source_fact.predicate == "equals":
+        if source_fact.predicate == "equals":
             return "equality_substitution"
         if result.predicate == "is" and source_fact.predicate == "or":
             return "disjunctive_syllogism"
@@ -135,6 +138,9 @@ class InferenceEngine:
                 r = subtype_transitivity(fact, other)
                 if r:
                     results.append(r)
+                r = is_transitivity(fact, other)
+                if r:
+                    results.append(r)
 
         if fact.predicate == "all_are":
             for other in all_facts:
@@ -147,9 +153,7 @@ class InferenceEngine:
 
         if fact.predicate == "equals":
             for other in all_facts:
-                r = equality_substitution(fact, other)
-                if r:
-                    results.append(r)
+                results.extend(equality_substitution(fact, other))
 
         if fact.predicate == "or":
             for other in all_facts:
