@@ -92,20 +92,28 @@ class MemorySystem:
             return self.exact.count()
 
     def save(self, path: str) -> None:
-        import shutil, os
-        os.makedirs(path, exist_ok=True)
-        shutil.copy(self.exact.db_path, os.path.join(path, "memory.db"))
-        import json
-        graph_data = {"nodes": list(self.graph.get_all_nodes()), "edges": [(u, v, d) for u, v, d in self.graph.get_all_edges()]}
-        with open(os.path.join(path, "graph.json"), "w") as f:
-            json.dump(graph_data, f)
+        import shutil, os, json
+        with self.lock:
+            os.makedirs(path, exist_ok=True)
+            shutil.copy(self.exact.db_path, os.path.join(path, "memory.db"))
+            lance_src = self.semantic.db_path
+            lance_dst = os.path.join(path, "vectors.lance")
+            if os.path.exists(lance_src):
+                if os.path.exists(lance_dst):
+                    shutil.rmtree(lance_dst)
+                shutil.copytree(lance_src, lance_dst)
+            graph_data = {"nodes": list(self.graph.get_all_nodes()), "edges": [(u, v, d) for u, v, d in self.graph.get_all_edges()]}
+            with open(os.path.join(path, "graph.json"), "w") as f:
+                json.dump(graph_data, f)
 
     @classmethod
     def load(cls, path: str, lance_path: str | None = None) -> "MemorySystem":
-        import shutil, os
+        import os
         db_path = os.path.join(path, "memory.db")
         if lance_path is None:
             lance_path = os.path.join(path, "vectors.lance")
+        if not os.path.exists(db_path):
+            raise FileNotFoundError(f"Database file not found: {db_path}")
         system = cls(db_path=db_path, lance_path=lance_path)
         user_facts = system.exact.get_user_facts()
         system.engine.add_facts(user_facts)
