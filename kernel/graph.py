@@ -30,26 +30,33 @@ class KnowledgeGraph:
             self.add_fact(f)
 
     def get_related(self, node: str, hops: int = 1) -> list[tuple[str, str, dict]]:
-        """Get all edges within N hops of a node. Handles cycles."""
+        """Get all edges within N hops of a node. Handles cycles and self-loops."""
         if node not in self.graph:
             return []
         related = []
-        visited = {node}
+        seen_edges = set()
+        visited = set()
         current = {node}
         for _ in range(hops):
             next_level = set()
             for n in current:
                 for successor in self.graph.successors(n):
-                    if successor not in visited:
+                    edge_key = (n, successor)
+                    if edge_key not in seen_edges:
                         for key, data in self.graph[n][successor].items():
                             related.append((n, successor, data))
+                        seen_edges.add(edge_key)
+                    if successor not in visited:
                         next_level.add(successor)
                 for predecessor in self.graph.predecessors(n):
-                    if predecessor not in visited:
+                    edge_key = (predecessor, n)
+                    if edge_key not in seen_edges:
                         for key, data in self.graph[predecessor][n].items():
                             related.append((predecessor, n, data))
+                        seen_edges.add(edge_key)
+                    if predecessor not in visited:
                         next_level.add(predecessor)
-            visited.update(next_level)
+            visited.update(current)
             current = next_level
             if not current:
                 break

@@ -24,6 +24,8 @@ class Fact:
     def __post_init__(self):
         if not self.subject or not self.predicate or not self.object:
             raise ValueError("subject, predicate, and object must be non-empty")
+        if not self.subject.strip() or not self.predicate.strip() or not self.object.strip():
+            raise ValueError("subject, predicate, and object must not be whitespace-only")
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError(f"confidence must be 0.0-1.0, got {self.confidence}")
 
