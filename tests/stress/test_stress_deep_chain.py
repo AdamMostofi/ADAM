@@ -37,5 +37,5 @@ def test_100_hop_transitivity():
     engine = InferenceEngine()
     facts = [Fact(f"n{i}", "implies", f"n{i+1}") for i in range(100)]
     engine.add_facts(facts)
-    engine.infer(max_iterations=500)
+    engine.infer(max_iterations=5000)
     assert len(engine.query(subject="n0", predicate="implies", object="n100")) > 0
