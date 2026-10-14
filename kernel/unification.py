@@ -24,19 +24,32 @@ def unify(fact_a: Fact, fact_b: Fact) -> dict[str, str] | None:
 
 
 def _unify_term(a: str, b: str, bindings: dict[str, str]) -> bool:
-    """Unify two terms, updating bindings."""
+    """Unify two terms, updating bindings. Includes occurs check."""
     if a == b:
         return True
     if a.startswith("?"):
         if a in bindings:
             return bindings[a] == b
+        if _occurs_check(a, b, bindings):
+            return False
         bindings[a] = b
         return True
     if b.startswith("?"):
         if b in bindings:
             return bindings[b] == a
+        if _occurs_check(b, a, bindings):
+            return False
         bindings[b] = a
         return True
+    return False
+
+
+def _occurs_check(var: str, term: str, bindings: dict[str, str]) -> bool:
+    """Prevent circular bindings: var must not occur in term."""
+    if var == term:
+        return True
+    if term in bindings:
+        return _occurs_check(var, bindings[term], bindings)
     return False
 
 

@@ -29,7 +29,7 @@ class KnowledgeGraph:
             self.add_fact(f)
 
     def get_related(self, node: str, hops: int = 1) -> list[tuple[str, str, dict]]:
-        """Get all edges within N hops of a node."""
+        """Get all edges within N hops of a node. Handles cycles."""
         if node not in self.graph:
             return []
         related = []
@@ -48,6 +48,8 @@ class KnowledgeGraph:
                         next_level.add(predecessor)
             visited.update(next_level)
             current = next_level
+            if not current:
+                break
         return related
 
     def find_path(self, source: str, target: str) -> list[str] | None:
