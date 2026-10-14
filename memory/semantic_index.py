@@ -33,11 +33,14 @@ class SemanticIndex:
             try:
                 self._table = self._db.open_table("facts")
             except Exception:
+                self._load_model()
+                sample = self._model.encode("sample", normalize_embeddings=True)
+                dim = len(sample)
                 self._table = self._db.create_table(
                     "facts",
                     data=[{
                         "id": "placeholder",
-                        "vector": [0.0] * 768,
+                        "vector": np.zeros(dim, dtype=np.float32).tolist(),
                         "subject": "",
                         "predicate": "",
                         "object": "",

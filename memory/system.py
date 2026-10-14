@@ -16,7 +16,7 @@ class MemorySystem:
         self,
         db_path: str = "adam_memory.db",
         lance_path: str = "adam_vectors.lance",
-        embedding_model: str = "google/embeddinggemma-300m",
+        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
     ):
         self.exact = ExactStore(db_path)
         self.semantic = SemanticIndex(lance_path, embedding_model)
@@ -79,10 +79,11 @@ class MemorySystem:
             json.dump(graph_data, f)
 
     @classmethod
-    def load(cls, path: str) -> "MemorySystem":
+    def load(cls, path: str, lance_path: str | None = None) -> "MemorySystem":
         import shutil, os
         db_path = os.path.join(path, "memory.db")
-        lance_path = os.path.join(path, "vectors.lance")
+        if lance_path is None:
+            lance_path = os.path.join(path, "vectors.lance")
         system = cls(db_path=db_path, lance_path=lance_path)
         user_facts = system.exact.get_user_facts()
         system.engine.add_facts(user_facts)
