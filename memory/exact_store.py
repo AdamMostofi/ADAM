@@ -51,7 +51,7 @@ class ExactStore:
                 (fact.subject, fact.predicate, fact.object, fact.confidence,
                  fact.source.value, fact.timestamp, fact_text, proof_json, metadata)
             )
-            return cursor.lastrowid
+            return cursor.lastrowid or 0
 
     def get(self, fact_id: int) -> Fact | None:
         with sqlite3.connect(self.db_path) as conn:
