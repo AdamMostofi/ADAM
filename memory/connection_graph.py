@@ -25,8 +25,13 @@ class ConnectionGraph:
             source=fact.source.value,
         )
 
-    def add_connection(self, node_a: str, node_b: str, predicate: str = "related", confidence: float = 1.0) -> None:
+    def add_connection(self, node_a: str, node_b: str, predicate: str = "related", confidence: float = 1.0) -> bool:
+        if self.graph.has_edge(node_a, node_b):
+            for key, data in self.graph[node_a][node_b].items():
+                if data.get("predicate") == predicate:
+                    return False
         self.graph.add_edge(node_a, node_b, predicate=predicate, confidence=confidence, source="connected")
+        return True
 
     def get_related(self, node: str, hops: int = 1) -> list[tuple[str, str, dict]]:
         if node not in self.graph:
@@ -76,15 +81,17 @@ class ConnectionGraph:
         connections = []
         for existing in existing_facts:
             if existing.subject == new_fact.subject:
-                connections.append((new_fact.subject, existing.object))
+                pair = (new_fact.subject, existing.object)
             elif existing.object == new_fact.object:
-                connections.append((new_fact.subject, existing.object))
+                pair = (new_fact.subject, existing.object)
             elif existing.subject == new_fact.object:
-                connections.append((new_fact.subject, existing.object))
+                pair = (new_fact.subject, existing.object)
             elif existing.object == new_fact.subject:
-                connections.append((existing.subject, new_fact.object))
-        for node_a, node_b in connections:
-            self.add_connection(node_a, node_b)
+                pair = (existing.subject, new_fact.object)
+            else:
+                continue
+            if self.add_connection(pair[0], pair[1]):
+                connections.append(pair)
         return connections
 
     def clear(self) -> None:
