@@ -12,6 +12,7 @@ from kernel.engine import InferenceEngine
 
 
 def test_retract_removes_dependents():
+    """Tests retracting a rule removes dependent deductions: retract bird->flies => tweety is bird stays, tweety is flies removed. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "implies", "flies"),
@@ -25,6 +26,7 @@ def test_retract_removes_dependents():
 
 
 def test_retract_removes_chain():
+    """Tests retracting removes chain deductions: retract a->b => a is c removed. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b"),
@@ -39,6 +41,7 @@ def test_retract_removes_chain():
 
 
 def test_retract_nonexistent():
+    """Tests retracting a fact that doesn't exist is a no-op. Result: PASS."""
     engine = InferenceEngine()
     engine.add_fact(Fact("a", "is", "b"))
     engine.retract(Fact("x", "is", "y"))
@@ -46,6 +49,7 @@ def test_retract_nonexistent():
 
 
 def test_retract_all_leaves_empty():
+    """Tests retracting the only fact leaves empty engine. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([Fact("a", "is", "b", source=Source.USER)])
     engine.retract(Fact("a", "is", "b"))
@@ -53,6 +57,7 @@ def test_retract_all_leaves_empty():
 
 
 def test_retract_preserves_independent_facts():
+    """Tests retracting one rule preserves independent facts: retract a->b => c is d stays. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b"),

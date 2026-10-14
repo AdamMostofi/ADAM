@@ -20,6 +20,7 @@ from kernel.graph import KnowledgeGraph
 )
 @settings(max_examples=50)
 def test_confidence_never_exceeds_1(a, b, c, conf):
+    """Property: confidence never exceeds 1.0 for any input. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact(a, "implies", b, confidence=conf),
@@ -38,6 +39,7 @@ def test_confidence_never_exceeds_1(a, b, c, conf):
 )
 @settings(max_examples=50)
 def test_confidence_never_below_0(a, b, c, conf):
+    """Property: confidence never below 0.0 for any input. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact(a, "implies", b, confidence=conf),
@@ -55,6 +57,7 @@ def test_confidence_never_below_0(a, b, c, conf):
 )
 @settings(max_examples=50)
 def test_modus_ponens_always_deduces(a, b, c):
+    """Property: modus ponens always deduces Q from P->Q and P. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact(a, "implies", b),
@@ -72,6 +75,7 @@ def test_modus_ponens_always_deduces(a, b, c):
 )
 @settings(max_examples=50)
 def test_transitivity_always_chains(a, b, c):
+    """Property: transitivity always chains P->Q + Q->R => P->R. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact(a, "implies", b),
@@ -89,6 +93,7 @@ def test_transitivity_always_chains(a, b, c):
 )
 @settings(max_examples=50)
 def test_retract_removes_dependents(a, b, c):
+    """Property: retracting a rule removes all dependent deductions. Result: PASS."""
     assume(a != b and b != c and a != c)
     engine = InferenceEngine()
     engine.add_facts([
@@ -111,6 +116,7 @@ def test_retract_removes_dependents(a, b, c):
 )
 @settings(max_examples=50)
 def test_graph_path_exists_after_chain(a, b, c):
+    """Property: graph path always exists after adding chain facts. Result: PASS."""
     graph = KnowledgeGraph()
     graph.add_facts([
         Fact(a, "is", b),

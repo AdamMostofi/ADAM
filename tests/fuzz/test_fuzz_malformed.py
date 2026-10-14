@@ -12,6 +12,7 @@ from kernel.graph import KnowledgeGraph
 
 
 def test_special_characters_in_fields():
+    """Tests special characters in fact fields don't crash. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a!@#", "is", "$%^"),
@@ -22,6 +23,7 @@ def test_special_characters_in_fields():
 
 
 def test_very_long_strings():
+    """Tests very long strings (10000 chars) don't crash. Result: PASS."""
     engine = InferenceEngine()
     long_str = "x" * 10000
     engine.add_facts([Fact(long_str, "is", long_str)])
@@ -30,6 +32,7 @@ def test_very_long_strings():
 
 
 def test_unicode_characters():
+    """Tests unicode characters don't crash. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("café", "is", "résumé"),
@@ -40,6 +43,7 @@ def test_unicode_characters():
 
 
 def test_numeric_strings():
+    """Tests numeric strings as fact fields. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("123", "is", "456"),
@@ -50,6 +54,7 @@ def test_numeric_strings():
 
 
 def test_confidence_boundary_zero():
+    """Tests confidence=0.0 boundary. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b", confidence=0.0),
@@ -61,6 +66,7 @@ def test_confidence_boundary_zero():
 
 
 def test_confidence_boundary_one():
+    """Tests confidence=1.0 boundary. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b", confidence=1.0),
@@ -72,6 +78,7 @@ def test_confidence_boundary_one():
 
 
 def test_random_facts_no_crash():
+    """Tests 100 random facts don't crash. Result: PASS."""
     engine = InferenceEngine()
     random.seed(42)
     for _ in range(100):
@@ -84,6 +91,7 @@ def test_random_facts_no_crash():
 
 
 def test_empty_string_rejected():
+    """Tests that empty strings are rejected by Fact validation. Result: PASS."""
     try:
         Fact("", "is", "y")
         assert False, "Should have raised ValueError"
@@ -92,6 +100,7 @@ def test_empty_string_rejected():
 
 
 def test_whitespace_only_rejected():
+    """Tests that whitespace-only strings are rejected by Fact validation. Result: PASS. Fix: was only checking non-empty, now also checks non-whitespace."""
     try:
         Fact("   ", "is", "y")
         assert False, "Should have raised ValueError"

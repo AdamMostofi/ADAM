@@ -12,6 +12,7 @@ from kernel.engine import InferenceEngine
 
 
 def test_confidence_decay_two_steps():
+    """Tests 2-step confidence decay: 0.9 * 0.9 = 0.81. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b", confidence=0.9),
@@ -25,6 +26,7 @@ def test_confidence_decay_two_steps():
 
 
 def test_confidence_decay_three_steps():
+    """Tests 3-step confidence decay: 0.9^3 = 0.729. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b", confidence=0.9),
@@ -39,6 +41,7 @@ def test_confidence_decay_three_steps():
 
 
 def test_confidence_never_exceeds_1():
+    """Tests that confidence never exceeds 1.0 regardless of input. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b", confidence=0.99),
@@ -50,6 +53,7 @@ def test_confidence_never_exceeds_1():
 
 
 def test_confidence_never_below_0():
+    """Tests that confidence never goes below 0. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b", confidence=0.001),
@@ -61,6 +65,7 @@ def test_confidence_never_below_0():
 
 
 def test_deep_chain_confidence():
+    """Tests 10-hop chain confidence: 0.95^10 = 0.598. Result: PASS."""
     engine = InferenceEngine()
     facts = [Fact(f"n{i}", "implies", f"n{i+1}", confidence=0.95) for i in range(10)]
     facts.append(Fact("n0", "is", "n0", confidence=1.0))

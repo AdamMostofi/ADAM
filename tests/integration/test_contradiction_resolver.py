@@ -11,6 +11,7 @@ from kernel.contradictions import ContradictionResolver
 
 
 def test_user_overrides_deduced():
+    """Tests that user-source facts override deduced facts regardless of confidence. Result: PASS."""
     resolver = ContradictionResolver()
     user_belief = Belief(fact=Fact("x", "is", "y", confidence=0.5, source=Source.USER))
     deduced_belief = Belief(fact=Fact("x", "not_is", "y", confidence=0.9, source=Source.DEDUCED))
@@ -20,6 +21,7 @@ def test_user_overrides_deduced():
 
 
 def test_higher_confidence_wins():
+    """Tests that higher confidence fact wins when same source. Result: PASS."""
     resolver = ContradictionResolver()
     low_belief = Belief(fact=Fact("x", "is", "y", confidence=0.3, source=Source.USER))
     high_belief = Belief(fact=Fact("x", "not_is", "y", confidence=0.9, source=Source.USER))
@@ -29,14 +31,15 @@ def test_higher_confidence_wins():
 
 
 def test_no_contradiction_returns_none():
+    """Tests that non-contradicting facts return None. Result: PASS."""
     resolver = ContradictionResolver()
     belief_a = Belief(fact=Fact("x", "is", "y", source=Source.USER))
     belief_b = Belief(fact=Fact("x", "is", "z", source=Source.USER))
-    result = resolver.check(belief_b, [belief_a])
-    assert result is None
+    assert resolver.check(belief_b, [belief_a]) is None
 
 
 def test_contradictions_list():
+    """Tests that contradictions are recorded in a list. Result: PASS."""
     resolver = ContradictionResolver()
     belief_a = Belief(fact=Fact("x", "is", "y", source=Source.USER))
     belief_b = Belief(fact=Fact("x", "not_is", "y", source=Source.USER))

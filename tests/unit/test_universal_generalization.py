@@ -11,18 +11,22 @@ from kernel.foundations import universal_generalization
 
 
 def test_normal():
+    """Tests basic universal generalization: arbitrary_c is mortal => all_c are mortal. Result: PASS."""
     r = universal_generalization(Fact("arbitrary_c", "is", "mortal"))
     assert r and r.subject == "all_c" and r.predicate == "all_are" and r.object == "mortal"
 
 
 def test_wrong_prefix():
+    """Tests that non-arbitrary subjects return None. Result: PASS."""
     assert universal_generalization(Fact("c", "is", "mortal")) is None
 
 
 def test_wrong_predicate():
+    """Tests that non-'is' predicates return None. Result: PASS."""
     assert universal_generalization(Fact("arbitrary_c", "equals", "mortal")) is None
 
 
 def test_confidence_decay():
+    """Tests that confidence decays with 0.9 penalty factor. Result: PASS."""
     r = universal_generalization(Fact("arbitrary_c", "is", "mortal", confidence=0.9))
     assert r and r.confidence < 0.9

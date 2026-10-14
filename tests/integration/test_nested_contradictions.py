@@ -11,6 +11,7 @@ from kernel.engine import InferenceEngine
 
 
 def test_contradiction_in_deduced_fact():
+    """Tests contradiction in deduced facts: bird all_are flies + penguin is bird + penguin not_is flies => contradiction. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
@@ -18,11 +19,11 @@ def test_contradiction_in_deduced_fact():
         Fact("penguin", "not_is", "flies"),
     ])
     engine.infer()
-    contradictions = engine.query(predicate="contradiction")
-    assert len(contradictions) > 0
+    assert len(engine.query(predicate="contradiction")) > 0
 
 
 def test_deep_nested_contradiction():
+    """Tests deep nested contradiction: a all_are b + b all_are c + x is a + x not_is c => contradiction. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "all_are", "b"),
@@ -31,11 +32,11 @@ def test_deep_nested_contradiction():
         Fact("x", "not_is", "c"),
     ])
     engine.infer()
-    contradictions = engine.query(predicate="contradiction")
-    assert len(contradictions) > 0
+    assert len(engine.query(predicate="contradiction")) > 0
 
 
 def test_multiple_contradictions():
+    """Tests multiple independent contradictions in same engine. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
@@ -46,11 +47,11 @@ def test_multiple_contradictions():
         Fact("shark", "not_is", "swims"),
     ])
     engine.infer()
-    contradictions = engine.query(predicate="contradiction")
-    assert len(contradictions) >= 2
+    assert len(engine.query(predicate="contradiction")) >= 2
 
 
 def test_contradiction_via_equality():
+    """Tests contradiction through equality substitution: a=b + a is c + b not_is c => contradiction. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "equals", "b"),
@@ -58,16 +59,15 @@ def test_contradiction_via_equality():
         Fact("b", "not_is", "c"),
     ])
     engine.infer()
-    contradictions = engine.query(predicate="contradiction")
-    assert len(contradictions) > 0
+    assert len(engine.query(predicate="contradiction")) > 0
 
 
 def test_no_false_contradiction():
+    """Tests that unrelated facts don't trigger false contradictions. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "is", "b"),
         Fact("c", "not_is", "d"),
     ])
     engine.infer()
-    contradictions = engine.query(predicate="contradiction")
-    assert len(contradictions) == 0
+    assert len(engine.query(predicate="contradiction")) == 0

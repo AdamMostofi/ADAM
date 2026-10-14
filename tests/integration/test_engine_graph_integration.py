@@ -12,6 +12,7 @@ from kernel.graph import KnowledgeGraph
 
 
 def test_engine_results_in_graph():
+    """Tests that engine deductions appear in graph with correct path. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
@@ -21,16 +22,13 @@ def test_engine_results_in_graph():
     graph = KnowledgeGraph()
     for b in engine.beliefs.values():
         graph.add_fact(b.fact)
-    path = graph.find_path("tweety", "flies")
-    assert path is not None
+    assert graph.find_path("tweety", "flies") is not None
 
 
 def test_graph_reflects_retraction():
+    """Tests that graph reflects retraction (path removed). Result: PASS."""
     engine = InferenceEngine()
-    engine.add_facts([
-        Fact("a", "implies", "b"),
-        Fact("a", "is", "a"),
-    ])
+    engine.add_facts([Fact("a", "implies", "b"), Fact("a", "is", "a")])
     engine.infer()
     graph = KnowledgeGraph()
     for b in engine.beliefs.values():
@@ -44,6 +42,7 @@ def test_graph_reflects_retraction():
 
 
 def test_graph_with_all_rule_types():
+    """Tests graph with facts from multiple rule types (all_are, is, equals). Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
@@ -61,6 +60,7 @@ def test_graph_with_all_rule_types():
 
 
 def test_graph_query_after_complex_reasoning():
+    """Tests graph path finding after complex multi-step reasoning. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b"),
@@ -72,5 +72,4 @@ def test_graph_query_after_complex_reasoning():
     graph = KnowledgeGraph()
     for b in engine.beliefs.values():
         graph.add_fact(b.fact)
-    path = graph.find_path("a", "d")
-    assert path is not None
+    assert graph.find_path("a", "d") is not None

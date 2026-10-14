@@ -11,6 +11,7 @@ from kernel.engine import InferenceEngine
 
 
 def test_modus_ponens_chain():
+    """Tests 3-step modus ponens chain: a->b->c->d + a is a => a is d. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b"),
@@ -26,6 +27,7 @@ def test_modus_ponens_chain():
 
 
 def test_transitivity_plus_modus_ponens():
+    """Tests 4-step transitivity + modus ponens: a->b->c->d->e + a is a => a is e. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("a", "implies", "b"),
@@ -40,6 +42,7 @@ def test_transitivity_plus_modus_ponens():
 
 
 def test_subtype_plus_universal():
+    """Tests subtype + universal: bird all_are flies + tweety is penguin + penguin is bird => tweety is flies. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
@@ -52,6 +55,7 @@ def test_subtype_plus_universal():
 
 
 def test_equality_plus_universal():
+    """Tests equality + universal: john=jack + jack is person + person all_are mortal => john is mortal. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("john", "equals", "jack"),
@@ -64,6 +68,7 @@ def test_equality_plus_universal():
 
 
 def test_modus_tollens_in_engine():
+    """Tests modus tollens in engine: human->mortal + socrates not_is mortal => socrates not_is human. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("human", "implies", "mortal"),
@@ -75,6 +80,7 @@ def test_modus_tollens_in_engine():
 
 
 def test_disjunctive_syllogism_plus_modus_ponens():
+    """Tests disjunctive syllogism + modus ponens: sunny or rainy + not sunny + rainy->wet => wet. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("sunny", "or", "rainy"),
@@ -86,6 +92,7 @@ def test_disjunctive_syllogism_plus_modus_ponens():
 
 
 def test_double_negation_plus_modus_ponens():
+    """Tests double negation + modus ponens: alive not_not true + alive->breathing => breathing. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("alive", "not_not", "true"),
@@ -96,6 +103,7 @@ def test_double_negation_plus_modus_ponens():
 
 
 def test_de_morgan_in_engine():
+    """Tests De Morgan in engine: sunny not_and rainy + sunny is true => rainy not_is true. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("sunny", "not_and", "rainy"),
@@ -106,6 +114,7 @@ def test_de_morgan_in_engine():
 
 
 def test_combined_is_subtype_universal():
+    """Tests combined is_transitivity + subtype_transitivity + universal_instantiation: tweety->penguin->bird + bird all_are flies => tweety is flies. Result: PASS."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("tweety", "is", "penguin"),
