@@ -4,6 +4,8 @@ Provides perfect recall, semantic search, and auto-connection.
 """
 from __future__ import annotations
 
+import threading
+
 from kernel.facts import Fact
 from kernel.engine import InferenceEngine
 from memory.exact_store import ExactStore
@@ -35,18 +37,20 @@ class MemorySystem:
         self.semantic = SemanticIndex(lance_path, embedding_model)
         self.graph = ConnectionGraph()
         self.engine = InferenceEngine()
+        self.lock = threading.RLock()
 
     def store(self, fact: Fact) -> int:
-        fact_id = self.exact.store(fact)
-        self.graph.add_fact(fact)
-        self.semantic.store(fact_id, fact)
-        if self.graph.similarity_fn is None:
-            self.graph.similarity_fn = lambda a, b: _embedding_similarity(self.semantic, a, b)
-            self.graph.similarity_threshold = 0.7
-        related = self.exact.find_by_subject(fact.subject)
-        related.extend(self.exact.find_by_object(fact.object))
-        self.graph.auto_connect(fact, related)
-        return fact_id
+        with self.lock:
+            fact_id = self.exact.store(fact)
+            self.graph.add_fact(fact)
+            self.semantic.store(fact_id, fact)
+            if self.graph.similarity_fn is None:
+                self.graph.similarity_fn = lambda a, b: _embedding_similarity(self.semantic, a, b)
+                self.graph.similarity_threshold = 0.7
+            related = self.exact.find_by_subject(fact.subject)
+            related.extend(self.exact.find_by_object(fact.object))
+            self.graph.auto_connect(fact, related)
+            return fact_id
 
     def store_with_proof(self, fact: Fact, proof_chain: list[str]) -> int:
         fact_id = self.exact.store(fact, proof_chain)
@@ -55,17 +59,18 @@ class MemorySystem:
         return fact_id
 
     def recall(self, query: str, limit: int = 10) -> list[Fact]:
-        results = self.exact.search_text(query)
-        if results:
-            return results
-        semantic_results = self.semantic.search(query, limit)
-        facts = []
-        for r in semantic_results:
-            fact_id = int(r["id"])
-            fact = self.exact.get(fact_id)
-            if fact:
-                facts.append(fact)
-        return facts
+        with self.lock:
+            results = self.exact.search_text(query)
+            if results:
+                return results
+            semantic_results = self.semantic.search(query, limit)
+            facts = []
+            for r in semantic_results:
+                fact_id = int(r["id"])
+                fact = self.exact.get(fact_id)
+                if fact:
+                    facts.append(fact)
+            return facts
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
         return self.semantic.search(query, limit)
@@ -83,7 +88,8 @@ class MemorySystem:
         return self.exact.get_all()
 
     def count(self) -> int:
-        return self.exact.count()
+        with self.lock:
+            return self.exact.count()
 
     def save(self, path: str) -> None:
         import shutil, os
