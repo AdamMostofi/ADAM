@@ -13,8 +13,10 @@ from kernel.facts import Fact
 
 
 class ConnectionGraph:
-    def __init__(self):
+    def __init__(self, similarity_fn=None, similarity_threshold: float = 0.8):
         self.graph = nx.MultiDiGraph()
+        self.similarity_fn = similarity_fn
+        self.similarity_threshold = similarity_threshold
 
     def add_fact(self, fact: Fact) -> None:
         self.graph.add_edge(
@@ -88,11 +90,22 @@ class ConnectionGraph:
                 pair = (new_fact.subject, existing.object)
             elif existing.object == new_fact.subject:
                 pair = (existing.subject, new_fact.object)
+            elif self.similarity_fn and self._is_semantically_similar(new_fact, existing):
+                pair = (new_fact.subject, existing.object)
             else:
                 continue
             if self.add_connection(pair[0], pair[1]):
                 connections.append(pair)
         return connections
+
+    def _is_semantically_similar(self, fact_a: Fact, fact_b: Fact) -> bool:
+        if self.similarity_fn is None:
+            return False
+        try:
+            similarity = self.similarity_fn(str(fact_a), str(fact_b))
+            return similarity >= self.similarity_threshold
+        except Exception:
+            return False
 
     def clear(self) -> None:
         self.graph.clear()

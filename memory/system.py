@@ -11,6 +11,19 @@ from memory.semantic_index import SemanticIndex
 from memory.connection_graph import ConnectionGraph
 
 
+def _embedding_similarity(semantic_index: SemanticIndex, text_a: str, text_b: str) -> float:
+    vec_a = semantic_index._embed(text_a)
+    vec_b = semantic_index._embed(text_b)
+    import numpy as np
+    a = np.array(vec_a)
+    b = np.array(vec_b)
+    dot = np.dot(a, b)
+    norm = np.linalg.norm(a) * np.linalg.norm(b)
+    if norm == 0:
+        return 0.0
+    return float(dot / norm)
+
+
 class MemorySystem:
     def __init__(
         self,
@@ -27,6 +40,9 @@ class MemorySystem:
         fact_id = self.exact.store(fact)
         self.graph.add_fact(fact)
         self.semantic.store(fact_id, fact)
+        if self.graph.similarity_fn is None:
+            self.graph.similarity_fn = lambda a, b: _embedding_similarity(self.semantic, a, b)
+            self.graph.similarity_threshold = 0.7
         related = self.exact.find_by_subject(fact.subject)
         related.extend(self.exact.find_by_object(fact.object))
         self.graph.auto_connect(fact, related)
