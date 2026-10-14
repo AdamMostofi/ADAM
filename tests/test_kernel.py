@@ -9,6 +9,7 @@ from kernel.foundations import (
     modus_ponens,
     modus_tollens,
     transitivity,
+    subtype_transitivity,
     universal_instantiation,
     existential_generalization,
     equality_substitution,
@@ -139,16 +140,16 @@ def test_contradiction_no_false_positive():
 
 def test_de_morgan_and():
     not_a_and_b = Fact("a", "not_and", "b")
-    result = de_morgan_and(not_a_and_b)
-    assert result is not None
-    assert result.predicate == "or"
+    results = de_morgan_and(not_a_and_b)
+    assert len(results) == 2
+    assert all(r.predicate == "not_is" for r in results)
 
 
 def test_de_morgan_or():
     not_a_or_b = Fact("a", "not_or", "b")
-    result = de_morgan_or(not_a_or_b)
-    assert result is not None
-    assert result.predicate == "and"
+    results = de_morgan_or(not_a_or_b)
+    assert len(results) == 2
+    assert all(r.predicate == "not_is" for r in results)
 
 
 def test_double_negation():
@@ -343,6 +344,169 @@ def test_engine_max_iterations():
     ])
     new_facts = engine.infer(max_iterations=10)
     assert len(new_facts) > 0
+
+
+def test_subtype_transitivity():
+    x_is_y = Fact("penguin", "is", "bird")
+    y_implies_z = Fact("bird", "implies", "flies")
+    result = subtype_transitivity(x_is_y, y_implies_z)
+    assert result is not None
+    assert result.subject == "penguin"
+    assert result.predicate == "implies"
+    assert result.object == "flies"
+
+
+def test_confidence_decay_through_chain():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("a", "implies", "b", confidence=0.9),
+        Fact("b", "implies", "c", confidence=0.9),
+        Fact("a", "is", "a", confidence=1.0),
+    ])
+    engine.infer()
+    beliefs = engine.query(subject="a")
+    for b in beliefs:
+        if b.fact.predicate == "implies" and b.fact.object == "c":
+            assert b.confidence < 0.9
+            assert abs(b.confidence - 0.81) < 0.001
+            return
+    assert False, "Expected a implies c with decayed confidence"
+
+
+def test_fact_retraction():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("bird", "implies", "flies"),
+        Fact("tweety", "is", "bird"),
+    ])
+    engine.infer()
+    assert len(engine.query(subject="tweety")) > 1
+    engine.retract(Fact("bird", "implies", "flies"))
+    assert len(engine.query(subject="tweety")) == 1
+    assert engine.query(subject="tweety")[0].fact.object == "bird"
+
+
+def test_query_by_object():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("cat", "is", "mammal"),
+        Fact("dog", "is", "mammal"),
+        Fact("shark", "is", "fish"),
+    ])
+    mammals = engine.query(object="mammal")
+    assert len(mammals) == 2
+
+
+def test_de_morgan_and_returns_list():
+    not_a_and_b = Fact("a", "not_and", "b")
+    results = de_morgan_and(not_a_and_b)
+    assert len(results) == 2
+    assert all(r.predicate == "not_is" for r in results)
+
+
+def test_trace_contains_rule_name():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("bird", "implies", "flies"),
+        Fact("tweety", "is", "bird"),
+    ])
+    engine.infer()
+    trace = engine.get_trace()
+    assert any("[modus_ponens]" in t for t in trace)
+
+
+def test_graph_multiple_edges():
+    graph = KnowledgeGraph()
+    graph.add_facts([
+        Fact("a", "is", "b"),
+        Fact("a", "equals", "b"),
+    ])
+    edges = graph.get_all_edges()
+    assert len(edges) == 2
+
+
+def test_find_unifiable_ranked():
+    facts = [
+        Fact("socrates", "is", "mortal", confidence=0.9),
+        Fact("plato", "is", "mortal", confidence=0.5),
+    ]
+    pattern = Fact("?x", "is", "mortal")
+    results = find_unifiable(pattern, facts)
+    assert len(results) == 2
+    assert results[0][0].confidence >= results[1][0].confidence
+
+
+def test_deep_chain_confidence():
+    engine = InferenceEngine()
+    facts = [Fact(f"n{i}", "implies", f"n{i+1}", confidence=0.95) for i in range(10)]
+    facts.append(Fact("n0", "is", "n0", confidence=1.0))
+    engine.add_facts(facts)
+    engine.infer()
+    final = engine.query(subject="n0", predicate="is", object="n10")
+    assert len(final) > 0
+    assert final[0].confidence < 0.6
+
+
+def test_subtype_contradiction_resolution():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("bird", "all_are", "flies"),
+        Fact("penguin", "is", "bird"),
+        Fact("penguin", "not_is", "flies"),
+    ])
+    engine.infer()
+    contradictions = engine.query(predicate="contradiction")
+    assert len(contradictions) > 0
+    penguin_flying = engine.query(subject="penguin", predicate="is", object="flies")
+    penguin_not_flying = engine.query(subject="penguin", predicate="not_is", object="flies")
+    assert len(penguin_flying) > 0
+    assert len(penguin_not_flying) > 0
+
+
+def test_negation_propagation():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("bird", "implies", "flies"),
+        Fact("penguin", "not_is", "flies"),
+    ])
+    engine.infer()
+    not_bird = engine.query(subject="penguin", predicate="not_is", object="bird")
+    assert len(not_bird) > 0
+
+
+def test_empty_query_returns_empty():
+    engine = InferenceEngine()
+    result = engine.query(subject="nonexistent")
+    assert len(result) == 0
+
+
+def test_retract_nonexistent_fact():
+    engine = InferenceEngine()
+    engine.add_fact(Fact("a", "is", "b"))
+    engine.retract(Fact("x", "is", "y"))
+    assert len(engine.query()) == 1
+
+
+def test_circular_dependency_terminates():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("a", "implies", "b"),
+        Fact("b", "implies", "a"),
+        Fact("a", "is", "a"),
+    ])
+    new_facts = engine.infer(max_iterations=50)
+    assert len(new_facts) > 0
+
+
+def test_double_negation_demorgan_integration():
+    engine = InferenceEngine()
+    engine.add_facts([
+        Fact("p", "not_not", "true"),
+    ])
+    engine.infer()
+    results = engine.query(subject="p", predicate="is")
+    assert len(results) > 0
+    assert results[0].fact.object == "true"
 
 
 if __name__ == "__main__":

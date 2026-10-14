@@ -54,10 +54,11 @@ def _occurs_check(var: str, term: str, bindings: dict[str, str]) -> bool:
 
 
 def find_unifiable(fact: Fact, facts: list[Fact]) -> list[tuple[Fact, dict[str, str]]]:
-    """Find all facts that unify with the given fact."""
+    """Find all facts that unify with the given fact, ranked by confidence."""
     results = []
     for other in facts:
         bindings = unify(fact, other)
         if bindings is not None:
             results.append((other, bindings))
+    results.sort(key=lambda x: x[0].confidence, reverse=True)
     return results

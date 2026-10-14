@@ -41,18 +41,6 @@ class Fact:
 
 
 @dataclass
-class Rule:
-    name: str
-    premises: list[Fact]
-    conclusion: Fact
-    strength: float = 1.0
-
-    def __post_init__(self):
-        if not 0.0 <= self.strength <= 1.0:
-            raise ValueError(f"strength must be 0.0-1.0, got {self.strength}")
-
-
-@dataclass
 class Belief:
     fact: Fact
     proof_chain: list[str] = field(default_factory=list)

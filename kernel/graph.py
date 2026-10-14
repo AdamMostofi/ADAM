@@ -2,6 +2,7 @@
 
 Stores what ADAM has deduced and can reason over.
 Separate from source_graph.py which stores raw book material.
+Uses MultiDiGraph to handle multiple edges between same nodes.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from kernel.facts import Fact
 
 class KnowledgeGraph:
     def __init__(self):
-        self.graph = nx.DiGraph()
+        self.graph = nx.MultiDiGraph()
 
     def add_fact(self, fact: Fact) -> None:
         self.graph.add_edge(
@@ -40,11 +41,13 @@ class KnowledgeGraph:
             for n in current:
                 for successor in self.graph.successors(n):
                     if successor not in visited:
-                        related.append((n, successor, self.graph[n][successor]))
+                        for key, data in self.graph[n][successor].items():
+                            related.append((n, successor, data))
                         next_level.add(successor)
                 for predecessor in self.graph.predecessors(n):
                     if predecessor not in visited:
-                        related.append((predecessor, n, self.graph[predecessor][n]))
+                        for key, data in self.graph[predecessor][n].items():
+                            related.append((predecessor, n, data))
                         next_level.add(predecessor)
             visited.update(next_level)
             current = next_level
@@ -63,4 +66,4 @@ class KnowledgeGraph:
         return list(self.graph.nodes())
 
     def get_all_edges(self) -> list[tuple[str, str, dict]]:
-        return list(self.graph.edges(data=True))
+        return [(u, v, data) for u, v, data in self.graph.edges(data=True)]

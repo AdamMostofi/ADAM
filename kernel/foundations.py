@@ -20,7 +20,7 @@ def modus_ponens(p_implies_q: Fact, p: Fact) -> Fact | None:
             subject=p.subject,
             predicate="is",
             object=p_implies_q.object,
-            confidence=min(p_implies_q.confidence, p.confidence),
+            confidence=p_implies_q.confidence * p.confidence,
             source=Source.DEDUCED,
         )
     return None
@@ -37,7 +37,7 @@ def modus_tollens(p_implies_q: Fact, not_q: Fact) -> Fact | None:
             subject=not_q.subject,
             predicate="not_is",
             object=p_implies_q.subject,
-            confidence=min(p_implies_q.confidence, not_q.confidence) * 0.9,
+            confidence=p_implies_q.confidence * not_q.confidence * 0.9,
             source=Source.DEDUCED,
         )
     return None
@@ -54,7 +54,24 @@ def transitivity(p_implies_q: Fact, q_implies_r: Fact) -> Fact | None:
             subject=p_implies_q.subject,
             predicate="implies",
             object=q_implies_r.object,
-            confidence=min(p_implies_q.confidence, q_implies_r.confidence),
+            confidence=p_implies_q.confidence * q_implies_r.confidence,
+            source=Source.DEDUCED,
+        )
+    return None
+
+
+def subtype_transitivity(x_is_y: Fact, y_implies_z: Fact) -> Fact | None:
+    """If X is Y and Y implies Z, then X implies Z. Type hierarchy reasoning."""
+    if (
+        x_is_y.predicate == "is"
+        and y_implies_z.predicate == "implies"
+        and x_is_y.object == y_implies_z.subject
+    ):
+        return Fact(
+            subject=x_is_y.subject,
+            predicate="implies",
+            object=y_implies_z.object,
+            confidence=x_is_y.confidence * y_implies_z.confidence,
             source=Source.DEDUCED,
         )
     return None
@@ -71,7 +88,7 @@ def universal_instantiation(all_x_are_y: Fact, a_is_x: Fact) -> Fact | None:
             subject=a_is_x.subject,
             predicate="is",
             object=all_x_are_y.object,
-            confidence=min(all_x_are_y.confidence, a_is_x.confidence),
+            confidence=all_x_are_y.confidence * a_is_x.confidence,
             source=Source.DEDUCED,
         )
     return None
@@ -99,7 +116,7 @@ def equality_substitution(a_equals_b: Fact, fact_with_a: Fact) -> Fact | None:
             subject=a_equals_b.object,
             predicate=fact_with_a.predicate,
             object=fact_with_a.object,
-            confidence=min(a_equals_b.confidence, fact_with_a.confidence) * 0.95,
+            confidence=a_equals_b.confidence * fact_with_a.confidence * 0.95,
             source=Source.DEDUCED,
         )
     if fact_with_a.object == a_equals_b.subject:
@@ -107,7 +124,7 @@ def equality_substitution(a_equals_b: Fact, fact_with_a: Fact) -> Fact | None:
             subject=fact_with_a.subject,
             predicate=fact_with_a.predicate,
             object=a_equals_b.object,
-            confidence=min(a_equals_b.confidence, fact_with_a.confidence) * 0.95,
+            confidence=a_equals_b.confidence * fact_with_a.confidence * 0.95,
             source=Source.DEDUCED,
         )
     return None
@@ -124,7 +141,7 @@ def disjunctive_syllogism(a_or_b: Fact, not_a: Fact) -> Fact | None:
             subject=a_or_b.object,
             predicate="is",
             object="true",
-            confidence=min(a_or_b.confidence, not_a.confidence),
+            confidence=a_or_b.confidence * not_a.confidence,
             source=Source.DEDUCED,
         )
     return None
@@ -150,30 +167,56 @@ def contradiction_detection(p: Fact, not_p: Fact) -> Fact | None:
     return None
 
 
-def de_morgan_and(not_a_and_b: Fact) -> Fact | None:
-    """NOT(A AND B) -> (NOT A OR NOT B)."""
+def specificity_resolution(general: Fact, specific: Fact) -> Fact:
+    """Exception handling: more specific rule wins over general rule.
+    E.g., 'penguin not_is flies' overrides 'bird all_are flies' because
+    penguin is a subtype of bird (more specific subject).
+    """
+    return specific
+
+
+def de_morgan_and(not_a_and_b: Fact) -> list[Fact]:
+    """NOT(A AND B) -> (NOT A, NOT B). Returns two separate facts."""
     if not_a_and_b.predicate == "not_and":
-        return Fact(
-            subject=f"({not_a_and_b.subject} or {not_a_and_b.object})",
-            predicate="or",
-            object=f"(not {not_a_and_b.subject} or not {not_a_and_b.object})",
-            confidence=not_a_and_b.confidence,
-            source=Source.DEDUCED,
-        )
-    return None
+        return [
+            Fact(
+                subject=not_a_and_b.subject,
+                predicate="not_is",
+                object="true",
+                confidence=not_a_and_b.confidence,
+                source=Source.DEDUCED,
+            ),
+            Fact(
+                subject=not_a_and_b.object,
+                predicate="not_is",
+                object="true",
+                confidence=not_a_and_b.confidence,
+                source=Source.DEDUCED,
+            ),
+        ]
+    return []
 
 
-def de_morgan_or(not_a_or_b: Fact) -> Fact | None:
-    """NOT(A OR B) -> (NOT A AND NOT B)."""
+def de_morgan_or(not_a_or_b: Fact) -> list[Fact]:
+    """NOT(A OR B) -> (NOT A, NOT B). Returns two separate facts."""
     if not_a_or_b.predicate == "not_or":
-        return Fact(
-            subject=f"({not_a_or_b.subject} and {not_a_or_b.object})",
-            predicate="and",
-            object=f"(not {not_a_or_b.subject} and not {not_a_or_b.object})",
-            confidence=not_a_or_b.confidence,
-            source=Source.DEDUCED,
-        )
-    return None
+        return [
+            Fact(
+                subject=not_a_or_b.subject,
+                predicate="not_is",
+                object="true",
+                confidence=not_a_or_b.confidence,
+                source=Source.DEDUCED,
+            ),
+            Fact(
+                subject=not_a_or_b.object,
+                predicate="not_is",
+                object="true",
+                confidence=not_a_or_b.confidence,
+                source=Source.DEDUCED,
+            ),
+        ]
+    return []
 
 
 def double_negation(not_not_p: Fact) -> Fact | None:
@@ -196,7 +239,7 @@ def conditional_proof(p: Fact, q: Fact) -> Fact | None:
             subject=p.subject,
             predicate="implies",
             object=q.object,
-            confidence=min(p.confidence, q.confidence) * 0.9,
+            confidence=p.confidence * q.confidence * 0.9,
             source=Source.DEDUCED,
         )
     return None
