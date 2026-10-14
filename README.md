@@ -22,6 +22,7 @@ Build an AI from the ground up that does NOT rely on memorized knowledge or stat
 
 ### What's Built
 - **Logical Kernel** — 16 foundational rules, O(n) agenda inference, thread-safe, 162 tests passing
+- **Memory System** — 3-layer storage (SQLite + LanceDB + NetworkX), semantic search, auto-connection, persistence, 169 tests passing
 
 ### What Needs Building
 - **Memory System** — perfect recall + cross-domain connection graph (V0.3)

@@ -41,6 +41,35 @@
 
 ---
 
+## V0.3 — Memory System (Complete)
+
+### Built
+- `memory/exact_store.py` — SQLite + JSON hybrid storage (queryable, crash-safe, never-delete)
+- `memory/semantic_index.py` — LanceDB + sentence-transformers embeddings (semantic search)
+- `memory/connection_graph.py` — NetworkX auto-connection (exact + semantic similarity)
+- `memory/system.py` — MemorySystem main API (store, recall, search, get_context, save/load)
+- `memory/persistence.py` — save/load/export/import
+
+### Features
+- 3-layer storage: exact (SQLite), semantic (LanceDB), connection graph (NetworkX)
+- Semantic similarity auto-connection (cosine similarity via embeddings)
+- Thread-safe via RLock
+- Persistence includes LanceDB data (save/load roundtrip)
+- Error handling for corrupted/missing files
+- Embedding quality verified (top 3 semantic search)
+- Large-scale verified (1000+ facts in <23s)
+
+### Issues Resolved
+- #1: Auto-connection logic incomplete → added semantic similarity
+- #2: Persistence edge cases → save/load includes LanceDB, error handling
+- #4: No thread safety → added RLock
+- #5: Model name mismatch → fixed default
+- #7: Auto-connect duplicate edges → check before adding
+- #8: Embedding quality not tested → verified top 3
+- #9: Large-scale performance not tested → verified 1000+ facts
+
+---
+
 ## V0.1 — Research & Specification (Complete)
 
 - Meta AI's neuro-symbolic proposal analyzed
