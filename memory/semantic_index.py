@@ -14,7 +14,7 @@ from kernel.facts import Fact, Source
 
 
 class SemanticIndex:
-    def __init__(self, db_path: str = "adam_vectors.lance", model_name: str = "google/embeddinggemma-300m"):
+    def __init__(self, db_path: str = "adam_vectors.lance", model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         self.db_path = db_path
         self.model_name = model_name
         self._model = None
