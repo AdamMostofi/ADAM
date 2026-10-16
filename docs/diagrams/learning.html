@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V0.4 Continuous Learning</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #FAFAF9; color: #1C1917; padding: 40px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { font-size: 14px; color: #78716C; margin-bottom: 32px; }
+  .diagram { background: #FFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+  .node { display: inline-block; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .core { background: #1C1917; color: #FAFAF9; }
+  .module { background: #F5F5F4; border: 1px solid #D6D3D1; }
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+  .arrow { color: #A8A29E; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #A8A29E; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>V0.4 — Continuous Learning</h1>
+  <p class="subtitle">Pattern extraction, skill compilation, cross-domain mapping, error correction</p>
+  <div class="diagram">
+    <div class="section-label">Modules</div>
+    <div class="flow-row">
+      <div class="node module">PatternExtractor</div>
+      <div class="node module">SkillCompiler</div>
+      <div class="node module">CrossDomainMapper</div>
+      <div class="node module">ErrorCorrector</div>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="section-label">Learning Pipeline</div>
+    <div class="flow-row">
+      <div class="node module">Teaching Session</div>
+      <span class="arrow">→</span>
+      <div class="node core">PatternExtractor</div>
+      <span class="arrow">→</span>
+      <div class="node module">SkillCompiler</div>
+      <span class="arrow">→</span>
+      <div class="node module">Skill (JSON)</div>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="section-label">Methodologies</div>
+    <div class="flow-row">
+      <div class="node module">Popper (patterns)</div>
+      <div class="node module">HERAKLES (skills)</div>
+      <div class="node module">GO-Skill (compilation)</div>
+      <div class="node module">PolySkill (composition)</div>
+      <div class="node module">Gentner SMT (analogy)</div>
+      <div class="node module">AGM K-Edit (correction)</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

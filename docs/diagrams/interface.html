@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V0.6 Interface</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #FAFAF9; color: #1C1917; padding: 40px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { font-size: 14px; color: #78716C; margin-bottom: 32px; }
+  .diagram { background: #FFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+  .node { display: inline-block; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .core { background: #1C1917; color: #FAFAF9; }
+  .ui { background: #F5F5F4; border: 1px solid #D6D3D1; }
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+  .arrow { color: #A8A29E; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #A8A29E; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>V0.6 — Interface</h1>
+  <p class="subtitle">CLI + Web UI with 5 tabs</p>
+  <div class="diagram">
+    <div class="section-label">CLI</div>
+    <div class="flow-row">
+      <div class="node ui">python -m interface.cli</div>
+      <div class="node ui">Interactive REPL (rich)</div>
+      <div class="node ui">--web flag</div>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="section-label">Web UI Tabs</div>
+    <div class="flow-row">
+      <div class="node ui">Chat</div>
+      <div class="node ui">Knowledge Graph</div>
+      <div class="node ui">Memory</div>
+      <div class="node ui">Skills</div>
+      <div class="node ui">Settings</div>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="section-label">API Endpoints</div>
+    <div class="flow-row">
+      <div class="node ui">/api/chat</div>
+      <div class="node ui">/api/facts</div>
+      <div class="node ui">/api/graph</div>
+      <div class="node ui">/api/skills</div>
+      <div class="node ui">/api/stats</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

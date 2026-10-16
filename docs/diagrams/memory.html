@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V0.3 Memory System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #FAFAF9; color: #1C1917; padding: 40px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { font-size: 14px; color: #78716C; margin-bottom: 32px; }
+  .diagram { background: #FFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+  .node { display: inline-block; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .core { background: #1C1917; color: #FAFAF9; }
+  .store { background: #F5F5F4; border: 1px solid #D6D3D1; }
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+  .arrow { color: #A8A29E; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #A8A29E; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>V0.3 — Memory System</h1>
+  <p class="subtitle">3-layer storage: SQLite + LanceDB + NetworkX</p>
+  <div class="diagram">
+    <div class="section-label">Storage Layers</div>
+    <div class="flow-row">
+      <div class="node store">SQLite (exact)</div>
+      <div class="node store">LanceDB (semantic)</div>
+      <div class="node store">NetworkX (graph)</div>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="section-label">API Flow</div>
+    <div class="flow-row">
+      <div class="node store">store(fact)</div>
+      <span class="arrow">→</span>
+      <div class="node core">MemorySystem</div>
+      <span class="arrow">→</span>
+      <div class="node store">recall(query)</div>
+    </div>
+    <div class="flow-row">
+      <div class="node store">search(query)</div>
+      <span class="arrow">→</span>
+      <div class="node core">Auto-connect</div>
+      <span class="arrow">→</span>
+      <div class="node store">get_context(fact)</div>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="section-label">Features</div>
+    <div class="flow-row">
+      <div class="node store">Perfect recall</div>
+      <div class="node store">Semantic search</div>
+      <div class="node store">Auto-connection</div>
+      <div class="node store">Save/Load</div>
+      <div class="node store">Thread-safe</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
