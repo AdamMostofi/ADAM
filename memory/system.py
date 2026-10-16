@@ -66,7 +66,10 @@ class MemorySystem:
             semantic_results = self.semantic.search(query, limit)
             facts = []
             for r in semantic_results:
-                fact_id = int(r["id"])
+                try:
+                    fact_id = int(r["id"])
+                except (ValueError, KeyError):
+                    continue
                 fact = self.exact.get(fact_id)
                 if fact:
                     facts.append(fact)
