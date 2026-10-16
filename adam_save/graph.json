@@ -1,1 +1,0 @@
-{"nodes": ["bird", "fly"], "edges": [["bird", "fly", {"predicate": "can", "confidence": 1.0, "source": "user"}], ["bird", "fly", {"predicate": "related", "confidence": 1.0, "source": "connected"}]]}
