@@ -24,11 +24,16 @@ Build an AI from the ground up that does NOT rely on memorized knowledge or stat
 - **Logical Kernel** — 16 foundational rules, O(n) agenda inference, thread-safe, 162 tests passing
 - **Memory System** — 3-layer storage (SQLite + LanceDB + NetworkX), semantic search, auto-connection, persistence, 169 tests passing
 
+### What's Built
+- **Logical Kernel** — 16 foundational rules, O(n) agenda inference, thread-safe, 162 tests passing
+- **Memory System** — 3-layer storage (SQLite + LanceDB + NetworkX), semantic search, auto-connection, persistence, 169 tests passing
+- **Continuous Learning** — pattern extraction, skill compilation, cross-domain mapping, error correction, 48 tests passing
+- **EQ Subsystem** — cognitive appraisal, response adjustment, baseline learning, manual override, 38 tests passing
+- **Interface** — CLI (rich) + Web UI (Flask + custom HTML/JS), 5 tabs (Chat, Knowledge Graph, Memory, Skills, Settings), 19 tests passing
+
 ### What Needs Building
-- **Memory System** — perfect recall + cross-domain connection graph (V0.3)
-- **Continuous Learning** — organic skill acquisition (V0.4)
-- **EQ Subsystem** — cognitive appraisal theory for emotional intelligence (V0.5)
-- **Interface** — CLI + GUI (V0.6)
+- **Ear/Mouth Integration** — Needle 2 + Tiny-LLM (V0.7)
+- **Advanced UI Features** — streaming, real-time graph updates, dark/light themes
 
 ---
 
@@ -91,10 +96,14 @@ Build an AI from the ground up that does NOT rely on memorized knowledge or stat
 - Response adjuster (warmth, directness, depth)
 - Baseline learner (topic preferences, knowledge level)
 
-### V0.6 — Interface
-- CLI via `rich` or `textual`
-- GUI via `gradio` or `textual`
-- Memory browser, skill dashboard, knowledge graph viewer
+### V0.6 — Interface (Complete)
+- CLI via `rich` — interactive REPL with colored output
+- Web UI via Flask + custom HTML/JS/CSS — 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings
+- vis.js for interactive knowledge graph visualization
+- Full/simple mode toggle (full = kernel + memory + learning + EQ, simple = memory + EQ only)
+- Loading spinner during chat processing
+- No auth — localhost only
+- 19 tests passing
 
 ---
 
@@ -121,8 +130,9 @@ Hardcoded foundational reasoning (refinable through experience, but present from
 | Vector memory | `chromadb` or `faiss-cpu` (V0.3) |
 | Exact storage | `sqlite3` (V0.3) |
 | Embeddings | `sentence-transformers` (all-MiniLM) (V0.3) |
-| CLI | `rich` or `textual` (V0.6) |
-| GUI | `gradio` or `textual` (V0.6) |
+| CLI | `rich` |
+| Web UI | Flask + custom HTML/JS/CSS |
+| Graph viz | vis.js (CDN) |
 | Data models | `dataclasses` |
 | Testing | `pytest`, `hypothesis` |
 
@@ -145,6 +155,24 @@ class Belief:
     fact: Fact
     proof_chain: list[str]
 ```
+
+---
+
+## Quick Start
+
+### CLI
+```bash
+python -m interface.cli              # interactive REPL
+python -m interface.cli "hello"      # single-shot query
+python -m interface.cli --web        # launch web UI
+```
+
+### Web UI
+```bash
+python -m interface.web.app          # starts on http://localhost:7860
+```
+
+Open http://localhost:7860 in your browser. 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings.
 
 ---
 

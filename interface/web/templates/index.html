@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADAM — First Of It's Kind</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>ADAM</h1>
+        <span class="subtitle">First Of It's Kind</span>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab active" data-tab="chat">Chat</button>
+        <button class="tab" data-tab="graph">Knowledge Graph</button>
+        <button class="tab" data-tab="memory">Memory</button>
+        <button class="tab" data-tab="skills">Skills</button>
+        <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <main>
+        <section id="tab-chat" class="tab-content active">
+            <div id="chat-messages"></div>
+            <div class="chat-input-row">
+                <select id="mode-toggle">
+                    <option value="full">Full Mode</option>
+                    <option value="simple">Simple Mode</option>
+                </select>
+                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                <button id="send-btn">Send</button>
+            </div>
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <span>ADAM is thinking...</span>
+            </div>
+        </section>
+
+        <section id="tab-graph" class="tab-content">
+            <div id="graph-container"></div>
+        </section>
+
+        <section id="tab-memory" class="tab-content">
+            <div class="memory-controls">
+                <input type="text" id="memory-search" placeholder="Search memories...">
+                <button id="memory-refresh">Refresh</button>
+            </div>
+            <div id="memory-list"></div>
+        </section>
+
+        <section id="tab-skills" class="tab-content">
+            <div id="skills-list"></div>
+        </section>
+
+        <section id="tab-settings" class="tab-content">
+            <div id="stats-panel"></div>
+            <button id="save-btn">Save State</button>
+            <button id="add-fact-btn">Add Fact</button>
+            <div id="add-fact-form" class="hidden">
+                <input type="text" id="fact-subject" placeholder="Subject">
+                <input type="text" id="fact-predicate" placeholder="Predicate">
+                <input type="text" id="fact-object" placeholder="Object">
+                <button id="fact-submit">Submit</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
