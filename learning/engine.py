@@ -59,7 +59,12 @@ class LearningEngine:
         return self.cross_domain.get_analogies(concept)
 
     def submit_correction(self, original: Fact, corrected: Fact, confidence: float):
-        return self.error_corrector.submit_correction(original, corrected, confidence)
+        correction = self.error_corrector.submit_correction(original, corrected, confidence)
+        if confidence >= 0.99:
+            self.engine.retract(original)
+            self.engine.add_fact(corrected)
+            self.engine.infer()
+        return correction
 
     def should_override_correction(self, correction) -> bool:
         return self.error_corrector.should_override(correction)

@@ -57,7 +57,7 @@ class InferenceEngine:
             key = str(fact)
             if key not in self.beliefs:
                 self.beliefs[key] = Belief(fact=fact)
-                self.index[fact.predicate].add(key)
+                self.index.setdefault(fact.predicate, set()).add(key)
                 self.agenda.append(fact)
                 self._check_contradictions(fact)
 

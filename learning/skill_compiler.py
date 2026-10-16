@@ -47,10 +47,13 @@ class SkillCompiler:
         if not self.skills_dir.exists():
             return
         for json_file in self.skills_dir.rglob("*.json"):
-            with open(json_file) as f:
-                data = json.load(f)
-            skill = Skill.from_dict(data)
-            self.skills[skill.name] = skill
+            try:
+                with open(json_file) as f:
+                    data = json.load(f)
+                skill = Skill.from_dict(data)
+                self.skills[skill.name] = skill
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
 
     def compile_skill(self, name: str, domain: str, premises: list[Fact], conclusion: Fact, confidence: float) -> Skill:
         skill = Skill(

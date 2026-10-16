@@ -32,7 +32,12 @@ class ErrorCorrector:
             verified=False,
         )
         self.corrections.append(correction)
+        if confidence >= self.override_threshold:
+            self._apply_correction(correction)
         return correction
+
+    def _apply_correction(self, correction: Correction) -> None:
+        correction.verified = True
 
     def should_override(self, correction: Correction) -> bool:
         return correction.confidence >= self.override_threshold
