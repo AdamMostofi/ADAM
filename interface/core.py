@@ -9,6 +9,8 @@ from kernel.facts import Fact, Source
 from memory.system import MemorySystem
 from learning.engine import LearningEngine
 from learning.eq.engine import EQEngine
+from interface.ear import Ear
+from interface.mouth import Mouth
 
 
 class ADAMCore:
@@ -17,14 +19,17 @@ class ADAMCore:
         self.learning = LearningEngine(memory_system=self.memory)
         self.eq = EQEngine(db_path)
         self.engine = self.memory.engine
+        self.ear = Ear()
+        self.mouth = Mouth()
 
     def chat(self, message: str, mode: str = "full") -> dict:
+        intent = self.ear.listen(message)
         user_state, params = self.eq.process_input(message)
 
         if mode == "simple":
             memories = self.memory.recall(message, limit=5)
             context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
-            response = self._format_response(message, params, context_text)
+            core_response = self._format_response(message, params, context_text)
         else:
             relevant = self.memory.recall(message, limit=5)
             for fact in relevant:
@@ -34,7 +39,13 @@ class ADAMCore:
                 self.memory.store(fact)
             memories = self.memory.recall(message, limit=10)
             context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
-            response = self._format_response(message, params, context_text)
+            core_response = self._format_response(message, params, context_text)
+
+        response = self.mouth.format_response(core_response, {
+            "warmth": params.warmth,
+            "depth": params.depth,
+            "tone": user_state.emotional_tone.value,
+        })
 
         self.eq.tracker.update(user_state)
         self.eq.baseline.record_interaction(user_state)
@@ -42,6 +53,11 @@ class ADAMCore:
 
         return {
             "response": response,
+            "intent": {
+                "action": intent.action,
+                "topic": intent.topic,
+                "sentiment": intent.sentiment,
+            },
             "state": {
                 "goal_status": user_state.goal_status.value,
                 "emotional_tone": user_state.emotional_tone.value,
