@@ -57,27 +57,27 @@ python -m interface.web.app          # http://localhost:7860
 
 ### V0.2 — Logical Kernel
 16 foundational rules, predicate-indexed agenda inference (O(n)), thread-safe.
-- [Diagram](docs/diagrams/kernel.html)
+- [Diagram]docs/diagrams/kernel.png
 
 ### V0.3 — Memory System
 3-layer storage: SQLite (exact), LanceDB (semantic), NetworkX (graph). Perfect recall, auto-connection, persistence.
-- [Diagram](docs/diagrams/memory.html)
+- [Diagram]docs/diagrams/memory.png
 
 ### V0.4 — Continuous Learning
 Pattern extraction (Popper), skill compilation (HERAKLES), cross-domain mapping (Gentner SMT), error correction (AGM).
-- [Diagram](docs/diagrams/learning.html)
+- [Diagram]docs/diagrams/learning.png
 
 ### V0.5 — EQ Subsystem
 Scherer's Component Process Model. Primary/secondary appraisal, response adjustment, baseline learning, manual override.
-- [Diagram](docs/diagrams/eq.html)
+- [Diagram]docs/diagrams/eq.png
 
 ### V0.6 — Interface
 CLI (rich REPL) + Web UI (Flask, 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings). vis.js graph visualization.
-- [Diagram](docs/diagrams/interface.html)
+- [Diagram]docs/diagrams/interface.png
 
 ### V0.7 — Ear/Mouth
 Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (15M params) for persona-formatted responses.
-- [Diagram](docs/diagrams/ear-mouth.html)
+- [Diagram]docs/diagrams/ear-mouth.png
 
 ---
 
