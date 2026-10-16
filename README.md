@@ -1,140 +1,153 @@
 # ADAM
 *(First Of It's Kind)*
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-310%20passing-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/version-V0.7-blue.svg)]()
+
 A neuro-symbolic cognitive architecture that emulates a super-infant AI — starting with foundational logic and reasoning, then learning continuously through teaching and experience. Perfect memory. Cross-domain reasoning. Gets smarter with every interaction.
 
 ---
 
-## Vision
+## Architecture Overview
 
-Build an AI from the ground up that does NOT rely on memorized knowledge or statistical pattern matching. Instead:
+<p align="center">
+  <img src="https://img.shields.io/badge/Architecture-Neuro--Symbolic-purple.svg" />
+</p>
 
-- Starts with **basic and foundational logic, analysis, and reasoning systems** (like a human infant, but super)
-- Can be **taught and trained to specialize** — teach it programming, it becomes better each time
-- Given documentation (e.g., great white sharks), it **remembers, reasons, thinks, and analyzes** the info
-- **Never forgets anything** — photographic/eidetic memory without human degradation
-- **Continuously forges connections** between different ideas and concepts
-- **Gets better and more in tune with the user** every time it runs
+**Pipeline:** `User Input → Ear (Needle 2) → ADAM Core → Mouth (TinyChat15M) → Response`
 
-### What's Secured
-- **Ear:** Needle 2 (45M params, 28MB RAM) — structured intent extraction
-- **Mouth:** Tiny-LLM / micro-decoder (~15MB RAM) — persona-formatted output
+**ADAM Core = 4 subsystems:**
+- **Logical Kernel** (V0.2) — 16 foundational rules, O(n) inference
+- **Memory System** (V0.3) — SQLite + LanceDB + NetworkX
+- **Continuous Learning** (V0.4) — pattern extraction, skill compilation
+- **EQ Subsystem** (V0.5) — cognitive appraisal, response adjustment
 
-### What's Built
-- **Logical Kernel** — 16 foundational rules, O(n) agenda inference, thread-safe, 162 tests passing
-- **Memory System** — 3-layer storage (SQLite + LanceDB + NetworkX), semantic search, auto-connection, persistence, 169 tests passing
-
-### What's Built
-- **Logical Kernel** — 16 foundational rules, O(n) agenda inference, thread-safe, 162 tests passing
-- **Memory System** — 3-layer storage (SQLite + LanceDB + NetworkX), semantic search, auto-connection, persistence, 169 tests passing
-- **Continuous Learning** — pattern extraction, skill compilation, cross-domain mapping, error correction, 48 tests passing
-- **EQ Subsystem** — cognitive appraisal, response adjustment, baseline learning, manual override, 38 tests passing
-- **Interface** — CLI (rich) + Web UI (Flask + custom HTML/JS), 5 tabs (Chat, Knowledge Graph, Memory, Skills, Settings), 19 tests passing
-
-### What Needs Building
-- **Ear/Mouth Integration** — Needle 2 + Tiny-LLM (V0.7)
-- **Advanced UI Features** — streaming, real-time graph updates, dark/light themes
+**Interface** (V0.6) — CLI (rich) + Web UI (Flask)
+**Ear/Mouth** (V0.7) — Needle 2 (45M) + TinyChat15M (15M)
 
 ---
 
-## Architecture
+## Quick Start
 
-```
-[ User Input ]
-      |
-      v
-[ Ear: Needle 2 ] --> structured intent (JSON)
-      |
-      v
-[ Belief Tape ] --> working memory, session state
-      |
-      v
-[ Logical Kernel ] <---> [ Memory System ]
-      |                         ^
-      v                         |
-[ EQ Subsystem ] ---+         |
-      |              |         |
-      v              v         |
-[ Mouth: Tiny-LLM ] <-- [ Learning Engine ]
+### One-Command Install
+
+```bash
+git clone https://github.com/AdamMostofi/ADAM.git
+cd ADAM
+./install.sh
 ```
 
-**Total RAM footprint: ~45MB for Ear + Mouth. Kernel + Memory run in Python with minimal overhead.**
+### Manual Start
+
+```bash
+# CLI
+python -m interface.cli              # interactive REPL
+python -m interface.cli "hello"      # single-shot query
+python -m interface.cli --web        # launch web UI
+
+# Web UI
+python -m interface.web.app          # http://localhost:7860
+```
 
 ---
 
-## Phased Roadmap
+## Versions
 
-### V0.1 — Research & Specification (Complete)
-- Meta AI's neuro-symbolic proposal analyzed
-- Needle 2 + Tiny-LLM micro-architecture identified
-- Cognitive architecture design finalized
+### V0.2 — Logical Kernel
+16 foundational rules, predicate-indexed agenda inference (O(n)), thread-safe.
+- [Diagram](docs/diagrams/kernel.html)
 
-### V0.2 — Logical Kernel (Complete)
-- 16 foundational rules: modus ponens, modus tollens, transitivity, subtype_transitivity, is_transitivity, universal_instantiation, existential_generalization, universal_generalization, equality_substitution, disjunctive_syllogism, contradiction_detection, de_morgan_and/or, double_negation, conditional_proof
-- Predicate-indexed agenda system for O(n) inference (was O(n^3))
-- Thread-safe via RLock
-- Knowledge graph with MultiDiGraph (handles multiple edges, cycles, self-loops)
-- Contradiction resolver with confidence-based conflict resolution
-- Unification with occurs check and confidence-based ranking
-- 162 tests passing (unit, integration, stress, fuzz, property-based)
-- 3 red-team passes completed
-
-### V0.3 — Memory System (Next)
-- Three-layer storage: exact (SQLite), semantic (ChromaDB), connection graph (NetworkX)
-- Perfect recall with automatic cross-referencing
-- `store()`, `recall()`, `connect()`, `get_context()` operations
-- JSON persistence for engine state (save/load with re-derivation)
+### V0.3 — Memory System
+3-layer storage: SQLite (exact), LanceDB (semantic), NetworkX (graph). Perfect recall, auto-connection, persistence.
+- [Diagram](docs/diagrams/memory.html)
 
 ### V0.4 — Continuous Learning
-- Pattern extraction from teaching sessions
-- Skill compilation into macro-rules
-- Cross-domain connection building
-- Error correction with confidence updating
+Pattern extraction (Popper), skill compilation (HERAKLES), cross-domain mapping (Gentner SMT), error correction (AGM).
+- [Diagram](docs/diagrams/learning.html)
 
 ### V0.5 — EQ Subsystem
-- User state tracker (goals, emotions, engagement)
-- Response adjuster (warmth, directness, depth)
-- Baseline learner (topic preferences, knowledge level)
+Scherer's Component Process Model. Primary/secondary appraisal, response adjustment, baseline learning, manual override.
+- [Diagram](docs/diagrams/eq.html)
 
-### V0.6 — Interface (Complete)
-- CLI via `rich` — interactive REPL with colored output
-- Web UI via Flask + custom HTML/JS/CSS — 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings
-- vis.js for interactive knowledge graph visualization
-- Full/simple mode toggle (full = kernel + memory + learning + EQ, simple = memory + EQ only)
-- Loading spinner during chat processing
-- No auth — localhost only
-- 19 tests passing
+### V0.6 — Interface
+CLI (rich REPL) + Web UI (Flask, 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings). vis.js graph visualization.
+- [Diagram](docs/diagrams/interface.html)
 
----
-
-## Starting Primitives (Infant Foundation)
-
-Hardcoded foundational reasoning (refinable through experience, but present from birth):
-
-- **Object permanence** — things exist when not observed
-- **Basic causality** — A causes B
-- **Temporal ordering** — before, after, during
-- **Spatial relations** — inside, outside, near, far
-- **Basic set theory** — is-a, has-a, part-of
+### V0.7 — Ear/Mouth
+Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (15M params) for persona-formatted responses.
+- [Diagram](docs/diagrams/ear-mouth.html)
 
 ---
 
 ## Technology Stack
 
-| Component | Library |
-|-----------|---------|
-| Rule engine | Custom (16 rules) |
-| Inference | Predicate-indexed agenda (O(n)) |
-| Thread safety | `threading.RLock` |
-| Knowledge graph | `networkx` (MultiDiGraph) |
-| Vector memory | `chromadb` or `faiss-cpu` (V0.3) |
-| Exact storage | `sqlite3` (V0.3) |
-| Embeddings | `sentence-transformers` (all-MiniLM) (V0.3) |
-| CLI | `rich` |
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.10+ |
+| Inference | Custom predicate-indexed agenda (O(n)) |
+| Vector DB | LanceDB |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
+| Graph | NetworkX (MultiDiGraph) |
+| Exact storage | SQLite |
+| Ear | Needle 2 (Cactus Compute) |
+| Mouth | TinyChat15M (transformers) |
+| CLI | rich |
 | Web UI | Flask + custom HTML/JS/CSS |
-| Graph viz | vis.js (CDN) |
-| Data models | `dataclasses` |
-| Testing | `pytest`, `hypothesis` |
+| Graph viz | vis.js |
+| Models | dataclasses, Pydantic |
+| Testing | pytest, hypothesis |
+
+---
+
+## Project Structure
+
+```
+ADAM/
+├── kernel/                 # Logical Kernel (V0.2)
+│   ├── engine.py           # InferenceEngine (O(n) agenda)
+│   ├── foundations.py      # 16 immutable rules
+│   ├── graph.py            # KnowledgeGraph (MultiDiGraph)
+│   ├── contradictions.py   # ContradictionResolver
+│   ├── unification.py      # Pattern matching
+│   └── facts.py            # Fact, Belief dataclasses
+├── memory/                 # Memory System (V0.3)
+│   ├── system.py           # MemorySystem API
+│   ├── exact_store.py      # SQLite + JSON
+│   ├── semantic_index.py   # LanceDB embeddings
+│   ├── connection_graph.py # NetworkX auto-connection
+│   └── persistence.py      # save/load
+├── learning/               # Continuous Learning (V0.4)
+│   ├── engine.py           # LearningEngine API
+│   ├── pattern_extractor.py
+│   ├── skill_compiler.py
+│   ├── cross_domain.py
+│   ├── error_correction.py
+│   └── eq/                 # EQ Subsystem (V0.5)
+│       ├── engine.py       # EQEngine API
+│       ├── user_state.py
+│       ├── appraiser.py
+│       ├── adjuster.py
+│       ├── baseline.py
+│       └── manual_override.py
+├── interface/              # Interface (V0.6) + Ear/Mouth (V0.7)
+│   ├── core.py             # ADAMCore facade
+│   ├── cli.py              # rich CLI
+│   ├── ear.py              # Needle 2 wrapper
+│   ├── mouth.py            # TinyChat15M wrapper
+│   └── web/                # Flask web UI
+│       ├── app.py
+│       ├── static/
+│       └── templates/
+├── docs/
+│   ├── diagrams/           # Architecture diagrams (HTML+SVG)
+│   └── design/             # Design documents
+├── tests/                  # 310 tests
+├── install.sh              # One-command installation
+├── requirements.txt
+└── LICENSE                 # MIT
+```
 
 ---
 
@@ -147,7 +160,7 @@ class Fact:
     predicate: str
     object: str
     confidence: float  # 0.0-1.0
-    source: Source     # "user", "deduced", "inferred", "learned"
+    source: Source     # user, deduced, inferred, learned
     timestamp: float
 
 @dataclass
@@ -158,30 +171,60 @@ class Belief:
 
 ---
 
-## Quick Start
-
-### CLI
-```bash
-python -m interface.cli              # interactive REPL
-python -m interface.cli "hello"      # single-shot query
-python -m interface.cli --web        # launch web UI
-```
-
-### Web UI
-```bash
-python -m interface.web.app          # starts on http://localhost:7860
-```
-
-Open http://localhost:7860 in your browser. 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings.
-
----
-
 ## Design Principles
 
-1. **Knowledge lives outside the model weights** — facts are stored, retrieved, and reasoned over — never baked into parameters
+1. **Knowledge lives outside the model weights** — facts stored, retrieved, reasoned over — never baked into parameters
 2. **Reasoning is deterministic** — no hallucination, no probabilistic guessing
 3. **Memory is permanent** — nothing forgotten, everything connected
 4. **Learning is organic** — skills compiled from experience, not prompt-engineered
-5. **Every conclusion has a trace** — you can ask "how do you know?" and get the full reasoning chain
+5. **Every conclusion has a trace** — ask "how do you know?" and get the full reasoning chain
 6. **Thread-safe by default** — all mutating operations protected by RLock
 7. **O(n) inference** — predicate-indexed agenda system, no redundant re-scanning
+
+---
+
+## Future Roadmap
+
+### V0.8 — Repo Overhaul (Current)
+- Professional README with badges and structure
+- One-command installation (`install.sh`)
+- Architecture diagrams for all versions
+- MIT license
+- USB deployment guide
+- Agent clones architecture
+
+### V0.9 — USB Deployment
+- Portable: runs from USB on any computer
+- Uses host CPU/RAM/GPU only
+- No local installation required
+- Self-contained with all models + runtime
+
+### V1.0 — Agent Clones
+- Specialized clones of ADAM core
+- Each clone focused on specific domain/task
+- Core has full oversight into all clones
+- Bidirectional knowledge transfer:
+  - Clone learns → core absorbs new info/skills
+  - Core teaches → clone benefits from accumulated knowledge
+- Double-progress: learning speed increases with each clone
+
+### V1.1 — Continuous Optimization
+- Custom everything for speed + quality
+- Profile-guided optimization
+- Hardware-specific tuning
+- Reduced latency, improved responses
+
+---
+
+## Tests
+
+```bash
+python -m pytest tests/ -v
+# 310 passed
+```
+
+---
+
+## License
+
+[MIT](LICENSE)
