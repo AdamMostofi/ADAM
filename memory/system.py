@@ -94,17 +94,18 @@ class MemorySystem:
         with self.lock:
             return self.exact.count()
 
-    def save(self, path: str) -> None:
+    def save(self, path: str, include_vectors: bool = True) -> None:
         import shutil, os, json
         with self.lock:
             os.makedirs(path, exist_ok=True)
             shutil.copy(self.exact.db_path, os.path.join(path, "memory.db"))
-            lance_src = self.semantic.db_path
-            lance_dst = os.path.join(path, "vectors.lance")
-            if os.path.exists(lance_src):
-                if os.path.exists(lance_dst):
-                    shutil.rmtree(lance_dst)
-                shutil.copytree(lance_src, lance_dst)
+            if include_vectors:
+                lance_src = self.semantic.db_path
+                lance_dst = os.path.join(path, "vectors.lance")
+                if os.path.exists(lance_src):
+                    if os.path.exists(lance_dst):
+                        shutil.rmtree(lance_dst)
+                    shutil.copytree(lance_src, lance_dst)
             graph_data = {"nodes": list(self.graph.get_all_nodes()), "edges": [(u, v, d) for u, v, d in self.graph.get_all_edges()]}
             with open(os.path.join(path, "graph.json"), "w") as f:
                 json.dump(graph_data, f)
