@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>ADAM — Visual Test: Conversation</title>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const theme = params.get("theme") || "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    if (theme === "light") {
+      const st = document.createElement("style");
+      st.textContent = `html { background: #e8e0cd; }`;
+      document.head.append(st);
+    }
+  </script>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>PRIMARCH ADAM</h1>
+    </header>
+    <main class="main" id="main"></main>
+  </div>
+
+  <script type="module">
+    import { Conversation } from "/static/js/components/conversation.js";
+
+    const conv = new Conversation({
+      emptyTitle: "The vox is silent",
+      emptyDescription: "Awaiting transmission. Speak, and the Machine Spirit shall answer.",
+    });
+    document.getElementById("main").append(conv.el);
+
+    // Render a few sample messages to exercise the layout.
+    const showEmpty = new URLSearchParams(location.search).has("empty");
+    if (!showEmpty) {
+      const bubble = (text) => {
+        const d = document.createElement("div");
+        d.textContent = text;
+        return d;
+      };
+      conv.addMessage("user", bubble("Machine Spirit, what is the status of the cogitator?"));
+      conv.addMessage("assistant", bubble("All systems nominal. The logic engines burn bright and the data-vaults stand ready."));
+      conv.addMessage("user", bubble("Recite the Litany of Activation."));
+      conv.addMessage("assistant", bubble("Bless the machine, whose works are just. Bless the code, whose logic is pure."));
+    }
+    window.__conv = conv;
+  </script>
+</body>
+</html>

@@ -130,6 +130,29 @@ the Emperor; *primus* = first, matching "First Of It's Kind").
 
 ---
 
+## Phase 1 — Conversation
+
+**Files:** `interface/web/static/js/components/conversation.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `conversation.tsx` — scroll container (`role="log"`), auto-scroll,
+empty state, scroll-to-bottom button, transcript download.
+
+**Vanilla port:** `Conversation` class. Scroll container with smooth
+auto-scroll; empty state ("The vox is silent"); floating scroll button that
+appears only when not at the bottom; transcript export as Markdown.
+
+**40K mapping:** empty state "THE VOX IS SILENT"; download = export transcript.
+
+**Verified:** screenshots in both dark and light themes
+(`tests/conversation-*.png`).
+
+**Bug fixed:** scroll button initially visible at the bottom — added a
+`requestAnimationFrame` sync after construction.
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
