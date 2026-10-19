@@ -9,6 +9,7 @@ build/
 adam_vectors.lance/
 adam_memory.db
 skills/
+models/
 *.save/
 .pytest_cache/
 .hypothesis/
