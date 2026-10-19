@@ -30,12 +30,23 @@
     import { Conversation } from "/static/js/components/conversation.js";
     import { Message } from "/static/js/components/message.js";
     import { markdownToNode } from "/static/js/components/markdown.js";
+    import { PromptInput } from "/static/js/components/prompt-input.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
       emptyDescription: "Awaiting transmission. Speak, and the Machine Spirit shall answer.",
     });
     document.getElementById("main").append(conv.el);
+
+    const prompt = new PromptInput({
+      placeholder: "Open a vox channel…",
+      onSubmit: ({ text }) => {
+        const m = new Message({ from: "user" });
+        m.setContent(document.createTextNode(text));
+        conv.addMessage("user", m.el);
+      },
+    });
+    document.getElementById("main").append(prompt.el);
 
     // Render a few sample messages to exercise the layout.
     const showEmpty = new URLSearchParams(location.search).has("empty");

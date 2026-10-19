@@ -280,4 +280,71 @@
   background: var(--steel);
 }
 
+/* ---------- Phase 4: PromptInput ---------- */
+.adam-prompt {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--iron);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius-md);
+  background: var(--steel);
+  box-shadow: 0 2px 12px var(--shadow);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.adam-prompt:focus-within {
+  border-color: var(--gold);
+  border-left-color: var(--gold-bright);
+  box-shadow: 0 0 0 1px var(--gold), 0 2px 16px var(--glow);
+}
+
+.adam-prompt-field {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.adam-prompt-textarea {
+  flex: 1;
+  resize: none;
+  border: 0;
+  background: transparent;
+  padding: var(--space-2) var(--space-1);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--bone);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.adam-prompt-textarea::placeholder { color: var(--ash); }
+.adam-prompt-textarea:focus { outline: none; }
+
+.adam-prompt-submit {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--iron);
+  border-radius: var(--radius-sm);
+  background: var(--void-2);
+  color: var(--gold);
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.adam-prompt-submit:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--void);
+  border-color: var(--gold);
+}
+.adam-prompt-submit svg { width: 17px; height: 17px; }
+.adam-prompt-submit.is-disabled,
+.adam-prompt-submit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+
 

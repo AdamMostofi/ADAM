@@ -204,6 +204,27 @@ and version-pinned.
 
 ---
 
+## Phase 4 — PromptInput
+
+**Files:** `interface/web/static/js/components/prompt-input.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `prompt-input.tsx` (core: `PromptInput`, `PromptInputTextarea`,
+`PromptInputSubmit`; attachments/screenshot tooling omitted as out of scope).
+
+**Vanilla port:** `PromptInput` class. Auto-resizing `<textarea>` (capped at
+220 px), gold submit button, Enter-to-send / Shift+Enter for newline, and a
+`ready`/`streaming` status that disables submit while the Machine Spirit
+answers.
+
+**40K mapping:** field is a steel vox channel with a gold rail; submit is a
+gold arrow. Placeholder "Open a vox channel…".
+
+**Verified:** dark and light screenshots (`tests/prompt-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
