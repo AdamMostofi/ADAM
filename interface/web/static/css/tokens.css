@@ -1,4 +1,4 @@
-/* ADAM — Warhammer 40K Imperium of Man design tokens */
+/* ADAM — Warhammer 40K Imperium of Man design tokens (OKLCH) */
 
 @font-face {
   font-family: "Cinzel";
@@ -79,38 +79,38 @@
 /* Light — parchment & bone */
 :root,
 [data-theme="light"] {
-  --void: #e8e0cd;
-  --void-2: #ded3ba;
-  --steel: #d9cdb0;
-  --steel-2: #cdc0a0;
-  --iron: #b8a888;
-  --iron-strong: #8a7a58;
-  --gold: #8a6d1a;
-  --gold-bright: #b8912a;
-  --crimson: #7a1220;
-  --bone: #2a2418;
-  --bone-2: #4a4030;
-  --ash: #6b5d4a;
-  --shadow: rgba(42, 36, 24, 0.18);
-  --glow: rgba(138, 109, 26, 0.18);
+  --void: oklch(90.8% 0.027 88);
+  --void-2: oklch(86.9% 0.036 87);
+  --steel: oklch(85.0% 0.041 88);
+  --steel-2: oklch(81.0% 0.046 89);
+  --iron: oklch(73.7% 0.048 84);
+  --iron-strong: oklch(58.5% 0.052 86);
+  --gold: oklch(54.9% 0.103 88);
+  --gold-bright: oklch(67.6% 0.124 87);
+  --crimson: oklch(37.7% 0.137 21);
+  --bone: oklch(26.3% 0.023 84);
+  --bone-2: oklch(37.7% 0.029 79);
+  --ash: oklch(48.7% 0.034 75);
+  --shadow: oklch(26.3% 0.023 84 / 0.18);
+  --glow: oklch(54.9% 0.103 88 / 0.18);
   color-scheme: light;
 }
 
 /* Dark — void & steel */
 [data-theme="dark"] {
-  --void: #0a0a0c;
-  --void-2: #101014;
-  --steel: #16161a;
-  --steel-2: #1e1e24;
-  --iron: #2e2e36;
-  --iron-strong: #4a4a55;
-  --gold: #c9a227;
-  --gold-bright: #e0bc4a;
-  --crimson: #a31621;
-  --bone: #e6dcc3;
-  --bone-2: #b8ad93;
-  --ash: #8a8578;
-  --shadow: rgba(0, 0, 0, 0.5);
-  --glow: rgba(201, 162, 39, 0.16);
+  --void: oklch(14.6% 0.004 286);
+  --void-2: oklch(17.5% 0.008 286);
+  --steel: oklch(20.2% 0.008 286);
+  --steel-2: oklch(23.8% 0.011 285);
+  --iron: oklch(30.4% 0.014 286);
+  --iron-strong: oklch(41.3% 0.018 286);
+  --gold: oklch(72.8% 0.138 90);
+  --gold-bright: oklch(80.6% 0.136 91);
+  --crimson: oklch(46.0% 0.173 24);
+  --bone: oklch(89.6% 0.035 89);
+  --bone-2: oklch(75.0% 0.038 88);
+  --ash: oklch(61.7% 0.020 89);
+  --shadow: oklch(0% 0 0 / 0.5);
+  --glow: oklch(72.8% 0.138 90 / 0.16);
   color-scheme: dark;
 }

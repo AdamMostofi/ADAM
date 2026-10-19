@@ -104,6 +104,11 @@ gold accents, bone/parchment light theme, gothic display type, subtle
 Aquila/skull/vox iconography. Header rank: **PRIMARCH** (above Adeptus, below
 the Emperor; *primus* = first, matching "First Of It's Kind").
 
+**Color system:** OKLCH (`oklch(L C H)`) — perceptually uniform lightness,
+chroma and hue. Chosen over HSL/hex because equal lightness steps look equally
+bright and hue stays consistent across the palette, which suits the flat,
+theming-heavy Imperium design.
+
 ---
 
 ## Phase 0 — Research + design foundation
