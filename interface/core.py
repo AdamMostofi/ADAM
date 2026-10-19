@@ -14,13 +14,13 @@ from interface.mouth import Mouth
 
 
 class ADAMCore:
-    def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.lance"):
+    def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.lance", mouth=None):
         self.memory = MemorySystem(db_path, lance_path)
         self.learning = LearningEngine(memory_system=self.memory)
         self.eq = EQEngine(db_path)
         self.engine = self.memory.engine
         self.ear = Ear()
-        self.mouth = Mouth()
+        self.mouth = mouth if mouth is not None else Mouth()
 
     def chat(self, message: str, mode: str = "full") -> dict:
         intent = self.ear.listen(message)

@@ -1,4 +1,4 @@
-"""Semantic index layer using LanceDB + EmbeddingGemma.
+"""Semantic index layer using LanceDB + fastembed (ONNX Runtime).
 
 Stores embeddings for similarity search.
 LanceDB handles persistence, metadata, and vector search automatically.
@@ -14,7 +14,7 @@ from kernel.facts import Fact, Source
 
 
 class SemanticIndex:
-    def __init__(self, db_path: str = "adam_vectors.lance", model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, db_path: str = "adam_vectors.lance", model_name: str = "BAAI/bge-small-en-v1.5"):
         self.db_path = db_path
         self.model_name = model_name
         self._model = None
@@ -23,8 +23,8 @@ class SemanticIndex:
 
     def _load_model(self):
         if self._model is None:
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(self.model_name)
+            from fastembed import TextEmbedding
+            self._model = TextEmbedding(model_name=self.model_name)
         return self._model
 
     def _get_table(self):
@@ -34,7 +34,7 @@ class SemanticIndex:
                 self._table = self._db.open_table("facts")
             except Exception:
                 self._load_model()
-                sample = self._model.encode("sample", normalize_embeddings=True)
+                sample = self._embed("sample")
                 dim = len(sample)
                 self._table = self._db.create_table(
                     "facts",
@@ -53,8 +53,7 @@ class SemanticIndex:
 
     def _embed(self, text: str) -> list[float]:
         model = self._load_model()
-        embedding = model.encode(text, normalize_embeddings=True)
-        return embedding.tolist()
+        return [float(x) for x in list(model.embed([text]))[0]]
 
     def store(self, fact_id: int, fact: Fact) -> None:
         table = self._get_table()
