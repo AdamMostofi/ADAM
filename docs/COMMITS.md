@@ -245,6 +245,25 @@ cogitator hums…".
 
 ---
 
+## Phase 6 — Suggestion
+
+**Files:** `interface/web/static/js/components/suggestion.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `suggestion.tsx` — `Suggestions` (horizontal scrollable row) +
+`Suggestion` (clickable chip).
+
+**Vanilla port:** `Suggestions` labelled row + `Suggestion` chip buttons.
+Clicking a chip emits its text (wired to pre-fill the vox channel in the demo).
+
+**40K mapping:** label "SANCTIONED INQUIRIES"; chips are steel pills with a gold
+hover.
+
+**Verified:** dark and light screenshots (`tests/suggestion-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
