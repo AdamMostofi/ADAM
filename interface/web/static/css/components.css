@@ -458,6 +458,76 @@
 }
 .adam-suggestion:active { transform: translateY(0); }
 
+/* ---------- Phase 7: ModelSelector ---------- */
+.adam-model-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+}
+.adam-model-selector-label {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ash);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.adam-model-selector-label::before {
+  content: "";
+  width: 14px;
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.7;
+}
+
+.adam-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--iron);
+  border-radius: var(--radius-md);
+  background: var(--void-2);
+}
+.adam-segment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ash);
+  font-family: var(--font-ui);
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.adam-segment-option-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.adam-segment-option-desc {
+  font-size: 0.66rem;
+  font-weight: 300;
+  color: var(--ash);
+}
+.adam-segment-option:hover { color: var(--bone); }
+.adam-segment-option.is-active {
+  background: var(--steel);
+  border-color: var(--gold);
+  color: var(--bone);
+}
+.adam-segment-option.is-active .adam-segment-option-label { color: var(--gold); }
+.adam-segment-option.is-active .adam-segment-option-desc { color: var(--bone-2); }
+
+
 
 
 

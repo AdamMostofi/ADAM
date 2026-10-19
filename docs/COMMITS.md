@@ -264,6 +264,24 @@ hover.
 
 ---
 
+## Phase 7 — ModelSelector
+
+**Files:** `interface/web/static/js/components/model-selector.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `model-selector.tsx` — dialog with model + effort pickers.
+
+**Vanilla port:** simplified to a segmented cogitator-mode control
+(`full` / `simple`), since ADAM has one model and a mode toggle rather than a
+model marketplace.
+
+**40K mapping:** label "COGITATOR MODE"; active option is gold-rimmed.
+
+**Verified:** dark and light screenshots (`tests/model-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
