@@ -9,7 +9,7 @@ import time
 import urllib.request
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_DEFAULT_MODEL = os.path.normpath(os.path.join(_HERE, "..", "..", "models", "TinyChat15M.gguf"))
+_DEFAULT_MODEL = os.path.normpath(os.path.join(_HERE, "..", "models", "TinyChat15M.gguf"))
 _DEFAULT_SERVER_CANDIDATES = [
     "/home/adam/llama.cpp/build/bin/llama-server",
     "llama-server",
@@ -94,9 +94,8 @@ class Mouth:
         warmth = params.get("warmth", "medium")
         depth = params.get("depth", "detailed")
         return (
-            f"[PARAMS] warmth={warmth}, depth={depth}\n"
-            f"[RESPONSE] {core_response}\n"
-            f"[OUTPUT]"
+            f"[INST] Respond to the user in a {warmth}-warmth, {depth}-depth tone.\n"
+            f"User: {core_response} [/INST]"
         )
 
     def close(self) -> None:

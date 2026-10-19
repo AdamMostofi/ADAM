@@ -37,10 +37,11 @@ def test_ear_sentiment_negative():
 def test_mouth_build_prompt():
     mouth = Mouth(auto_start=False)
     prompt = mouth._build_prompt("Based on what I know: hello", {"warmth": "high", "depth": "summary"})
-    assert "warmth=high" in prompt
-    assert "depth=summary" in prompt
+    assert "high-warmth" in prompt
+    assert "summary-depth" in prompt
     assert "Based on what I know: hello" in prompt
-    assert prompt.endswith("[OUTPUT]")
+    assert prompt.startswith("[INST]")
+    assert prompt.endswith("[/INST]")
 
 
 def test_mouth_format_response():
@@ -54,7 +55,7 @@ def test_mouth_format_response():
     mouth.speak = fake_speak
     result = mouth.format_response("core text", {"warmth": "high", "depth": "summary"})
     assert result == "ok"
-    assert "warmth=high" in captured["prompt"]
+    assert "high-warmth" in captured["prompt"]
     assert "core text" in captured["prompt"]
 
 

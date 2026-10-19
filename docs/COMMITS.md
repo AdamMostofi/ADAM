@@ -86,6 +86,29 @@ This removes PyTorch while keeping semantic search quality.
 **Still over the 300 MB target.** Remaining fat: LanceDB (~100 MB) and the
 fastembed runtime (~267 MB, of which the 65 MB model loads to ~185 MB RSS).
 
+---
+
+## Commit 3 — Fix Mouth model path + prompt format
+
+**Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
+
+**Bug 1 — wrong default model path.** `_DEFAULT_MODEL` used two `..` from
+`interface/`, resolving to `~/models/TinyChat15M.gguf` instead of
+`ADAM/models/TinyChat15M.gguf`. Any default `Mouth()` raised
+`FileNotFoundError`. Fixed by using one `..`.
+
+**Bug 2 — mismatched prompt format.** TinyChat15M was trained on Llama-2
+`[INST]...[/INST]` chat format, but the Mouth sent a custom
+`[PARAMS]/[RESPONSE]/[OUTPUT]` prompt. Switched to the native chat format so
+responses are relevant.
+
+**Verified:** `Mouth().format_response("hello", ...)` now returns coherent text
+(verified live against `llama-server`), replacing the earlier gibberish from
+the abandoned `sshleifer/tiny-gpt2` placeholder.
+
+**Theory:** a conversational model must receive prompts in the format it was
+trained on; otherwise output is coherent but off-topic.
+
 ### Next candidates (not yet applied)
 
 - Replace LanceDB with numpy cosine-search over SQLite → saves ~100 MB.
