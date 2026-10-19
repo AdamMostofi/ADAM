@@ -27,6 +27,7 @@
 
   <script type="module">
     import { Conversation } from "/static/js/components/conversation.js";
+    import { Message } from "/static/js/components/message.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -37,15 +38,19 @@
     // Render a few sample messages to exercise the layout.
     const showEmpty = new URLSearchParams(location.search).has("empty");
     if (!showEmpty) {
-      const bubble = (text) => {
-        const d = document.createElement("div");
-        d.textContent = text;
-        return d;
+      const add = (role, text) => {
+        const m = new Message({ from: role });
+        m.setContent(document.createTextNode(text));
+        if (role === "assistant") {
+          m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
+          m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
+        }
+        return conv.addMessage(role, m.el);
       };
-      conv.addMessage("user", bubble("Machine Spirit, what is the status of the cogitator?"));
-      conv.addMessage("assistant", bubble("All systems nominal. The logic engines burn bright and the data-vaults stand ready."));
-      conv.addMessage("user", bubble("Recite the Litany of Activation."));
-      conv.addMessage("assistant", bubble("Bless the machine, whose works are just. Bless the code, whose logic is pure."));
+      add("user", "Machine Spirit, what is the status of the cogitator?");
+      add("assistant", "All systems nominal. The logic engines burn bright and the data-vaults stand ready.");
+      add("user", "Recite the Litany of Activation.");
+      add("assistant", "Bless the machine, whose works are just. Bless the code, whose logic is pure.");
     }
     window.__conv = conv;
   </script>

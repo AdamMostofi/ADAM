@@ -153,6 +153,27 @@ appears only when not at the bottom; transcript export as Markdown.
 
 ---
 
+## Phase 2 — Message
+
+**Files:** `interface/web/static/js/components/message.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `message.tsx` — `Message` (user/assistant turn), `MessageContent`
+(bubble), `MessageActions` / `MessageAction` (copy/retry/share), `MessageToolbar`.
+
+**Vanilla port:** `Message` class with role label, content slot and action row.
+User turns render as a right-aligned steel bubble with an Imperial-gold edge;
+assistant turns render full-width with a gold rail and a "MACHINE SPIRIT"
+stencil label.
+
+**40K mapping:** user = "VOX TRANSMISSION", assistant = "MACHINE SPIRIT";
+actions are ghost icon buttons (copy, retry, share, like, dislike).
+
+**Verified:** screenshots in dark and light themes (`tests/message-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
