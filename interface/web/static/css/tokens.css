@@ -1,0 +1,116 @@
+/* ADAM — Warhammer 40K Imperium of Man design tokens */
+
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/Cinzel-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/Cinzel-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../fonts/Oswald-300.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/Oswald-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/Oswald-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/Oswald-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/IBMPlexMono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/IBMPlexMono-500.woff2") format("woff2");
+}
+
+:root {
+  --font-display: "Cinzel", "Times New Roman", serif;
+  --font-ui: "Oswald", "Arial Narrow", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-full: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --header-h: 56px;
+}
+
+/* Light — parchment & bone */
+:root,
+[data-theme="light"] {
+  --void: #e8e0cd;
+  --void-2: #ded3ba;
+  --steel: #d9cdb0;
+  --steel-2: #cdc0a0;
+  --iron: #b8a888;
+  --iron-strong: #8a7a58;
+  --gold: #8a6d1a;
+  --gold-bright: #b8912a;
+  --crimson: #7a1220;
+  --bone: #2a2418;
+  --bone-2: #4a4030;
+  --ash: #6b5d4a;
+  --shadow: rgba(42, 36, 24, 0.18);
+  --glow: rgba(138, 109, 26, 0.18);
+  color-scheme: light;
+}
+
+/* Dark — void & steel */
+[data-theme="dark"] {
+  --void: #0a0a0c;
+  --void-2: #101014;
+  --steel: #16161a;
+  --steel-2: #1e1e24;
+  --iron: #2e2e36;
+  --iron-strong: #4a4a55;
+  --gold: #c9a227;
+  --gold-bright: #e0bc4a;
+  --crimson: #a31621;
+  --bone: #e6dcc3;
+  --bone-2: #b8ad93;
+  --ash: #8a8578;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --glow: rgba(201, 162, 39, 0.16);
+  color-scheme: dark;
+}

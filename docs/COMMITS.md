@@ -88,6 +88,48 @@ fastembed runtime (~267 MB, of which the 65 MB model loads to ~185 MB RSS).
 
 ---
 
+# Web UI Overhaul — Warhammer 40K Imperium
+
+AI Elements (`elements.ai-sdk.dev`) is a **React 19 + Next.js + Tailwind 4 +
+shadcn/ui** library, deprecated end of November 2026. ADAM's UI is Flask +
+vanilla HTML/CSS/JS. Using AI Elements directly would require adding a Node
+runtime (RAM cost) and building on a deprecated source.
+
+**Decision:** study each AI Elements component's design, structure and utility,
+then rebuild it in vanilla HTML/CSS/JS for the existing Flask stack. Zero RAM
+increase, no build step, no deprecation lock-in, fully customizable.
+
+**Aesthetic:** Warhammer 40K *Imperium of Man* — void/steel surfaces, Imperial
+gold accents, bone/parchment light theme, gothic display type, subtle
+Aquila/skull/vox iconography. Header rank: **PRIMARCH** (above Adeptus, below
+the Emperor; *primus* = first, matching "First Of It's Kind").
+
+---
+
+## Phase 0 — Research + design foundation
+
+**Files:** `docs/research/**`, `interface/web/static/fonts/**`,
+`interface/web/static/css/tokens.css`, `interface/web/static/css/base.css`,
+`interface/web/tests/shot.py`
+
+**Change:**
+- Saved all 13 required component sources from the AI Elements GitHub repo
+  (`vercel/ai-elements`) into `docs/research/components/` **before the site is
+  deprecated**.
+- Downloaded Cinzel / Oswald / IBM Plex Mono `woff2` (latin subset) for offline
+  use.
+- Built `tokens.css` (Imperium palette, light + dark themes) and `base.css`
+  (reset, layout, typography).
+- Built `tests/shot.py` — a Playwright harness that serves the web root and
+  screenshots any test page, so every component is verified visually.
+
+**Alternatives considered:**
+- Port AI Elements to React (Next.js/Vite) — adds Node runtime + build step;
+  ruled out by the zero-RAM constraint.
+- Keep the existing generic dark UI — rejected; no AI-native structure.
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
