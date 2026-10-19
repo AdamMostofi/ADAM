@@ -28,6 +28,7 @@ def main():
     out = sys.argv[2]
     width = int(sys.argv[3]) if len(sys.argv) > 3 else 1200
     height = int(sys.argv[4]) if len(sys.argv) > 4 else 800
+    scale = int(sys.argv[5]) if len(sys.argv) > 5 else 1
 
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("127.0.0.1", 0), Handler) as httpd:
@@ -37,7 +38,7 @@ def main():
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch()
-                ctx = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=2)
+                ctx = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=scale)
                 pg = ctx.new_page()
                 pg.goto(f"http://127.0.0.1:{port}/{page}")
                 pg.wait_for_timeout(600)

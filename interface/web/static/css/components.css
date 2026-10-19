@@ -173,3 +173,111 @@
 }
 .adam-message-action svg { width: 15px; height: 15px; }
 
+/* ---------- Phase 3: Markdown (MessageContent) ---------- */
+.adam-markdown { font-weight: 300; }
+.adam-markdown > *:first-child { margin-top: 0; }
+.adam-markdown > *:last-child { margin-bottom: 0; }
+
+.adam-markdown p { margin: 0 0 var(--space-3); }
+.adam-markdown p:last-child { margin-bottom: 0; }
+
+.adam-markdown h1,
+.adam-markdown h2,
+.adam-markdown h3,
+.adam-markdown h4 {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: var(--space-6) 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--iron);
+}
+.adam-markdown h1:first-child,
+.adam-markdown h2:first-child { margin-top: 0; }
+
+.adam-markdown ul,
+.adam-markdown ol {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-6);
+}
+.adam-markdown li { margin-bottom: var(--space-1); }
+.adam-markdown li::marker { color: var(--gold); }
+
+.adam-markdown a {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--iron);
+}
+.adam-markdown a:hover { color: var(--gold-bright); text-decoration-color: var(--gold); }
+
+.adam-markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--steel-2);
+  border: 1px solid var(--iron);
+  color: var(--bone);
+}
+
+.adam-markdown pre {
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--iron);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius-md);
+  background: var(--void-2);
+  overflow-x: auto;
+}
+.adam-markdown pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--bone);
+}
+
+.adam-markdown blockquote {
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 2px solid var(--gold);
+  background: var(--steel);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--bone-2);
+}
+.adam-markdown blockquote p:last-child { margin-bottom: 0; }
+
+.adam-markdown hr {
+  border: 0;
+  border-top: 1px solid var(--iron);
+  margin: var(--space-6) 0;
+}
+
+.adam-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0;
+  font-size: 0.85rem;
+}
+.adam-markdown th,
+.adam-markdown td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--iron);
+  text-align: left;
+}
+.adam-markdown th {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--gold);
+  background: var(--steel);
+}
+
+

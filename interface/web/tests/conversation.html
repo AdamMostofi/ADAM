@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="/static/css/components.css">
+  <script src="/static/js/lib/marked.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -28,6 +29,7 @@
   <script type="module">
     import { Conversation } from "/static/js/components/conversation.js";
     import { Message } from "/static/js/components/message.js";
+    import { markdownToNode } from "/static/js/components/markdown.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -40,7 +42,8 @@
     if (!showEmpty) {
       const add = (role, text) => {
         const m = new Message({ from: role });
-        m.setContent(document.createTextNode(text));
+        if (role === "assistant") m.setContent(markdownToNode(text));
+        else m.setContent(document.createTextNode(text));
         if (role === "assistant") {
           m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
           m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
@@ -48,9 +51,9 @@
         return conv.addMessage(role, m.el);
       };
       add("user", "Machine Spirit, what is the status of the cogitator?");
-      add("assistant", "All systems nominal. The logic engines burn bright and the data-vaults stand ready.");
+      add("assistant", "## Cogitator Status\n\nAll systems **nominal**. The logic engines burn bright and the data-vaults stand ready.\n\n- Logic engines: *online*\n- Data-vaults: *sealed*\n- Machine spirit: *content*\n\n> The Omnissiah guides the code.");
       add("user", "Recite the Litany of Activation.");
-      add("assistant", "Bless the machine, whose works are just. Bless the code, whose logic is pure.");
+      add("assistant", "Bless the machine, whose works are just.\n\n```\nBLESS(CODE); // logic is pure\n```");
     }
     window.__conv = conv;
   </script>

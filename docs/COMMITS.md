@@ -179,6 +179,31 @@ actions are ghost icon buttons (copy, retry, share, like, dislike).
 
 ---
 
+## Phase 3 — MessageContent (markdown)
+
+**Files:** `interface/web/static/js/components/markdown.js`,
+`interface/web/static/css/components.css`,
+`interface/web/static/js/lib/marked.min.js`,
+`interface/web/tests/conversation.html`
+
+**Source:** `message.tsx` — `MessageResponse` renders markdown via *Streamdown*
+(GFM, math, code, streaming).
+
+**Vanilla port:** `markdownToNode(text)` — `marked.js` (vendored, v12) parses
+markdown; a small allowlist sanitizer strips `<script>`/`<iframe>`/forms,
+`on*` handlers and non-http(s) URLs before inserting HTML. Styled headings,
+code blocks, tables, lists and blockquotes in the Imperium theme.
+
+**40K mapping:** gold headings with rules, gold-edged code blocks, gold list
+markers, gold blockquotes.
+
+**Why vendored instead of CDN:** keeps the UI offline-safe (USB deployment goal)
+and version-pinned.
+
+**Verified:** dark and light screenshots (`tests/markdown-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
