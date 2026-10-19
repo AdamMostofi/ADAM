@@ -346,5 +346,67 @@
   cursor: not-allowed;
 }
 
+/* ---------- Phase 5: Shimmer / Loader ---------- */
+.adam-shimmer {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--ash) calc(50% - var(--shimmer-spread, 60px)),
+    var(--gold-bright) 50%,
+    var(--ash) calc(50% + var(--shimmer-spread, 60px))
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: adam-shimmer-sweep var(--shimmer-duration, 2s) linear infinite;
+}
+@keyframes adam-shimmer-sweep {
+  from { background-position: 100% center; }
+  to { background-position: 0% center; }
+}
+
+.adam-loader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-2);
+  color: var(--ash);
+}
+.adam-loader-cog {
+  width: var(--loader-size, 28px);
+  height: var(--loader-size, 28px);
+  color: var(--gold);
+  animation: adam-cog-spin 2.6s linear infinite;
+  flex-shrink: 0;
+}
+.adam-loader-cog svg { width: 100%; height: 100%; }
+.adam-loader-label {
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+@keyframes adam-cog-spin { to { transform: rotate(360deg); } }
+
+.adam-thinking {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--iron);
+  border-radius: var(--radius-md);
+  background: var(--steel);
+  color: var(--bone);
+}
+.adam-thinking-cog {
+  width: 16px;
+  height: 16px;
+  color: var(--gold);
+  animation: adam-cog-spin 1.6s linear infinite;
+  flex-shrink: 0;
+}
+.adam-thinking-cog svg { width: 100%; height: 100%; }
+
+
 
 

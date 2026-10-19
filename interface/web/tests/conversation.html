@@ -31,6 +31,7 @@
     import { Message } from "/static/js/components/message.js";
     import { markdownToNode } from "/static/js/components/markdown.js";
     import { PromptInput } from "/static/js/components/prompt-input.js";
+    import { ThinkingIndicator, Loader } from "/static/js/components/shimmer.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -47,6 +48,10 @@
       },
     });
     document.getElementById("main").append(prompt.el);
+
+    const thinking = new ThinkingIndicator();
+    const loader = new Loader({ label: "The cogitator hums…" });
+    document.getElementById("main").append(thinking.el, loader.el);
 
     // Render a few sample messages to exercise the layout.
     const showEmpty = new URLSearchParams(location.search).has("empty");

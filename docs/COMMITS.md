@@ -225,6 +225,26 @@ gold arrow. Placeholder "Open a vox channel…".
 
 ---
 
+## Phase 5 — Shimmer / Loader
+
+**Files:** `interface/web/static/js/components/shimmer.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `shimmer.tsx` (text shimmer) + a cogitator spinner.
+
+**Vanilla port:** `Shimmer` (animated gold gradient sweep across text via
+`background-clip:text`), `Loader` (spinning cog + stencil label), and
+`ThinkingIndicator` (dashed cogitator panel with shimmer). All CSS animations,
+`prefers-reduced-motion` safe.
+
+**40K mapping:** shimmer reads "The Machine Spirit deliberates"; loader "The
+cogitator hums…".
+
+**Verified:** dark and light screenshots (`tests/shimmer-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
