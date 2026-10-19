@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" font-family="Inter, -apple-system, sans-serif">
+  <rect width="800" height="400" fill="#FAFAF9"/>
+  <text x="400" y="30" text-anchor="middle" font-size="20" font-weight="700" fill="#1C1917">V0.6 — Interface</text>
+  <text x="400" y="50" text-anchor="middle" font-size="12" fill="#78716C">CLI + Web UI with 5 tabs</text>
+
+  <text x="20" y="85" font-size="11" font-weight="600" fill="#A8A29E">CLI</text>
+
+  <rect x="20" y="100" width="200" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="120" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">python -m interface.cli</text>
+
+  <rect x="250" y="100" width="180" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="340" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Interactive REPL (rich)</text>
+
+  <rect x="460" y="100" width="140" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="530" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">--web flag</text>
+
+  <text x="20" y="190" font-size="11" font-weight="600" fill="#A8A29E">Web UI Tabs</text>
+
+  <rect x="20" y="205" width="100" height="40" rx="8" fill="#1C1917"/>
+  <text x="70" y="230" text-anchor="middle" font-size="12" font-weight="600" fill="#FAFAF9">Chat</text>
+
+  <rect x="140" y="205" width="140" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="210" y="230" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Knowledge Graph</text>
+
+  <rect x="300" y="205" width="100" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="350" y="230" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Memory</text>
+
+  <rect x="420" y="205" width="100" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="470" y="230" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Skills</text>
+
+  <rect x="540" y="205" width="100" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="590" y="230" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Settings</text>
+
+  <text x="20" y="290" font-size="11" font-weight="600" fill="#A8A29E">API Endpoints</text>
+
+  <rect x="20" y="305" width="100" height="35" rx="6" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="70" y="327" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">/api/chat</text>
+
+  <rect x="140" y="305" width="100" height="35" rx="6" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="190" y="327" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">/api/facts</text>
+
+  <rect x="260" y="305" width="100" height="35" rx="6" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="310" y="327" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">/api/graph</text>
+
+  <rect x="380" y="305" width="100" height="35" rx="6" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="430" y="327" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">/api/skills</text>
+
+  <rect x="500" y="305" width="100" height="35" rx="6" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="550" y="327" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">/api/stats</text>
+
+  <rect x="620" y="305" width="100" height="35" rx="6" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="670" y="327" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">/api/save</text>
+</svg>

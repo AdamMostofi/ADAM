@@ -18,6 +18,8 @@ A neuro-symbolic cognitive architecture that emulates a super-infant AI — star
 
 **Pipeline:** `User Input → Ear (Needle 2) → ADAM Core → Mouth (TinyChat15M) → Response`
 
+![ADAM Architecture](docs/diagrams/architecture.svg)
+
 **ADAM Core = 4 subsystems:**
 - **Logical Kernel** (V0.2) — 16 foundational rules, O(n) inference
 - **Memory System** (V0.3) — SQLite + LanceDB + NetworkX
@@ -57,27 +59,27 @@ python -m interface.web.app          # http://localhost:7860
 
 ### V0.2 — Logical Kernel
 16 foundational rules, predicate-indexed agenda inference (O(n)), thread-safe.
-- [Diagram]docs/diagrams/kernel.png
+![Logical Kernel](docs/diagrams/kernel.svg)
 
 ### V0.3 — Memory System
 3-layer storage: SQLite (exact), LanceDB (semantic), NetworkX (graph). Perfect recall, auto-connection, persistence.
-- [Diagram]docs/diagrams/memory.png
+![Memory System](docs/diagrams/memory.svg)
 
 ### V0.4 — Continuous Learning
 Pattern extraction (Popper), skill compilation (HERAKLES), cross-domain mapping (Gentner SMT), error correction (AGM).
-- [Diagram]docs/diagrams/learning.png
+![Continuous Learning](docs/diagrams/learning.svg)
 
 ### V0.5 — EQ Subsystem
 Scherer's Component Process Model. Primary/secondary appraisal, response adjustment, baseline learning, manual override.
-- [Diagram]docs/diagrams/eq.png
+![EQ Subsystem](docs/diagrams/eq.svg)
 
 ### V0.6 — Interface
 CLI (rich REPL) + Web UI (Flask, 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings). vis.js graph visualization.
-- [Diagram]docs/diagrams/interface.png
+![Interface](docs/diagrams/interface.svg)
 
 ### V0.7 — Ear/Mouth
 Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (15M params) for persona-formatted responses.
-- [Diagram]docs/diagrams/ear-mouth.png
+![Ear/Mouth Pipeline](docs/diagrams/ear-mouth.svg)
 
 ---
 

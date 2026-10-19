@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Inter, -apple-system, sans-serif">
+  <rect width="900" height="520" fill="#FAFAF9"/>
+  <text x="450" y="30" text-anchor="middle" font-size="20" font-weight="700" fill="#1C1917">ADAM — System Architecture</text>
+  <text x="450" y="50" text-anchor="middle" font-size="12" fill="#78716C">First Of It's Kind — Neuro-Symbolic Cognitive Architecture</text>
+
+  <text x="20" y="85" font-size="11" font-weight="600" fill="#A8A29E" text-transform="uppercase">Full Pipeline</text>
+
+  <rect x="20" y="100" width="90" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="65" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">User Input</text>
+
+  <line x1="110" y1="120" x2="140" y2="120" stroke="#A8A29E" stroke-width="2"/>
+  <polygon points="140,115 150,120 140,125" fill="#A8A29E"/>
+
+  <rect x="150" y="100" width="100" height="40" rx="8" fill="#1C1917"/>
+  <text x="200" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#FAFAF9">Ear: Needle 2</text>
+
+  <line x1="250" y1="120" x2="280" y2="120" stroke="#A8A29E" stroke-width="2"/>
+  <polygon points="280,115 290,120 280,125" fill="#A8A29E"/>
+
+  <rect x="290" y="100" width="90" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="335" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="#1C1917">Intent JSON</text>
+
+  <line x1="380" y1="120" x2="410" y2="120" stroke="#A8A29E" stroke-width="2"/>
+  <polygon points="410,115 420,120 410,125" fill="#A8A29E"/>
+
+  <rect x="420" y="100" width="90" height="40" rx="8" fill="#1C1917"/>
+  <text x="465" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#FAFAF9">ADAM Core</text>
+
+  <line x1="510" y1="120" x2="540" y2="120" stroke="#A8A29E" stroke-width="2"/>
+  <polygon points="540,115 550,120 540,125" fill="#A8A29E"/>
+
+  <rect x="550" y="100" width="110" height="40" rx="8" fill="#1C1917"/>
+  <text x="605" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#FAFAF9">Mouth: TinyChat</text>
+
+  <line x1="660" y1="120" x2="690" y2="120" stroke="#A8A29E" stroke-width="2"/>
+  <polygon points="690,115 700,120 690,125" fill="#A8A29E"/>
+
+  <rect x="700" y="100" width="90" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="745" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Response</text>
+
+  <text x="20" y="180" font-size="11" font-weight="600" fill="#A8A29E">ADAM Core — 4 Subsystems</text>
+
+  <rect x="20" y="195" width="180" height="50" rx="8" fill="#1C1917"/>
+  <text x="110" y="225" text-anchor="middle" font-size="13" font-weight="600" fill="#FAFAF9">Logical Kernel (V0.2)</text>
+
+  <rect x="220" y="195" width="180" height="50" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="310" y="225" text-anchor="middle" font-size="13" font-weight="600" fill="#1C1917">Memory System (V0.3)</text>
+
+  <rect x="420" y="195" width="180" height="50" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="510" y="225" text-anchor="middle" font-size="13" font-weight="600" fill="#1C1917">Learning Engine (V0.4)</text>
+
+  <rect x="620" y="195" width="180" height="50" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="710" y="225" text-anchor="middle" font-size="13" font-weight="600" fill="#1C1917">EQ Subsystem (V0.5)</text>
+
+  <text x="20" y="285" font-size="11" font-weight="600" fill="#A8A29E">Interface Layer (V0.6)</text>
+
+  <rect x="20" y="300" width="140" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="90" y="325" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">CLI (rich)</text>
+
+  <rect x="180" y="300" width="160" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="260" y="325" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Web UI (Flask)</text>
+
+  <rect x="360" y="300" width="140" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="430" y="325" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">REST API</text>
+
+  <text x="20" y="380" font-size="11" font-weight="600" fill="#A8A29E">Storage</text>
+
+  <rect x="20" y="395" width="120" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="80" y="420" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">SQLite</text>
+
+  <rect x="160" y="395" width="120" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="220" y="420" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">LanceDB</text>
+
+  <rect x="300" y="395" width="120" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="360" y="420" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">NetworkX</text>
+
+  <rect x="440" y="395" width="100" height="40" rx="8" fill="#F5F5F4" stroke="#D6D3D1"/>
+  <text x="490" y="420" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1917">Skills</text>
+</svg>
