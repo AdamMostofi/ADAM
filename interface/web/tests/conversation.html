@@ -38,6 +38,7 @@
     import { Sources } from "/static/js/components/sources.js";
     import { Tool } from "/static/js/components/tool.js";
     import { Task } from "/static/js/components/task.js";
+    import { Reveal } from "/static/js/components/reveal.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -87,7 +88,11 @@
           task.add({ title: "Extract pattern from teaching", status: "done" });
           task.add({ title: "Compile macro-rule", status: "done" });
           task.add({ title: "Link across domains", status: "running" });
-          m.setContent([r.el, src.el, tool.el, task.el]);
+          const reveal = new Reveal({ mode: "word", speed: 80 });
+          const parts = [reveal.container];
+          parts.push(r.el, src.el, tool.el, task.el);
+          m.setContent(parts);
+          reveal.show(markdownToNode("## Status\n\nAll systems **nominal**. The logic engines burn bright.").innerHTML);
           m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
           m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
         } else {

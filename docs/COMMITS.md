@@ -365,6 +365,27 @@ steps get a gold tick, running steps pulse, pending steps stay hollow.
 
 ---
 
+## Phase 12 — Fake streaming reveal
+
+**Files:** `interface/web/static/js/components/reveal.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** n/a — AI Elements streams for real via the AI SDK; ADAM keeps
+full responses.
+
+**Change:** `Reveal` class renders the complete markdown, then progressively
+un-hides word tokens with a gold caret (`word` / `letter` / `line` modes).
+Pure CSS/JS — no network, no RAM cost. Honours `prefers-reduced-motion`.
+
+**40K mapping:** gold blinking caret; words fade in as the Machine Spirit
+"speaks".
+
+**Verified:** screenshots captured mid-reveal (`tests/reveal-early.png`) and
+after completion.
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`

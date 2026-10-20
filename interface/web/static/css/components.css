@@ -839,6 +839,40 @@
 }
 .adam-task-item-title { overflow-wrap: anywhere; }
 
+/* ---------- Phase 12: Fake streaming reveal ---------- */
+.adam-reveal-token {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.adam-reveal-token.is-visible { opacity: 1; }
+.adam-reveal.is-done .adam-reveal-token { opacity: 1; }
+
+.adam-reveal-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--gold);
+  animation: adam-caret-blink 0.9s steps(1) infinite;
+}
+@keyframes adam-caret-blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adam-reveal-token { transition: none; }
+  .adam-reveal-cursor { animation: none; }
+  .adam-shimmer { animation: none; }
+  .adam-loader-cog,
+  .adam-thinking-cog,
+  .adam-reasoning-trigger > svg:first-child,
+  .adam-tool-badge[data-tone="running"],
+  .adam-task-item[data-status="running"] .adam-task-item-marker { animation: none; }
+}
+
+
 
 
 

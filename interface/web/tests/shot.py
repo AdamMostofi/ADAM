@@ -29,6 +29,7 @@ def main():
     width = int(sys.argv[3]) if len(sys.argv) > 3 else 1200
     height = int(sys.argv[4]) if len(sys.argv) > 4 else 800
     scale = int(sys.argv[5]) if len(sys.argv) > 5 else 1
+    wait = int(sys.argv[6]) if len(sys.argv) > 6 else 600
 
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("127.0.0.1", 0), Handler) as httpd:
@@ -41,7 +42,9 @@ def main():
                 ctx = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=scale)
                 pg = ctx.new_page()
                 pg.goto(f"http://127.0.0.1:{port}/{page}")
-                pg.wait_for_timeout(600)
+                pg.wait_for_timeout(wait)
+                pg.evaluate("document.querySelector('.adam-conversation')?.scrollTo({ top: 0, behavior: 'instant' })")
+                pg.wait_for_timeout(120)
                 pg.screenshot(path=out, full_page=False)
                 browser.close()
         finally:
