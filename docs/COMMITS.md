@@ -282,6 +282,26 @@ model marketplace.
 
 ---
 
+## Phase 8 — Reasoning
+
+**Files:** `interface/web/static/js/components/reasoning.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `reasoning.tsx` — collapsible panel, auto-opens while streaming,
+closes when done, with a duration readout.
+
+**Vanilla port:** `Reasoning` class with `start()` / `stop()` (duration timer),
+`setOpen()`, `setContent()`. Collapse uses the `grid-template-rows: 0fr → 1fr`
+technique (smooth, no JS height math).
+
+**40K mapping:** trigger "MACHINE DELIBERATION" with a spinning cog; content is
+a mono kernel trace / EQ appraisal.
+
+**Verified:** collapsed + open screenshots (`tests/reasoning-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`

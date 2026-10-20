@@ -527,6 +527,63 @@
 .adam-segment-option.is-active .adam-segment-option-label { color: var(--gold); }
 .adam-segment-option.is-active .adam-segment-option-desc { color: var(--bone-2); }
 
+/* ---------- Phase 8: Reasoning ---------- */
+.adam-reasoning {
+  display: grid;
+  grid-template-rows: auto 0fr;
+  transition: grid-template-rows 0.2s ease;
+  margin-top: var(--space-2);
+  border-left: 2px solid var(--iron);
+}
+.adam-reasoning[data-open="true"] { grid-template-rows: auto 1fr; }
+
+.adam-reasoning-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ash);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.adam-reasoning-trigger:hover { background: var(--steel); color: var(--bone); }
+.adam-reasoning-trigger > svg:first-child {
+  width: 14px;
+  height: 14px;
+  color: var(--gold);
+  animation: adam-cog-spin 3s linear infinite;
+}
+.adam-reasoning-label { flex: 1; }
+.adam-reasoning-status { font-size: 0.68rem; color: var(--gold); }
+.adam-reasoning-trigger > svg:last-child {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+.adam-reasoning[data-open="true"] .adam-reasoning-trigger > svg:last-child { transform: rotate(180deg); }
+
+.adam-reasoning-content {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 var(--space-3) 0 var(--space-3);
+  margin-bottom: var(--space-2);
+  border-left: 2px solid var(--iron);
+  margin-left: 0;
+  color: var(--bone-2);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+
 
 
 

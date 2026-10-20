@@ -34,6 +34,7 @@
     import { ThinkingIndicator, Loader } from "/static/js/components/shimmer.js";
     import { Suggestions } from "/static/js/components/suggestion.js";
     import { ModelSelector } from "/static/js/components/model-selector.js";
+    import { Reasoning } from "/static/js/components/reasoning.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -65,11 +66,15 @@
     if (!showEmpty) {
       const add = (role, text) => {
         const m = new Message({ from: role });
-        if (role === "assistant") m.setContent(markdownToNode(text));
-        else m.setContent(document.createTextNode(text));
         if (role === "assistant") {
+          const r = new Reasoning({ label: "Machine deliberation" });
+          r.setContent(document.createTextNode("> modus_ponens: cogitator IS online\n> EQ appraisal: tone neutral\n> memory recall: 3 vaults"));
+          r.setOpen(true);
+          m.setContent(r.el);
           m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
           m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
+        } else {
+          m.setContent(document.createTextNode(text));
         }
         return conv.addMessage(role, m.el);
       };
