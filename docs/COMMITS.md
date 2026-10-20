@@ -302,6 +302,30 @@ a mono kernel trace / EQ appraisal.
 
 ---
 
+## Phase 9 — Sources
+
+**Files:** `interface/web/static/js/components/sources.js`,
+`interface/web/static/js/components/message.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `sources.tsx` — collapsible citation list with a count trigger.
+
+**Vanilla port:** `Sources` (labelled, collapsible, count) + `Source` cards.
+For ADAM, sources are the memory "vaults" recalled for a turn.
+
+**40K mapping:** trigger "ARCHIVED DATA · N vaults"; cards are steel with a
+gold rail and a vault icon.
+
+**Bugs fixed while wiring:**
+- `Message.setContent([a, b])` previously stringified arrays — now spreads them.
+- `Sources` lost its `defaultOpen` when constructed empty (sources added after
+  init) — `add()` now restores the default-open state.
+
+**Verified:** dark and light screenshots (`tests/sources-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`

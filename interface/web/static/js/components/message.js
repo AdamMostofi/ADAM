@@ -55,7 +55,8 @@ export class Message {
   }
 
   setContent(node) {
-    this.content.replaceChildren(node);
+    const nodes = Array.isArray(node) ? node.flat() : [node];
+    this.content.replaceChildren(...nodes);
     return this;
   }
 

@@ -35,6 +35,7 @@
     import { Suggestions } from "/static/js/components/suggestion.js";
     import { ModelSelector } from "/static/js/components/model-selector.js";
     import { Reasoning } from "/static/js/components/reasoning.js";
+    import { Sources } from "/static/js/components/sources.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -70,7 +71,10 @@
           const r = new Reasoning({ label: "Machine deliberation" });
           r.setContent(document.createTextNode("> modus_ponens: cogitator IS online\n> EQ appraisal: tone neutral\n> memory recall: 3 vaults"));
           r.setOpen(true);
-          m.setContent(r.el);
+          const src = new Sources({ label: "Archived data", defaultOpen: true });
+          src.add({ title: "cogitator status log", description: "confidence 0.98" });
+          src.add({ title: "machine spirit catechism", description: "confidence 0.91" });
+          m.setContent([r.el, src.el]);
           m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
           m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
         } else {
