@@ -326,6 +326,25 @@ gold rail and a vault icon.
 
 ---
 
+## Phase 10 — Tool
+
+**Files:** `interface/web/static/js/components/tool.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `tool.tsx` — collapsible tool call with a status badge, a
+*Parameters* block and a *Result*/*Error* block.
+
+**Vanilla port:** `Tool` class with `setName`, `setState` (pending / running /
+completed / error), `setInput`, `setOutput`, `setError`.
+
+**40K mapping:** "RITE: <name>"; running badge pulses gold, completed is gold,
+error is crimson; params/result are gold-railed code blocks.
+
+**Verified:** dark and light screenshots (`tests/tool-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`

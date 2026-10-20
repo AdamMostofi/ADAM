@@ -36,6 +36,7 @@
     import { ModelSelector } from "/static/js/components/model-selector.js";
     import { Reasoning } from "/static/js/components/reasoning.js";
     import { Sources } from "/static/js/components/sources.js";
+    import { Tool } from "/static/js/components/tool.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -74,7 +75,14 @@
           const src = new Sources({ label: "Archived data", defaultOpen: true });
           src.add({ title: "cogitator status log", description: "confidence 0.98" });
           src.add({ title: "machine spirit catechism", description: "confidence 0.91" });
-          m.setContent([r.el, src.el]);
+          const tool = new Tool({
+            name: "rite: recall_vault",
+            state: "output-available",
+            input: { query: "cogitator status", limit: 3 },
+            output: { vaults: 3, top: "cogitator status log" },
+            defaultOpen: true,
+          });
+          m.setContent([r.el, src.el, tool.el]);
           m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
           m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
         } else {

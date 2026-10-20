@@ -659,6 +659,115 @@
 }
 .adam-source-desc { font-size: 0.68rem; color: var(--ash); font-weight: 300; }
 
+/* ---------- Phase 10: Tool ---------- */
+.adam-tool {
+  display: grid;
+  grid-template-rows: auto 0fr;
+  transition: grid-template-rows 0.2s ease;
+  margin-top: var(--space-2);
+  border: 1px solid var(--iron);
+  border-radius: var(--radius-md);
+  background: var(--void-2);
+  overflow: hidden;
+}
+.adam-tool[data-open="true"] { grid-template-rows: auto 1fr; }
+
+.adam-tool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--bone);
+  font-family: var(--font-ui);
+  text-align: left;
+}
+.adam-tool-header > svg:first-child {
+  width: 15px;
+  height: 15px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.adam-tool-name {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.adam-tool-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--ash);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.adam-tool[data-open="true"] .adam-tool-chevron { transform: rotate(180deg); }
+
+.adam-tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--iron);
+  background: var(--steel);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.adam-tool-badge[data-tone="running"] { color: var(--gold); border-color: var(--gold); animation: adam-pulse 1.4s ease-in-out infinite; }
+.adam-tool-badge[data-tone="completed"] { color: var(--gold-bright); border-color: var(--gold-bright); }
+.adam-tool-badge[data-tone="error"] { color: var(--crimson); border-color: var(--crimson); }
+
+.adam-tool-content {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-4);
+}
+.adam-tool-section h4 {
+  font-family: var(--font-ui);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ash);
+  margin-bottom: var(--space-2);
+}
+.adam-tool-pre {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--iron);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius-sm);
+  background: var(--steel);
+  color: var(--bone-2);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.adam-tool-section.is-error .adam-tool-pre {
+  border-left-color: var(--crimson);
+  color: var(--crimson);
+}
+
+@keyframes adam-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+
 
 
 
