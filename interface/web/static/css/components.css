@@ -767,6 +767,79 @@
   50% { opacity: 0.45; }
 }
 
+/* ---------- Phase 11: Task ---------- */
+.adam-task {
+  display: grid;
+  grid-template-rows: auto 0fr;
+  transition: grid-template-rows 0.2s ease;
+  margin-top: var(--space-2);
+  border-left: 2px solid var(--iron);
+}
+.adam-task[data-open="true"] { grid-template-rows: auto 1fr; }
+
+.adam-task-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ash);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.adam-task-trigger:hover { background: var(--steel); color: var(--bone); }
+.adam-task-trigger > svg:first-child { width: 14px; height: 14px; color: var(--gold); }
+.adam-task-title { flex: 1; }
+.adam-task-count { font-size: 0.68rem; color: var(--gold); }
+.adam-task-chevron {
+  width: 14px; height: 14px; transition: transform 0.2s ease;
+}
+.adam-task[data-open="true"] .adam-task-chevron { transform: rotate(180deg); }
+
+.adam-task-content {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-2) var(--space-3);
+}
+
+.adam-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  color: var(--bone-2);
+}
+.adam-task-item-marker {
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--iron);
+  border-radius: 2px;
+  background: transparent;
+}
+.adam-task-item[data-status="done"] { color: var(--bone); }
+.adam-task-item[data-status="done"] .adam-task-item-marker {
+  background: var(--gold);
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 2px var(--void-2);
+}
+.adam-task-item[data-status="running"] .adam-task-item-marker {
+  border-color: var(--gold);
+  animation: adam-pulse 1.4s ease-in-out infinite;
+}
+.adam-task-item-title { overflow-wrap: anywhere; }
+
+
 
 
 

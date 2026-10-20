@@ -37,6 +37,7 @@
     import { Reasoning } from "/static/js/components/reasoning.js";
     import { Sources } from "/static/js/components/sources.js";
     import { Tool } from "/static/js/components/tool.js";
+    import { Task } from "/static/js/components/task.js";
 
     const conv = new Conversation({
       emptyTitle: "The vox is silent",
@@ -82,7 +83,11 @@
             output: { vaults: 3, top: "cogitator status log" },
             defaultOpen: true,
           });
-          m.setContent([r.el, src.el, tool.el]);
+          const task = new Task({ title: "Directives", defaultOpen: true });
+          task.add({ title: "Extract pattern from teaching", status: "done" });
+          task.add({ title: "Compile macro-rule", status: "done" });
+          task.add({ title: "Link across domains", status: "running" });
+          m.setContent([r.el, src.el, tool.el, task.el]);
           m.addAction({ icon: "copy", label: "Copy", tooltip: "Copy to data-slate" });
           m.addAction({ icon: "retry", label: "Retry", tooltip: "Regenerate response" });
         } else {

@@ -345,6 +345,26 @@ error is crimson; params/result are gold-railed code blocks.
 
 ---
 
+## Phase 11 — Task
+
+**Files:** `interface/web/static/js/components/task.js`,
+`interface/web/static/css/components.css`,
+`interface/web/tests/conversation.html`
+
+**Source:** `task.tsx` — collapsible step list (`TaskTrigger` / `TaskContent` /
+`TaskItem`).
+
+**Vanilla port:** `Task` class with `add({ title, status })` and
+`setStatus(index, status)`. For ADAM these are the learning directives
+(extract pattern → compile rule → link domains).
+
+**40K mapping:** trigger "DIRECTIVES" with a `done/total` counter; completed
+steps get a gold tick, running steps pulse, pending steps stay hollow.
+
+**Verified:** dark and light screenshots (`tests/task-*.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`
