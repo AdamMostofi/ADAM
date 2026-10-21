@@ -10,6 +10,7 @@ adam_vectors.lance/
 adam_memory.db
 skills/
 models/
+interface/web/tests/shots/
 *.save/
 .pytest_cache/
 .hypothesis/

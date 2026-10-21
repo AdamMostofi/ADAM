@@ -151,7 +151,7 @@ appears only when not at the bottom; transcript export as Markdown.
 **40K mapping:** empty state "THE VOX IS SILENT"; download = export transcript.
 
 **Verified:** screenshots in both dark and light themes
-(`tests/conversation-*.png`).
+(`interface/web/tests/shots/conversation-*.png`).
 
 **Bug fixed:** scroll button initially visible at the bottom — added a
 `requestAnimationFrame` sync after construction.
@@ -175,7 +175,7 @@ stencil label.
 **40K mapping:** user = "VOX TRANSMISSION", assistant = "MACHINE SPIRIT";
 actions are ghost icon buttons (copy, retry, share, like, dislike).
 
-**Verified:** screenshots in dark and light themes (`tests/message-*.png`).
+**Verified:** screenshots in dark and light themes (`interface/web/tests/shots/message-*.png`).
 
 ---
 
@@ -200,7 +200,7 @@ markers, gold blockquotes.
 **Why vendored instead of CDN:** keeps the UI offline-safe (USB deployment goal)
 and version-pinned.
 
-**Verified:** dark and light screenshots (`tests/markdown-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/markdown-*.png`).
 
 ---
 
@@ -221,7 +221,7 @@ answers.
 **40K mapping:** field is a steel vox channel with a gold rail; submit is a
 gold arrow. Placeholder "Open a vox channel…".
 
-**Verified:** dark and light screenshots (`tests/prompt-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/prompt-*.png`).
 
 ---
 
@@ -241,7 +241,7 @@ gold arrow. Placeholder "Open a vox channel…".
 **40K mapping:** shimmer reads "The Machine Spirit deliberates"; loader "The
 cogitator hums…".
 
-**Verified:** dark and light screenshots (`tests/shimmer-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/shimmer-*.png`).
 
 ---
 
@@ -260,7 +260,7 @@ Clicking a chip emits its text (wired to pre-fill the vox channel in the demo).
 **40K mapping:** label "SANCTIONED INQUIRIES"; chips are steel pills with a gold
 hover.
 
-**Verified:** dark and light screenshots (`tests/suggestion-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/suggestion-*.png`).
 
 ---
 
@@ -278,7 +278,7 @@ model marketplace.
 
 **40K mapping:** label "COGITATOR MODE"; active option is gold-rimmed.
 
-**Verified:** dark and light screenshots (`tests/model-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/model-*.png`).
 
 ---
 
@@ -298,7 +298,7 @@ technique (smooth, no JS height math).
 **40K mapping:** trigger "MACHINE DELIBERATION" with a spinning cog; content is
 a mono kernel trace / EQ appraisal.
 
-**Verified:** collapsed + open screenshots (`tests/reasoning-*.png`).
+**Verified:** collapsed + open screenshots (`interface/web/tests/shots/reasoning-*.png`).
 
 ---
 
@@ -322,7 +322,7 @@ gold rail and a vault icon.
 - `Sources` lost its `defaultOpen` when constructed empty (sources added after
   init) — `add()` now restores the default-open state.
 
-**Verified:** dark and light screenshots (`tests/sources-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/sources-*.png`).
 
 ---
 
@@ -341,7 +341,7 @@ completed / error), `setInput`, `setOutput`, `setError`.
 **40K mapping:** "RITE: <name>"; running badge pulses gold, completed is gold,
 error is crimson; params/result are gold-railed code blocks.
 
-**Verified:** dark and light screenshots (`tests/tool-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/tool-*.png`).
 
 ---
 
@@ -361,7 +361,7 @@ error is crimson; params/result are gold-railed code blocks.
 **40K mapping:** trigger "DIRECTIVES" with a `done/total` counter; completed
 steps get a gold tick, running steps pulse, pending steps stay hollow.
 
-**Verified:** dark and light screenshots (`tests/task-*.png`).
+**Verified:** dark and light screenshots (`interface/web/tests/shots/task-*.png`).
 
 ---
 
@@ -381,7 +381,7 @@ Pure CSS/JS — no network, no RAM cost. Honours `prefers-reduced-motion`.
 **40K mapping:** gold blinking caret; words fade in as the Machine Spirit
 "speaks".
 
-**Verified:** screenshots captured mid-reveal (`tests/reveal-early.png`) and
+**Verified:** screenshots captured mid-reveal (`interface/web/tests/shots/reveal-early.png`) and
 after completion.
 
 ---
@@ -416,7 +416,7 @@ after completion.
 
 **Verified:** Playwright drives the app with a mocked `/api/chat`; a sent
 message renders a user bubble, a markdown assistant reply (h2 + strong) and
-copy/retry actions (`tests/app-chat.png`).
+copy/retry actions (`interface/web/tests/shots/app-chat.png`).
 
 ---
 
