@@ -74,7 +74,12 @@ Scherer's Component Process Model. Primary/secondary appraisal, response adjustm
 ![EQ Subsystem](docs/diagrams/eq.svg)
 
 ### V0.6 — Interface
-CLI (rich REPL) + Web UI (Flask, 5 tabs: Chat, Knowledge Graph, Memory, Skills, Settings). vis.js graph visualization.
+CLI (rich REPL) + Web UI (Flask). The web UI was **redesigned** with a
+Warhammer 40K *Imperium of Man* aesthetic — vanilla HTML/CSS/JS components
+ported from Vercel's AI Elements (chat, message, prompt input, suggestions,
+reasoning, sources, tool, task), OKLCH design tokens, light + dark themes, and
+a fake word-by-word streaming reveal. Zero RAM increase, no build step.
+
 ![Interface](docs/diagrams/interface.svg)
 
 ### V0.7 — Ear/Mouth
