@@ -37,7 +37,7 @@ export class PromptInput {
 
     this.submit = el("button", {
       class: "adam-prompt-submit",
-      type: "button",
+      type: "submit",
       "aria-label": "Transmit",
       title: "Transmit (Enter)",
       html: SEND,

@@ -78,9 +78,10 @@ export class Conversation {
   }
 
   addMessage(role, contentNode) {
-    const message = el("div", { class: `adam-message is-${role}` });
+    const message = contentNode?.classList?.contains("adam-message")
+      ? contentNode
+      : el("div", { class: `adam-message is-${role}` }, [contentNode]);
     message.dataset.role = role;
-    message.append(contentNode);
     this.content.append(message);
     this.messages.push({ role, node: message });
     this.emptyState.classList.add("hidden");

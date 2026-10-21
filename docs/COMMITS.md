@@ -386,6 +386,40 @@ after completion.
 
 ---
 
+## Phase 13 — Integration (app shell + Flask wiring)
+
+**Files:** `interface/web/static/js/api.js`,
+`interface/web/static/js/app.js`,
+`interface/web/static/js/lib/vis-network.min.js`,
+`interface/web/static/css/app.css`,
+`interface/web/templates/index.html`,
+`interface/web/static/js/components/{conversation,prompt-input}.js`
+
+**Change:**
+- `api.js` — typed wrapper over the Flask endpoints.
+- `app.js` — theme toggle (persisted), tab switching, chat wiring
+  (conversation + prompt + suggestions + mode + reveal + thinking indicator),
+  plus Data-Vaults, Skills, Rites (stats/save/inscribe) and Cognition (graph)
+  loaders.
+- `index.html` — new shell: PRIMARCH ADAM header, 5 tabs, chat pane.
+- `app.css` — header, tabs, pane, button and input styles.
+- Vendored `vis-network.min.js` (offline-safe graph).
+- Removed the old generic `static/app.js` + `static/style.css`.
+
+**40K mapping:** tabs are VOX / COGNITION / DATA-VAULTS / SKILLS / RITES.
+
+**Bugs fixed while wiring:**
+- `PromptInput` submit button was `type="button"` (never submitted the form) —
+  now `type="submit"`.
+- `Conversation.addMessage` wrapped content in a second `.adam-message`,
+  double-counting turns — it now reuses the `Message` element directly.
+
+**Verified:** Playwright drives the app with a mocked `/api/chat`; a sent
+message renders a user bubble, a markdown assistant reply (h2 + strong) and
+copy/retry actions (`tests/app-chat.png`).
+
+---
+
 ## Commit 3 — Fix Mouth model path + prompt format
 
 **Files:** `interface/mouth.py`, `tests/integration/test_ear_mouth.py`

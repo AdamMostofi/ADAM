@@ -1,72 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADAM — First Of It's Kind</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRIMARCH ADAM</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-    <header>
-        <h1>ADAM</h1>
-        <span class="subtitle">First Of It's Kind</span>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-title">Primarch Adam</span>
+        <span class="brand-sub">First Of It's Kind</span>
+      </div>
+      <div class="header-right">
+        <span class="header-status" id="header-status">Machine Spirit · online</span>
+        <button id="theme-toggle" class="header-btn" type="button" title="Toggle theme" aria-label="Toggle theme">☾</button>
+      </div>
     </header>
 
-    <nav class="tabs">
-        <button class="tab active" data-tab="chat">Chat</button>
-        <button class="tab" data-tab="graph">Knowledge Graph</button>
-        <button class="tab" data-tab="memory">Memory</button>
-        <button class="tab" data-tab="skills">Skills</button>
-        <button class="tab" data-tab="settings">Settings</button>
-    </nav>
+    <main class="main">
+      <nav class="tabs" aria-label="Sections">
+        <button class="tab active" data-tab="chat" type="button">Vox</button>
+        <button class="tab" data-tab="graph" type="button">Cognition</button>
+        <button class="tab" data-tab="memory" type="button">Data-Vaults</button>
+        <button class="tab" data-tab="skills" type="button">Skills</button>
+        <button class="tab" data-tab="settings" type="button">Rites</button>
+      </nav>
 
-    <main>
-        <section id="tab-chat" class="tab-content active">
-            <div id="chat-messages"></div>
-            <div class="chat-input-row">
-                <select id="mode-toggle">
-                    <option value="full">Full Mode</option>
-                    <option value="simple">Simple Mode</option>
-                </select>
-                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
-                <button id="send-btn">Send</button>
-            </div>
-            <div id="loading" class="hidden">
-                <div class="spinner"></div>
-                <span>ADAM is thinking...</span>
-            </div>
-        </section>
+      <section id="tab-chat" class="tab-content active">
+        <div id="chat-pane" class="chat-pane"></div>
+      </section>
 
-        <section id="tab-graph" class="tab-content">
-            <div id="graph-container"></div>
-        </section>
+      <section id="tab-graph" class="tab-content">
+        <div class="pane-head"><h2>Knowledge Graph</h2><button id="graph-refresh" class="ghost-btn" type="button">Refresh</button></div>
+        <div id="graph-container" class="graph-container"></div>
+      </section>
 
-        <section id="tab-memory" class="tab-content">
-            <div class="memory-controls">
-                <input type="text" id="memory-search" placeholder="Search memories...">
-                <button id="memory-refresh">Refresh</button>
-            </div>
-            <div id="memory-list"></div>
-        </section>
+      <section id="tab-memory" class="tab-content">
+        <div class="pane-head">
+          <h2>Data-Vaults</h2>
+          <div class="pane-controls">
+            <input id="memory-search" class="ghost-input" type="text" placeholder="Search the vaults…" aria-label="Search memories">
+            <button id="memory-refresh" class="ghost-btn" type="button">Refresh</button>
+          </div>
+        </div>
+        <div id="memory-list" class="scroll-list"></div>
+      </section>
 
-        <section id="tab-skills" class="tab-content">
-            <div id="skills-list"></div>
-        </section>
+      <section id="tab-skills" class="tab-content">
+        <div class="pane-head"><h2>Skills</h2><button id="skills-refresh" class="ghost-btn" type="button">Refresh</button></div>
+        <div id="skills-list" class="scroll-list"></div>
+      </section>
 
-        <section id="tab-settings" class="tab-content">
-            <div id="stats-panel"></div>
-            <button id="save-btn">Save State</button>
-            <button id="add-fact-btn">Add Fact</button>
-            <div id="add-fact-form" class="hidden">
-                <input type="text" id="fact-subject" placeholder="Subject">
-                <input type="text" id="fact-predicate" placeholder="Predicate">
-                <input type="text" id="fact-object" placeholder="Object">
-                <button id="fact-submit">Submit</button>
-            </div>
-        </section>
+      <section id="tab-settings" class="tab-content">
+        <div class="pane-head"><h2>Rites</h2></div>
+        <div id="stats-panel" class="stats-panel"></div>
+        <div class="settings-actions">
+          <button id="save-btn" class="gold-btn" type="button">Save State</button>
+          <button id="add-fact-btn" class="ghost-btn" type="button">Inscribe Fact</button>
+        </div>
+        <div id="add-fact-form" class="add-fact-form hidden">
+          <input id="fact-subject" class="ghost-input" type="text" placeholder="Subject" aria-label="Subject">
+          <input id="fact-predicate" class="ghost-input" type="text" placeholder="Predicate" aria-label="Predicate">
+          <input id="fact-object" class="ghost-input" type="text" placeholder="Object" aria-label="Object">
+          <button id="fact-submit" class="gold-btn" type="button">Inscribe</button>
+        </div>
+      </section>
     </main>
+  </div>
 
-    <script src="/static/app.js"></script>
+  <script src="/static/js/lib/marked.min.js"></script>
+  <script src="/static/js/lib/vis-network.min.js"></script>
+  <script type="module" src="/static/js/app.js"></script>
 </body>
 </html>
