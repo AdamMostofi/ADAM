@@ -152,5 +152,18 @@ def test_flask_save():
 
 def test_flask_static():
     with app.test_client() as client:
-        res = client.get("/static/app.js")
+        res = client.get("/static/css/tokens.css")
         assert res.status_code == 200
+
+
+def test_flask_static_js():
+    with app.test_client() as client:
+        res = client.get("/static/js/app.js")
+        assert res.status_code == 200
+
+
+def test_flask_index_has_new_shell():
+    with app.test_client() as client:
+        res = client.get("/")
+        assert res.status_code == 200
+        assert b"Primarch Adam" in res.data
