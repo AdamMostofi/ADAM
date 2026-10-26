@@ -11,6 +11,7 @@ from kernel.engine import InferenceEngine
 from memory.exact_store import ExactStore
 from memory.semantic_index import SemanticIndex
 from memory.connection_graph import ConnectionGraph
+from memory.attention import AttentionBank
 
 
 def _embedding_similarity(semantic_index: SemanticIndex, text_a: str, text_b: str) -> float:
@@ -37,6 +38,7 @@ class MemorySystem:
         self.semantic = SemanticIndex(lance_path, embedding_model)
         self.graph = ConnectionGraph()
         self.engine = InferenceEngine()
+        self.attention = AttentionBank()
         self.lock = threading.RLock()
 
     def store(self, fact: Fact) -> int:
@@ -61,19 +63,21 @@ class MemorySystem:
     def recall(self, query: str, limit: int = 10) -> list[Fact]:
         with self.lock:
             results = self.exact.search_text(query)
-            if results:
-                return results
-            semantic_results = self.semantic.search(query, limit)
-            facts = []
-            for r in semantic_results:
-                try:
-                    fact_id = int(r["id"])
-                except (ValueError, KeyError):
-                    continue
-                fact = self.exact.get(fact_id)
-                if fact:
-                    facts.append(fact)
-            return facts
+            if not results:
+                semantic_results = self.semantic.search(query, limit)
+                results = []
+                for r in semantic_results:
+                    try:
+                        fact_id = int(r["id"])
+                    except (ValueError, KeyError):
+                        continue
+                    fact = self.exact.get(fact_id)
+                    if fact:
+                        results.append(fact)
+            self.attention.decay()
+            for fact in results:
+                self.attention.stimulate(str(fact))
+            return self.attention.rank(results)
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
         return self.semantic.search(query, limit)

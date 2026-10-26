@@ -103,6 +103,7 @@ Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (1
 | CLI | rich |
 | Web UI | Flask + custom HTML/JS/CSS |
 | Graph viz | vis.js |
+| Reasoning | forward chaining + goal-directed proof |
 | Models | dataclasses, Pydantic |
 | Testing | pytest, hypothesis |
 
@@ -118,12 +119,14 @@ ADAM/
 │   ├── graph.py            # KnowledgeGraph (MultiDiGraph)
 │   ├── contradictions.py   # ContradictionResolver
 │   ├── unification.py      # Pattern matching
+│   ├── prove.py            # Goal-directed backward chaining
 │   └── facts.py            # Fact, Belief dataclasses
 ├── memory/                 # Memory System (V0.3)
 │   ├── system.py           # MemorySystem API
 │   ├── exact_store.py      # SQLite + JSON
 │   ├── semantic_index.py   # LanceDB embeddings
 │   ├── connection_graph.py # NetworkX auto-connection
+│   ├── attention.py        # ECAN-style STI/LTI attention
 │   └── persistence.py      # save/load
 ├── learning/               # Continuous Learning (V0.4)
 │   ├── engine.py           # LearningEngine API
@@ -149,8 +152,9 @@ ADAM/
 │       └── templates/
 ├── docs/
 │   ├── diagrams/           # Architecture diagrams (HTML+SVG)
-│   └── design/             # Design documents
-├── tests/                  # 310 tests
+│   ├── design/             # Design documents
+│   └── HYPERON_ANALYSIS.md # OpenCog Hyperon comparison + adoption plan
+├── tests/                  # 322 tests
 ├── install.sh              # One-command installation
 ├── requirements.txt
 └── LICENSE                 # MIT

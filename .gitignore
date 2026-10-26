@@ -12,6 +12,7 @@ skills/
 models/
 interface/web/tests/shots/
 *.save/
+adam_save/
 .pytest_cache/
 .hypothesis/
 *.log

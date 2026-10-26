@@ -261,3 +261,16 @@ class InferenceEngine:
     def get_trace(self) -> list[str]:
         with self.lock:
             return list(self.trace)
+
+    def prove(
+        self,
+        subject: str,
+        predicate: str,
+        object: str,
+        max_depth: int = 6,
+    ) -> list[str] | None:
+        """Goal-directed backward search; does not mutate beliefs."""
+        from kernel.prove import prove
+
+        with self.lock:
+            return prove(self, subject, predicate, object, max_depth)
