@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" role="img" aria-labelledby="eq-title eq-desc">
+  <title id="eq-title">ADAM EQ appraisal process</title>
+  <desc id="eq-desc">An input is appraised for novelty, relevance, congruence, coping, and agency, producing a tone and goal status that adjust response parameters and update the baseline.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8a877e"/>
+    </marker>
+    <marker id="arrow-brass" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#d4a94a"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="620" fill="#0b0d10"/>
+  <rect x="20" y="20" width="960" height="580" rx="6" fill="#101318" stroke="#2c333e"/>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace">
+    <text x="44" y="52" font-size="9" letter-spacing="2.2" fill="#d4a94a">ADAM / EQ</text>
+    <text x="956" y="52" font-size="9" text-anchor="end" fill="#8a877e">APPRAISAL → PARAMS</text>
+  </g>
+  <text x="44" y="88" font-family="'Cinzel', 'Times New Roman', serif" font-size="28" fill="#e8e6df">Affect before the answer</text>
+  <text x="44" y="112" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="10" fill="#8a877e">The same message is scored for what it means and what the user can do about it.</text>
+  <line x1="44" y1="132" x2="956" y2="132" stroke="#2c333e"/>
+
+  <rect x="604" y="160" width="344" height="50" rx="4" fill="#151920" stroke="#5f6570" stroke-dasharray="4,3"/>
+  <text x="776" y="180" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#b8b4a8">MANUAL OVERRIDE</text>
+  <text x="776" y="196" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">explicit state replaces appraisal</text>
+  <line x1="684" y1="210" x2="684" y2="246" stroke="#8a877e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+  <g font-family="'Oswald', 'Arial Narrow', sans-serif">
+    <rect x="52" y="250" width="160" height="92" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="68" y="276" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#5f6570">01</text>
+    <text x="132" y="292" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">INPUT</text>
+    <text x="132" y="312" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">message + context</text>
+
+    <rect x="236" y="250" width="160" height="92" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="252" y="276" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#5f6570">02</text>
+    <text x="316" y="292" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">PRIMARY</text>
+    <text x="316" y="312" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">novelty · relevance</text>
+    <text x="316" y="326" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">congruence</text>
+
+    <rect x="420" y="250" width="160" height="92" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="436" y="276" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#5f6570">03</text>
+    <text x="500" y="292" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">SECONDARY</text>
+    <text x="500" y="312" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">coping · agency</text>
+
+    <rect x="604" y="250" width="160" height="92" rx="4" fill="#1a1710" stroke="#d4a94a" stroke-width="1.2"/>
+    <text x="620" y="276" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#d4a94a">04</text>
+    <text x="684" y="292" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">TONE + GOAL</text>
+    <text x="684" y="312" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">valence · status</text>
+
+    <rect x="788" y="250" width="160" height="92" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="804" y="276" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#5f6570">05</text>
+    <text x="868" y="292" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">PARAMS</text>
+    <text x="868" y="312" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">warmth · depth</text>
+    <text x="868" y="326" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">caution</text>
+  </g>
+
+  <g fill="none" stroke="#8a877e" stroke-width="1.2">
+    <line x1="212" y1="296" x2="232" y2="296" marker-end="url(#arrow)"/>
+    <line x1="396" y1="296" x2="416" y2="296" marker-end="url(#arrow)"/>
+    <line x1="580" y1="296" x2="600" y2="296" marker-end="url(#arrow)"/>
+    <line x1="764" y1="296" x2="784" y2="296" marker-end="url(#arrow)"/>
+    <path d="M 868 342 V 472 H 356" marker-end="url(#arrow)"/>
+    <path d="M 202 440 V 390 H 132 V 346" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  </g>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8">
+    <rect x="588" y="452" width="96" height="14" rx="2" fill="#101318"/>
+    <text x="636" y="462" text-anchor="middle" fill="#8a877e">update baseline</text>
+    <rect x="144" y="370" width="72" height="14" rx="2" fill="#101318"/>
+    <text x="180" y="380" text-anchor="middle" fill="#8a877e">next turn</text>
+  </g>
+
+  <rect x="52" y="440" width="300" height="64" rx="4" fill="#151920" stroke="#2c333e"/>
+  <text x="68" y="464" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#5f6570">STATE</text>
+  <text x="202" y="482" text-anchor="middle" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="14" font-weight="600" fill="#e8e6df">BASELINE</text>
+  <text x="202" y="498" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">rolling state · mood shift</text>
+
+  <line x1="44" y1="540" x2="956" y2="540" stroke="#2c333e"/>
+  <text x="44" y="562" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">Appraisal is heuristic and auditable; manual override can replace it for a turn.</text>
+  <text x="956" y="562" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">learning/eq/appraiser.py</text>
+</svg>

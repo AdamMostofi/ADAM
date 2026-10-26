@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" role="img" aria-labelledby="mem-title mem-desc">
+  <title id="mem-title">ADAM memory layers</title>
+  <desc id="mem-desc">Four memory layers: exact SQLite facts, semantic LanceDB embeddings, a NetworkX graph, and attention ranking.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8a877e"/>
+    </marker>
+    <marker id="arrow-brass" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#d4a94a"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="620" fill="#0b0d10"/>
+  <rect x="20" y="20" width="960" height="580" rx="6" fill="#101318" stroke="#2c333e"/>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace">
+    <text x="44" y="52" font-size="9" letter-spacing="2.2" fill="#d4a94a">ADAM / MEMORY</text>
+    <text x="956" y="52" font-size="9" text-anchor="end" fill="#8a877e">4 LAYERS</text>
+  </g>
+  <text x="44" y="88" font-family="'Cinzel', 'Times New Roman', serif" font-size="28" fill="#e8e6df">Three stores, one recall path</text>
+  <text x="44" y="112" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="10" fill="#8a877e">Facts land in three stores; recall starts exact, falls back to semantic, then re-ranks.</text>
+  <line x1="44" y1="132" x2="956" y2="132" stroke="#2c333e"/>
+
+  <g font-family="'Oswald', 'Arial Narrow', sans-serif">
+    <rect x="60" y="172" width="820" height="72" rx="4" fill="#1a1710" stroke="#d4a94a" stroke-width="1.2"/>
+    <rect x="60" y="172" width="4" height="72" fill="#d4a94a"/>
+    <text x="82" y="213" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#d4a94a">L4</text>
+    <text x="132" y="206" font-size="16" font-weight="600" fill="#e8e6df">ATTENTION</text>
+    <text x="132" y="224" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">current focus</text>
+    <text x="860" y="213" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">STI / LTI rank · decay</text>
+
+    <rect x="60" y="258" width="820" height="72" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="82" y="299" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">L3</text>
+    <text x="132" y="292" font-size="16" font-weight="600" fill="#e8e6df">GRAPH</text>
+    <text x="132" y="310" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">relationships</text>
+    <text x="860" y="299" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">NetworkX · auto-connections</text>
+
+    <rect x="60" y="344" width="820" height="72" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="82" y="385" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">L2</text>
+    <text x="132" y="378" font-size="16" font-weight="600" fill="#e8e6df">SEMANTIC</text>
+    <text x="132" y="396" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">meaning</text>
+    <text x="860" y="385" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">LanceDB · fastembed embeddings</text>
+
+    <rect x="60" y="430" width="820" height="72" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="82" y="471" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">L1</text>
+    <text x="132" y="464" font-size="16" font-weight="600" fill="#e8e6df">EXACT</text>
+    <text x="132" y="482" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">verbatim</text>
+    <text x="860" y="471" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">SQLite · facts + proof chains</text>
+  </g>
+
+  <g stroke-width="1" fill="none">
+    <line x1="916" y1="480" x2="916" y2="188" stroke="#d4a94a" marker-end="url(#arrow-brass)"/>
+    <line x1="936" y1="188" x2="936" y2="480" stroke="#2c333e" marker-end="url(#arrow)"/>
+  </g>
+  <text x="916" y="180" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#d4a94a">RECALL</text>
+  <text x="936" y="498" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="7" fill="#5f6570">WRITE</text>
+
+  <line x1="44" y1="530" x2="956" y2="530" stroke="#2c333e"/>
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">
+    <text x="44" y="552" fill="#d4a94a">RECALL ORDER</text>
+    <text x="152" y="552">exact hit → stop</text>
+    <text x="290" y="552">miss → semantic</text>
+    <text x="430" y="552">attention re-ranks</text>
+    <text x="560" y="552">graph supplies context</text>
+    <text x="956" y="552" text-anchor="end" fill="#5f6570">write path touches all three stores</text>
+  </g>
+  <text x="44" y="580" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">Attention is in-memory and resets on restart; persistence and a global STI budget are planned next.</text>
+</svg>

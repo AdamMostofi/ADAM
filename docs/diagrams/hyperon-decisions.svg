@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" role="img" aria-labelledby="kan-title kan-desc">
+  <title id="kan-title">Hyperon adoption decisions</title>
+  <desc id="kan-desc">A four-column decision board: six mechanisms adopted, two next, three later, and six skipped from the OpenCog Hyperon analysis.</desc>
+
+  <rect width="1100" height="620" fill="#0b0d10"/>
+  <rect x="20" y="20" width="1060" height="580" rx="6" fill="#101318" stroke="#2c333e"/>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace">
+    <text x="44" y="52" font-size="9" letter-spacing="2.2" fill="#d4a94a">ADAM / HYPERON</text>
+    <text x="1056" y="52" font-size="9" text-anchor="end" fill="#8a877e">DECISION BOARD</text>
+  </g>
+  <text x="44" y="88" font-family="'Cinzel', 'Times New Roman', serif" font-size="28" fill="#e8e6df">Borrow the ideas, not the runtime</text>
+  <text x="44" y="112" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="10" fill="#8a877e">Six mechanisms adopted; the MeTTa runtime and distributed Atomspace stay out.</text>
+  <line x1="44" y1="132" x2="1056" y2="132" stroke="#2c333e"/>
+
+  <g font-family="'Oswald', 'Arial Narrow', sans-serif">
+    <rect x="22" y="150" width="240" height="400" rx="4" fill="#151920"/>
+    <rect x="294" y="150" width="240" height="400" rx="4" fill="#151920"/>
+    <rect x="566" y="150" width="240" height="400" rx="4" fill="#151920"/>
+    <rect x="838" y="150" width="240" height="400" rx="4" fill="#151920"/>
+  </g>
+
+  <g font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">
+    <text x="38" y="174">ADOPTED</text>
+    <text x="310" y="174" fill="#d4a94a">NEXT</text>
+    <text x="582" y="174">LATER</text>
+    <text x="854" y="174">SKIPPED</text>
+  </g>
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8">
+    <rect x="206" y="160" width="40" height="18" rx="2" fill="#101318" stroke="#2c333e"/>
+    <text x="226" y="172" text-anchor="middle" fill="#b8b4a8">6</text>
+    <rect x="478" y="160" width="40" height="18" rx="2" fill="#101318" stroke="#d4a94a"/>
+    <text x="498" y="172" text-anchor="middle" fill="#d4a94a">2</text>
+    <rect x="750" y="160" width="40" height="18" rx="2" fill="#101318" stroke="#2c333e"/>
+    <text x="770" y="172" text-anchor="middle" fill="#b8b4a8">3</text>
+    <rect x="1022" y="160" width="40" height="18" rx="2" fill="#101318" stroke="#2c333e"/>
+    <text x="1042" y="172" text-anchor="middle" fill="#b8b4a8">6</text>
+  </g>
+  <g stroke="#2c333e">
+    <line x1="38" y1="190" x2="246" y2="190"/>
+    <line x1="310" y1="190" x2="518" y2="190"/>
+    <line x1="582" y1="190" x2="790" y2="190"/>
+    <line x1="854" y1="190" x2="1062" y2="190"/>
+  </g>
+
+  <g font-family="'Oswald', 'Arial Narrow', sans-serif">
+    <rect x="38" y="210" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="54" y="232" font-size="11" font-weight="600" fill="#e8e6df">Attention (ECAN)</text>
+    <text x="54" y="250" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">STI / LTI · decay · rank</text>
+
+    <rect x="38" y="286" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="54" y="308" font-size="11" font-weight="600" fill="#e8e6df">Goal-directed proof</text>
+    <text x="54" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">backward chaining</text>
+
+    <rect x="38" y="362" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="54" y="384" font-size="11" font-weight="600" fill="#e8e6df">Rules + pattern queries</text>
+    <text x="54" y="402" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">declarative · ?variables</text>
+
+    <rect x="38" y="438" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="54" y="460" font-size="11" font-weight="600" fill="#e8e6df">Truth revision + fitness</text>
+    <text x="54" y="478" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">evidence · skill outcomes</text>
+
+    <rect x="310" y="210" width="208" height="64" rx="4" fill="#1a1710" stroke="#d4a94a" stroke-width="1.2"/>
+    <text x="326" y="232" font-size="11" font-weight="600" fill="#e8e6df">Proof step budget</text>
+    <text x="326" y="250" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">report partial answers</text>
+
+    <rect x="310" y="286" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="326" y="308" font-size="11" font-weight="600" fill="#e8e6df">Attention persistence</text>
+    <text x="326" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">metadata · global cap</text>
+
+    <rect x="582" y="210" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="598" y="232" font-size="11" font-weight="600" fill="#e8e6df">n-ary terms</text>
+    <text x="598" y="250" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">needs term-model migration</text>
+
+    <rect x="582" y="286" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="598" y="308" font-size="11" font-weight="600" fill="#e8e6df">Goal register</text>
+    <text x="598" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">multi-turn objectives</text>
+
+    <rect x="582" y="362" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
+    <text x="598" y="384" font-size="11" font-weight="600" fill="#e8e6df">Optional PyO3 path</text>
+    <text x="598" y="402" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">only if profiling demands</text>
+
+    <rect x="854" y="210" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e" stroke-dasharray="4,3"/>
+    <text x="870" y="232" font-size="11" font-weight="600" fill="#b8b4a8">MeTTa interpreter</text>
+    <text x="870" y="250" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">runtime outweighs benefit</text>
+
+    <rect x="854" y="286" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e" stroke-dasharray="4,3"/>
+    <text x="870" y="308" font-size="11" font-weight="600" fill="#b8b4a8">Distributed Atomspace</text>
+    <text x="870" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">single-process system</text>
+
+    <rect x="854" y="362" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e" stroke-dasharray="4,3"/>
+    <text x="870" y="384" font-size="11" font-weight="600" fill="#b8b4a8">MOSES / PRIMUS</text>
+    <text x="870" y="402" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">no oracle · under-specified</text>
+
+    <rect x="854" y="438" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e" stroke-dasharray="4,3"/>
+    <text x="870" y="460" font-size="11" font-weight="600" fill="#b8b4a8">Rust / replace SQLite</text>
+    <text x="870" y="478" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">not the bottleneck · durability wins</text>
+  </g>
+
+  <text x="38" y="530" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">grouped by mechanism</text>
+  <text x="582" y="530" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">blocked on structural migration</text>
+  <text x="854" y="530" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">paired by shared reason</text>
+
+  <line x1="44" y1="566" x2="1056" y2="566" stroke="#2c333e"/>
+  <text x="44" y="586" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">The kernel, SQLite facts, proof chains, Ear/Mouth, EQ, and the zero-build UI are deliberately kept.</text>
+  <text x="1056" y="586" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">docs/HYPERON_ANALYSIS.md</text>
+</svg>

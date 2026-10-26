@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 680" role="img" aria-labelledby="delta-title delta-desc">
+  <title id="delta-title">Web interface architecture delta</title>
+  <desc id="delta-desc">Before and after views of the ADAM web interface, with a ledger of the token, shell, chat, renderer, and theme changes.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8a877e"/>
+    </marker>
+  </defs>
+
+  <rect width="1120" height="680" fill="#0b0d10"/>
+  <rect x="20" y="20" width="1080" height="640" rx="6" fill="#101318" stroke="#2c333e"/>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace">
+    <text x="44" y="52" font-size="9" letter-spacing="2.2" fill="#d4a94a">ADAM / INTERFACE DELTA</text>
+    <text x="1076" y="52" font-size="9" text-anchor="end" fill="#8a877e">V0.6 → V0.8</text>
+  </g>
+  <text x="44" y="88" font-family="'Cinzel', 'Times New Roman', serif" font-size="28" fill="#e8e6df">Same app, rebuilt as a console</text>
+  <text x="44" y="112" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="10" fill="#8a877e">The reasoning core did not move. The interface around it did.</text>
+  <line x1="44" y1="132" x2="1076" y2="132" stroke="#2c333e"/>
+
+  <rect x="44" y="164" width="280" height="448" rx="6" fill="#0b0d10" stroke="#2c333e"/>
+  <rect x="356" y="164" width="380" height="448" rx="6" fill="#151920" stroke="#2c333e"/>
+  <rect x="768" y="164" width="308" height="448" rx="6" fill="#0b0d10" stroke="#2c333e"/>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace">
+    <text x="60" y="190" font-size="9" letter-spacing="1.6" fill="#8a877e">BEFORE / V0.6</text>
+    <text x="60" y="206" font-size="8" fill="#5f6570">single-page shell</text>
+    <text x="372" y="190" font-size="9" letter-spacing="1.6" fill="#d4a94a">CHANGE LEDGER</text>
+    <text x="372" y="206" font-size="8" fill="#8a877e">what actually moved</text>
+    <text x="784" y="190" font-size="9" letter-spacing="1.6" fill="#e8e6df">AFTER / V0.8</text>
+    <text x="784" y="206" font-size="8" fill="#5f6570">console shell</text>
+  </g>
+
+  <g font-family="'Oswald', 'Arial Narrow', sans-serif">
+    <rect x="60" y="220" width="248" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="76" y="242" font-size="12" font-weight="600" fill="#e8e6df">SHELL</text>
+    <text x="76" y="259" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">single page + tabs</text>
+    <rect x="288" y="230" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="295" y="240" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="60" y="294" width="248" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="76" y="316" font-size="12" font-weight="600" fill="#e8e6df">INLINE CHAT</text>
+    <text x="76" y="333" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">wired inside app.js</text>
+    <rect x="288" y="304" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="295" y="314" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="60" y="368" width="248" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="76" y="390" font-size="12" font-weight="600" fill="#e8e6df">MARKDOWN</text>
+    <text x="76" y="407" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">innerHTML, no allowlist</text>
+    <rect x="288" y="378" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="295" y="388" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="60" y="442" width="248" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="76" y="464" font-size="12" font-weight="600" fill="#e8e6df">THEME</text>
+    <text x="76" y="481" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">light / dark toggle</text>
+    <rect x="288" y="452" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="295" y="462" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="784" y="220" width="276" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="800" y="242" font-size="12" font-weight="600" fill="#e8e6df">SHELL</text>
+    <text x="800" y="259" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">rail + hash routes</text>
+    <rect x="1040" y="230" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="1047" y="240" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="784" y="294" width="276" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="800" y="316" font-size="12" font-weight="600" fill="#e8e6df">CHAT</text>
+    <text x="800" y="333" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">reveal / retry / transcript</text>
+    <rect x="1040" y="304" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="1047" y="314" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="784" y="368" width="276" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="800" y="390" font-size="12" font-weight="600" fill="#e8e6df">MARKDOWN</text>
+    <text x="800" y="407" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">allowlist sanitizer</text>
+    <rect x="1040" y="378" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="1047" y="388" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="784" y="442" width="276" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
+    <text x="800" y="464" font-size="12" font-weight="600" fill="#e8e6df">THEME</text>
+    <text x="800" y="481" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">dark + amber high contrast</text>
+    <rect x="1040" y="452" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="1047" y="462" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
+
+    <rect x="784" y="516" width="276" height="52" rx="4" fill="#151920" stroke="#c8ff3d"/>
+    <text x="800" y="538" font-size="12" font-weight="600" fill="#e8e6df">TOKENS</text>
+    <text x="800" y="555" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">sRGB / graphite / brass</text>
+    <rect x="1040" y="526" width="14" height="14" rx="2" fill="#1c212a" stroke="#c8ff3d"/>
+    <text x="1047" y="536" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#c8ff3d">+</text>
+  </g>
+
+  <g stroke="#8a877e" stroke-width="1.2" fill="none">
+    <line x1="184" y1="272" x2="184" y2="290" marker-end="url(#arrow)"/>
+    <line x1="184" y1="346" x2="184" y2="364" marker-end="url(#arrow)"/>
+    <line x1="922" y1="272" x2="922" y2="290" marker-end="url(#arrow)"/>
+    <line x1="922" y1="346" x2="922" y2="364" marker-end="url(#arrow)"/>
+  </g>
+
+  <g font-family="'IBM Plex Mono', 'Courier New', monospace">
+    <rect x="372" y="230" width="42" height="16" rx="2" fill="#1c212a" stroke="#c8ff3d"/>
+    <text x="393" y="241" text-anchor="middle" font-size="7" fill="#c8ff3d">ADDED</text>
+    <text x="426" y="242" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Token system v2</text>
+    <text x="426" y="258" font-size="9" fill="#8a877e">sRGB graphite + brass; amber high contrast</text>
+
+    <rect x="372" y="300" width="52" height="16" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="398" y="311" text-anchor="middle" font-size="7" fill="#d4a94a">CHANGED</text>
+    <text x="436" y="312" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Shell</text>
+    <text x="436" y="328" font-size="9" fill="#8a877e">single page → rail + hash routes</text>
+
+    <rect x="372" y="370" width="52" height="16" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="398" y="381" text-anchor="middle" font-size="7" fill="#d4a94a">CHANGED</text>
+    <text x="436" y="382" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Chat</text>
+    <text x="436" y="398" font-size="9" fill="#8a877e">inline wiring → controller + transcript</text>
+
+    <rect x="372" y="440" width="52" height="16" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="398" y="451" text-anchor="middle" font-size="7" fill="#d4a94a">CHANGED</text>
+    <text x="436" y="452" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Renderer</text>
+    <text x="436" y="468" font-size="9" fill="#8a877e">innerHTML → allowlist sanitizer</text>
+
+    <rect x="372" y="510" width="52" height="16" rx="2" fill="#1c212a" stroke="#d4a94a"/>
+    <text x="398" y="521" text-anchor="middle" font-size="7" fill="#d4a94a">CHANGED</text>
+    <text x="436" y="522" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Theme</text>
+    <text x="436" y="538" font-size="9" fill="#8a877e">light / dark → dark + high contrast</text>
+  </g>
+
+  <line x1="44" y1="636" x2="1076" y2="636" stroke="#2c333e"/>
+  <text x="44" y="656" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">Delta only: the kernel, memory, learning, EQ, and model paths are unchanged.</text>
+  <text x="1076" y="656" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">docs/COMMITS.md</text>
+</svg>
