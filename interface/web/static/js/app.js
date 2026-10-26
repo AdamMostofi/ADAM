@@ -15,23 +15,29 @@ const $ = (sel) => document.querySelector(sel);
 const loaders = {};
 const loaded = new Set();
 
-function setupTheme() {
+function setupContrast() {
   const root = document.documentElement;
-  const stored = localStorage.getItem("adam-theme");
-  const theme = stored ?? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  root.setAttribute("data-theme", theme);
   const btn = $("#theme-toggle");
+  const stored = localStorage.getItem("adam-contrast");
+  const prefersHigh = window.matchMedia?.("(prefers-contrast: more)").matches;
+  const mode = stored ?? (prefersHigh ? "high" : "standard");
+  root.setAttribute("data-contrast", mode);
+
   const sync = () => {
-    const dark = root.getAttribute("data-theme") === "dark";
-    btn.textContent = dark ? "☀" : "☾";
-    btn.setAttribute("aria-pressed", String(dark));
-    btn.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+    const high = root.getAttribute("data-contrast") === "high";
+    btn.textContent = "HC";
+    btn.setAttribute("aria-pressed", String(high));
+    btn.title = high ? "Use standard contrast" : "Use high contrast";
+    btn.setAttribute("aria-label", btn.title);
+  };
+  const apply = (next) => {
+    root.setAttribute("data-contrast", next);
+    localStorage.setItem("adam-contrast", next);
+    sync();
+    window.dispatchEvent(new Event("contrastchange"));
   };
   btn.addEventListener("click", () => {
-    const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    root.setAttribute("data-theme", next);
-    localStorage.setItem("adam-theme", next);
-    sync();
+    apply(root.getAttribute("data-contrast") === "high" ? "standard" : "high");
   });
   sync();
 }
@@ -322,7 +328,7 @@ function el(tag, props = {}, children = []) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  setupTheme();
+  setupContrast();
   setupTabs();
   setupChat();
   setupMemory();

@@ -1,4 +1,4 @@
-/* ADAM — matte / neon / metallic / jewel design tokens (OKLCH) */
+/* ADAM — machined Imperial console tokens (sRGB, no OKLCH dependency) */
 
 @font-face {
   font-family: "Cinzel";
@@ -62,9 +62,18 @@
   --font-ui: "Oswald", "Arial Narrow", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
+  --text-xs: 0.68rem;
+  --text-sm: 0.78rem;
+  --text-base: 0.92rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.45rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.8rem;
+
   --radius-sm: 2px;
   --radius-md: 4px;
-  --radius-full: 999px;
+  --radius-lg: 6px;
+  --radius-round: 50%;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -72,41 +81,75 @@
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
 
-  --header-h: 58px;
+  --rail-w: 232px;
+  --rail-w-collapsed: 76px;
+  --topbar-h: 76px;
+  --content-max: 1240px;
+  --reading-max: 780px;
+
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 420ms;
+  --ease-mech: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-stamp: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --z-rail: 20;
+  --z-topbar: 30;
+  --z-toast: 60;
+  --z-overlay: 70;
 }
 
-/* Dark — matte graphite, neon highlights, metal trim, jewel data */
+/* Standard — matte graphite, brass structure, neon state */
 :root,
-[data-theme="dark"] {
-  --surface-0: oklch(12.0% 0.008 240);
-  --surface-1: oklch(15.5% 0.010 240);
-  --surface-2: oklch(19.0% 0.012 240);
-  --surface-3: oklch(23.5% 0.014 240);
+[data-contrast="standard"] {
+  --surface-0: #0b0d10;
+  --surface-1: #101318;
+  --surface-2: #151920;
+  --surface-3: #1c212a;
+  --surface-inset: #090b0e;
 
-  --edge: oklch(32.0% 0.016 240);
-  --edge-strong: oklch(46.0% 0.020 240);
+  --edge: #2c333e;
+  --edge-strong: #46505f;
 
-  --text: oklch(92.0% 0.008 95);
-  --text-dim: oklch(74.0% 0.012 95);
-  --text-mute: oklch(58.0% 0.012 95);
+  --text: #e8e6df;
+  --text-dim: #b8b4a8;
+  --text-mute: #8a877e;
 
-  --metal-gold: oklch(78.0% 0.105 86);
-  --metal-gold-bright: oklch(88.0% 0.110 92);
-  --metal-silver: oklch(84.0% 0.008 250);
-  --metal-bronze: oklch(62.0% 0.075 62);
-  --metal-copper: oklch(60.0% 0.110 45);
+  --metal-gold: #d4a94a;
+  --metal-gold-bright: #f0c766;
+  --metal-silver: #c4ccd6;
+  --metal-bronze: #8a6a3f;
+  --metal-copper: #a86a45;
 
-  --neon-lime: oklch(89.0% 0.240 128);
-  --neon-pink: oklch(68.0% 0.280 350);
-  --neon-cyan: oklch(85.0% 0.160 205);
+  --neon-lime: #c8ff3d;
+  --neon-pink: #ff3d8b;
+  --neon-cyan: #3de1ff;
 
-  --jewel-emerald: oklch(64.0% 0.140 165);
-  --jewel-sapphire: oklch(58.0% 0.160 260);
-  --jewel-ruby: oklch(54.0% 0.190 22);
-  --jewel-amethyst: oklch(60.0% 0.170 305);
+  --jewel-emerald: #2fbf8f;
+  --jewel-sapphire: #4f7dff;
+  --jewel-ruby: #e0405a;
+  --jewel-amethyst: #a86bff;
 
-  /* legacy aliases used by existing components */
+  --jewel-emerald-text: #6fe6bf;
+  --jewel-sapphire-text: #8faaff;
+  --jewel-ruby-text: #ff8a99;
+  --jewel-amethyst-text: #c9a6ff;
+
+  --accent: var(--neon-lime);
+  --accent-2: var(--neon-pink);
+  --danger: var(--jewel-ruby);
+  --danger-text: var(--jewel-ruby-text);
+  --focus: var(--neon-lime);
+
+  --shadow: rgba(0, 0, 0, 0.55);
+  --shadow-soft: rgba(0, 0, 0, 0.35);
+  --glow: rgba(200, 255, 61, 0.18);
+  --highlight: rgba(255, 255, 255, 0.06);
+  --highlight-soft: rgba(255, 255, 255, 0.035);
+
+  /* legacy aliases while components migrate */
   --void: var(--surface-0);
   --void-2: var(--surface-1);
   --steel: var(--surface-2);
@@ -120,58 +163,54 @@
   --bone-2: var(--text-dim);
   --ash: var(--text-mute);
 
-  --accent: var(--neon-lime);
-  --accent-2: var(--neon-pink);
-  --shadow: oklch(0% 0 0 / 0.55);
-  --glow: oklch(89.0% 0.240 128 / 0.18);
   color-scheme: dark;
 }
 
-/* Light — matte field stone (no parchment), deep metal + jewel accents */
-[data-theme="light"] {
-  --surface-0: oklch(84.0% 0.008 240);
-  --surface-1: oklch(88.5% 0.006 240);
-  --surface-2: oklch(80.0% 0.008 240);
-  --surface-3: oklch(74.5% 0.010 240);
+/* High contrast — black / white / amber, no decorative texture */
+[data-contrast="high"] {
+  --surface-0: #000000;
+  --surface-1: #050505;
+  --surface-2: #0a0a0a;
+  --surface-3: #111111;
+  --surface-inset: #000000;
 
-  --edge: oklch(65.0% 0.012 240);
-  --edge-strong: oklch(48.0% 0.016 240);
+  --edge: #6b6b6b;
+  --edge-strong: #d0d0d0;
 
-  --text: oklch(22.0% 0.012 250);
-  --text-dim: oklch(37.0% 0.012 250);
-  --text-mute: oklch(49.0% 0.012 250);
+  --text: #ffffff;
+  --text-dim: #ececec;
+  --text-mute: #cfcfcf;
 
-  --metal-gold: oklch(43.0% 0.085 82);
-  --metal-gold-bright: oklch(51.0% 0.100 88);
-  --metal-silver: oklch(50.0% 0.010 250);
-  --metal-bronze: oklch(40.0% 0.055 62);
-  --metal-copper: oklch(40.0% 0.085 45);
+  --metal-gold: #ffd400;
+  --metal-gold-bright: #ffe45c;
+  --metal-silver: #ffffff;
+  --metal-bronze: #e0b25c;
+  --metal-copper: #ffb37a;
 
-  --neon-lime: oklch(43.0% 0.155 132);
-  --neon-pink: oklch(44.0% 0.190 350);
-  --neon-cyan: oklch(43.0% 0.100 215);
+  --neon-lime: #ffd400;
+  --neon-pink: #ff7ad9;
+  --neon-cyan: #7fe9ff;
 
-  --jewel-emerald: oklch(40.0% 0.110 165);
-  --jewel-sapphire: oklch(38.0% 0.135 260);
-  --jewel-ruby: oklch(38.0% 0.160 22);
-  --jewel-amethyst: oklch(40.0% 0.145 305);
+  --jewel-emerald: #4dffc3;
+  --jewel-sapphire: #a8c0ff;
+  --jewel-ruby: #ff8a99;
+  --jewel-amethyst: #d0a8ff;
 
-  --void: var(--surface-0);
-  --void-2: var(--surface-1);
-  --steel: var(--surface-2);
-  --steel-2: var(--surface-3);
-  --iron: var(--edge);
-  --iron-strong: var(--edge-strong);
-  --gold: var(--metal-gold);
-  --gold-bright: var(--metal-gold-bright);
-  --crimson: var(--jewel-ruby);
-  --bone: var(--text);
-  --bone-2: var(--text-dim);
-  --ash: var(--text-mute);
+  --jewel-emerald-text: #4dffc3;
+  --jewel-sapphire-text: #a8c0ff;
+  --jewel-ruby-text: #ff8a99;
+  --jewel-amethyst-text: #d0a8ff;
 
-  --accent: var(--neon-lime);
-  --accent-2: var(--neon-pink);
-  --shadow: oklch(22.0% 0.012 250 / 0.18);
-  --glow: oklch(43.0% 0.155 132 / 0.16);
-  color-scheme: light;
+  --accent: #ffd400;
+  --accent-2: #ff6b6b;
+  --danger: #ff8a99;
+  --danger-text: #ff8a99;
+  --focus: #ffd400;
+
+  --shadow: #000000;
+  --shadow-soft: #000000;
+  --glow: rgba(255, 212, 0, 0.22);
+  --highlight: rgba(255, 255, 255, 0.14);
+  --highlight-soft: rgba(255, 255, 255, 0.08);
+  color-scheme: dark;
 }
