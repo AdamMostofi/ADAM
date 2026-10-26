@@ -131,6 +131,9 @@ class ADAMCore:
                 "name": s.name,
                 "domain": s.domain,
                 "confidence": s.confidence,
+                "fitness": s.fitness,
+                "attempts": s.attempts,
+                "successes": s.successes,
                 "premises": s.premises,
                 "conclusion": s.conclusion,
             }

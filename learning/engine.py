@@ -67,13 +67,27 @@ class LearningEngine:
     def get_analogies(self, concept: str):
         return self.cross_domain.get_analogies(concept)
 
+    def record_skill_outcome(self, name: str, success: bool):
+        return self.skill_compiler.record_outcome(name, success)
+
     def submit_correction(self, original: Fact, corrected: Fact, confidence: float):
+        self._penalise_skills_claiming(original)
         correction = self.error_corrector.submit_correction(original, corrected, confidence)
         if confidence >= 0.99:
             self.engine.retract(original)
             self.engine.add_fact(corrected)
             self.engine.infer()
         return correction
+
+    def _penalise_skills_claiming(self, fact: Fact) -> None:
+        for skill in list(self.skill_compiler.skills.values()):
+            conclusion = skill.conclusion
+            if (
+                conclusion.get("subject") == fact.subject
+                and conclusion.get("predicate") == fact.predicate
+                and conclusion.get("object") == fact.object
+            ):
+                self.skill_compiler.record_outcome(skill.name, False)
 
     def should_override_correction(self, correction) -> bool:
         return self.error_corrector.should_override(correction)

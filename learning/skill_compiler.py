@@ -25,8 +25,24 @@ class Skill:
     confidence: float
     usage_count: int = 0
     success_rate: float = 0.0
+    successes: int = 0
+    attempts: int = 0
     compiled_at: float = field(default_factory=time.time)
     source: str = "compiled"
+
+    @property
+    def fitness(self) -> float:
+        """Skill confidence weighted by observed success; untested = confidence."""
+        if self.attempts == 0:
+            return self.confidence
+        return self.confidence * (self.successes / self.attempts)
+
+    def record_outcome(self, success: bool) -> None:
+        self.attempts += 1
+        self.usage_count += 1
+        if success:
+            self.successes += 1
+        self.success_rate = self.successes / self.attempts
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -153,14 +169,22 @@ class SkillCompiler:
         if confidence >= self.min_confidence_for_override:
             return list(self.skills.values())
         if confidence >= self.min_confidence_for_use:
-            return [s for s in self.skills.values() if s.confidence >= self.min_confidence_for_use]
+            return [s for s in self.skills.values() if s.fitness >= self.min_confidence_for_use]
         return []
 
     def should_use_skill(self, skill: Skill) -> bool:
-        return skill.confidence >= self.min_confidence_for_use
+        return skill.fitness >= self.min_confidence_for_use
 
     def should_override_with_skill(self, skill: Skill) -> bool:
-        return skill.confidence >= self.min_confidence_for_override
+        return skill.fitness >= self.min_confidence_for_override
+
+    def record_outcome(self, name: str, success: bool) -> Skill | None:
+        skill = self.skills.get(name)
+        if skill is None:
+            return None
+        skill.record_outcome(success)
+        self._save_skill(skill)
+        return skill
 
     def export_skills(self, zip_path: str) -> None:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
