@@ -1,39 +1,24 @@
 # ADAM
-*(First Of It's Kind)*
+
+**A local neuro-symbolic machine intelligence.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-310%20passing-brightgreen.svg)]()
-[![Version](https://img.shields.io/badge/version-V0.7-blue.svg)]()
+[![Tests](https://img.shields.io/badge/tests-pytest-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/version-V0.8-blue.svg)]()
 
-A neuro-symbolic cognitive architecture that emulates a super-infant AI — starting with foundational logic and reasoning, then learning continuously through teaching and experience. Perfect memory. Cross-domain reasoning. Gets smarter with every interaction.
+ADAM is a local-first cognitive architecture: a small symbolic kernel for
+reasoning, three stores for persistent memory, a learning loop that compiles
+skills into rules, and a lightweight language model for the voice. Runtime
+inference stays on the machine.
 
----
-
-## Architecture Overview
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Architecture-Neuro--Symbolic-purple.svg" />
-</p>
-
-**Pipeline:** `User Input → Ear (Needle 2) → ADAM Core → Mouth (TinyChat15M) → Response`
-
-![ADAM Architecture](docs/diagrams/architecture.svg)
-
-**ADAM Core = 4 subsystems:**
-- **Logical Kernel** (V0.2) — 16 foundational rules, O(n) inference
-- **Memory System** (V0.3) — SQLite + LanceDB + NetworkX
-- **Continuous Learning** (V0.4) — pattern extraction, skill compilation
-- **EQ Subsystem** (V0.5) — cognitive appraisal, response adjustment
-
-**Interface** (V0.6) — CLI (rich) + Web UI (Flask)
-**Ear/Mouth** (V0.7) — Needle 2 (45M) + TinyChat15M (15M)
+*First of its kind: a small, local mind that remembers.*
 
 ---
 
 ## Quick Start
 
-### One-Command Install
+### One-command install
 
 ```bash
 git clone https://github.com/AdamMostofi/ADAM.git
@@ -41,50 +26,180 @@ cd ADAM
 ./install.sh
 ```
 
-### Manual Start
+The installer builds `llama-server`, downloads and converts TinyChat15M, and
+installs the Python dependencies.
+
+### Manual start
 
 ```bash
 # CLI
-python -m interface.cli              # interactive REPL
-python -m interface.cli "hello"      # single-shot query
-python -m interface.cli --web        # launch web UI
+python -m interface.cli                 # interactive REPL
+python -m interface.cli "hello"         # single-shot query
+python -m interface.cli --web           # launch the web UI
 
 # Web UI
-python -m interface.web.app          # http://localhost:7860
+python -m interface.web.app             # http://localhost:7860
 ```
 
 ---
 
-## Versions
+## Architecture
 
-### V0.2 — Logical Kernel
-16 foundational rules, predicate-indexed agenda inference (O(n)), thread-safe.
-![Logical Kernel](docs/diagrams/kernel.svg)
+![ADAM system architecture](docs/diagrams/architecture.svg)
 
-### V0.3 — Memory System
-3-layer storage: SQLite (exact), LanceDB (semantic), NetworkX (graph). Perfect recall, auto-connection, persistence.
-![Memory System](docs/diagrams/memory.svg)
+*The interface is thin; the core owns intent, memory, inference, learning, and
+affect. The Mouth renders the answer.*
 
-### V0.4 — Continuous Learning
-Pattern extraction (Popper), skill compilation (HERAKLES), cross-domain mapping (Gentner SMT), error correction (AGM).
-![Continuous Learning](docs/diagrams/learning.svg)
+- **Ear** — Needle 2 extracts action, topic, sentiment, and urgency.
+- **Kernel** — 16 immutable Layer 1 rules, predicate-indexed forward inference,
+  goal-directed proof, `?variable` pattern queries, and staged truth revision.
+- **Memory** — SQLite for verbatim facts and proofs, LanceDB for semantic
+  recall, NetworkX for relationships, and ECAN-style attention for ranking.
+- **Learning** — proof patterns become skills, skills become Layer 2 rules, and
+  outcomes update fitness.
+- **EQ** — cognitive appraisal produces a tone, goal status, and response
+  parameters, then folds the turn into a rolling baseline.
+- **Mouth** — TinyChat15M served through `llama-server`.
+- **Interface** — a `rich` CLI and a Flask web UI built with vanilla HTML, CSS,
+  and JavaScript.
 
-### V0.5 — EQ Subsystem
-Scherer's Component Process Model. Primary/secondary appraisal, response adjustment, baseline learning, manual override.
-![EQ Subsystem](docs/diagrams/eq.svg)
+The Layer 1 rule floor stays immutable. Learning is additive.
 
-### V0.6 — Interface
-CLI (rich REPL) + Web UI (Flask). The web UI was **redesigned** with a
-Warhammer 40K *Imperium of Man* aesthetic — vanilla HTML/CSS/JS components
-ported from Vercel's AI Elements (chat, message, prompt input, suggestions,
-reasoning, sources, tool, task), OKLCH design tokens, light + dark themes, and
-a fake word-by-word streaming reveal. Zero RAM increase, no build step.
+---
 
-![Interface](docs/diagrams/interface.svg)
+## The V0.8 interface
 
-### V0.7 — Ear/Mouth
-Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (15M params) for persona-formatted responses.
-![Ear/Mouth Pipeline](docs/diagrams/ear-mouth.svg)
+![Web interface architecture delta](docs/diagrams/architecture-delta.svg)
+
+*The reasoning core did not move. The console around it did.*
+
+The V0.8 pass replaced the single-page shell with a machined Imperial console:
+
+- **Token system v2** — sRGB graphite, brass structure, neon state colors,
+  jewel data colors, and an amber high-contrast mode.
+- **Shell** — left rail for Vox, Cognition, Data-Vaults, Skills, and Rites; hash
+  routing; topbar; toasts; collapsed rail; mobile dock.
+- **Chat** — session transcript persistence, a `full` / `simple` mode selector,
+  rotating thinking phases, retryable errors, and a capped, skippable reveal.
+- **Markdown** — a strict allowlist sanitizer drops scripts, event handlers,
+  embedded frames, styles, and unsafe URL schemes.
+- **No build step** — no Node runtime, no bundler, no framework upgrade path to
+  maintain. The UI is served directly by Flask.
+
+The Vox, Data-Vaults, and Rites names are interface labels, not separate services.
+
+---
+
+## One transmission
+
+![ADAM request sequence](docs/diagrams/request-sequence.svg)
+
+*A browser message becomes an intent, a memory query, a proof, and a voice.*
+
+`POST /api/chat` is synchronous. The core calls the Ear, appraises the message,
+recalls facts, runs inference or proof, and formats the response. The browser
+receives JSON and handles the word-by-word reveal locally.
+
+```bash
+curl -s http://localhost:7860/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"hello","mode":"full"}'
+```
+
+---
+
+## Memory
+
+![ADAM memory layers](docs/diagrams/memory-layers.svg)
+
+*A fact is written to all three stores; recall starts exact, falls back to
+semantic, then re-ranks by attention.*
+
+- **Exact** — SQLite stores every fact verbatim, with proof chains and indexes
+  on subject, predicate, object, source, and confidence.
+- **Semantic** — LanceDB plus `fastembed` (ONNX) provides the semantic fallback
+  when exact text search returns nothing.
+- **Graph** — NetworkX keeps nodes and relationships, and supplies related
+  context for the data-vault views.
+- **Attention** — STI/LTI ranking decays and re-ranks recalled facts.
+
+Attention is currently in-memory and resets on restart. Persistence and a global
+STI budget are the next memory work.
+
+---
+
+## Learning
+
+![ADAM learning loop](docs/diagrams/learning-loop.svg)
+
+*Proofs leave a trail; the trail becomes a pattern; the pattern becomes a rule.*
+
+ADAM learns from its own proof traces:
+
+1. Extract recurring patterns from proof chains.
+2. Compile a skill with premises, conclusion, confidence, and domain.
+3. Exercise the skill in inference.
+4. Score the outcome and update fitness.
+5. Register the skill as a Layer 2 rule.
+
+The immutable Layer 1 rules remain the trust floor. Nothing learned can rewrite
+them.
+
+---
+
+## EQ
+
+![ADAM EQ appraisal process](docs/diagrams/eq-process.svg)
+
+*Affect is computed before the answer is written.*
+
+The EQ subsystem is inspired by Scherer's Component Process Model and
+Lazarus/Folkman appraisal:
+
+- **Primary appraisal** — novelty, goal relevance, goal congruence.
+- **Secondary appraisal** — coping potential and agency.
+- **Output** — emotional tone, goal status, engagement, and confidence.
+- **Adjustment** — warmth, directness, depth, and caution flags.
+- **Baseline** — rolling interaction state and mood-shift detection.
+
+Manual override can replace the appraisal for a turn.
+
+---
+
+## What we took from Hyperon
+
+![Hyperon adoption decisions](docs/diagrams/hyperon-decisions.svg)
+
+*Borrow the ideas, not the runtime.*
+
+Six mechanisms were adopted from the OpenCog Hyperon analysis:
+
+- ECAN-style attention.
+- Goal-directed backward chaining.
+- Declarative rules plus `?variable` pattern queries.
+- Staged truth revision.
+- Fitness-weighted skills.
+- A stats surface for facts, contradictions, and proof traces.
+
+n-ary terms, a goal register, and an optional PyO3 path are later. The MeTTa
+interpreter, distributed Atomspace, MOSES evolution, PRIMUS, a Rust rewrite, and
+replacing SQLite are deliberately skipped. The full reasoning is in
+[docs/HYPERON_ANALYSIS.md](docs/HYPERON_ANALYSIS.md).
+
+---
+
+## Roadmap
+
+![ADAM roadmap timeline](docs/diagrams/roadmap-timeline.svg)
+
+*Release order, not calendar time.*
+
+- **Shipped** — V0.2 kernel, V0.3 memory, V0.4 learning, V0.5 EQ, V0.6
+  interface, V0.7 Ear/Mouth.
+- **Current** — V0.8: interface overhaul plus the Hyperon-derived reasoning
+  additions.
+- **Next** — V0.9 portable USB runtime, V1.0 specialized agent clones with
+  bidirectional knowledge transfer, V1.1 profiling and hardware tuning.
 
 ---
 
@@ -93,17 +208,16 @@ Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (1
 | Component | Technology |
 |-----------|-----------|
 | Language | Python 3.10+ |
-| Inference | Custom predicate-indexed agenda (O(n)) |
-| Vector DB | LanceDB |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
-| Graph | NetworkX (MultiDiGraph) |
+| Inference | Custom predicate-indexed agenda, forward chaining, goal-directed proof |
 | Exact storage | SQLite |
-| Ear | Needle 2 (Cactus Compute) |
-| Mouth | TinyChat15M (transformers) |
-| CLI | rich |
-| Web UI | Flask + custom HTML/JS/CSS |
-| Graph viz | vis.js |
-| Reasoning | forward chaining + goal-directed proof |
+| Vector store | LanceDB |
+| Embeddings | fastembed (ONNX), `BAAI/bge-small-en-v1.5` |
+| Graph | NetworkX `MultiDiGraph` |
+| Ear | Cactus Needle 2 |
+| Mouth | TinyChat15M via `llama-server` |
+| CLI | `rich` |
+| Web UI | Flask + vanilla HTML/CSS/JS |
+| Graph view | vendored `vis-network` |
 | Models | dataclasses, Pydantic |
 | Testing | pytest, hypothesis |
 
@@ -111,128 +225,73 @@ Needle 2 (45M params, 28MB RAM) for structured intent extraction. TinyChat15M (1
 
 ## Project Structure
 
-```
+```text
 ADAM/
-├── kernel/                 # Logical Kernel (V0.2)
-│   ├── engine.py           # InferenceEngine (O(n) agenda)
-│   ├── foundations.py      # 16 immutable rules
-│   ├── graph.py            # KnowledgeGraph (MultiDiGraph)
-│   ├── contradictions.py   # ContradictionResolver
-│   ├── unification.py      # Pattern matching
-│   ├── prove.py            # Goal-directed backward chaining
-│   └── facts.py            # Fact, Belief dataclasses
-├── memory/                 # Memory System (V0.3)
-│   ├── system.py           # MemorySystem API
-│   ├── exact_store.py      # SQLite + JSON
-│   ├── semantic_index.py   # LanceDB embeddings
-│   ├── connection_graph.py # NetworkX auto-connection
-│   ├── attention.py        # ECAN-style STI/LTI attention
-│   └── persistence.py      # save/load
-├── learning/               # Continuous Learning (V0.4)
-│   ├── engine.py           # LearningEngine API
+├── kernel/                 # rules, inference, proof, truth revision
+│   ├── engine.py           # InferenceEngine
+│   ├── foundations.py      # immutable Layer 1 rules
+│   ├── prove.py            # goal-directed backward chaining
+│   ├── rules.py            # declarative rule registry
+│   └── truth.py            # PLN-style revision
+├── memory/                 # exact, semantic, graph, attention
+│   ├── system.py           # MemorySystem facade
+│   ├── exact_store.py      # SQLite
+│   ├── semantic_index.py   # LanceDB + fastembed
+│   ├── connection_graph.py # NetworkX
+│   └── attention.py        # STI/LTI ranking
+├── learning/               # patterns, skills, analogy, correction
+│   ├── engine.py           # LearningEngine
 │   ├── pattern_extractor.py
 │   ├── skill_compiler.py
-│   ├── cross_domain.py
-│   ├── error_correction.py
-│   └── eq/                 # EQ Subsystem (V0.5)
-│       ├── engine.py       # EQEngine API
-│       ├── user_state.py
-│       ├── appraiser.py
-│       ├── adjuster.py
-│       ├── baseline.py
-│       └── manual_override.py
-├── interface/              # Interface (V0.6) + Ear/Mouth (V0.7)
+│   └── eq/                 # appraisal, adjustment, baseline
+├── interface/              # CLI, Ear, Mouth, Flask
 │   ├── core.py             # ADAMCore facade
-│   ├── cli.py              # rich CLI
-│   ├── ear.py              # Needle 2 wrapper
-│   ├── mouth.py            # TinyChat15M wrapper
-│   └── web/                # Flask web UI
-│       ├── app.py
-│       ├── static/
-│       └── templates/
+│   ├── ear.py
+│   ├── mouth.py
+│   └── web/
 ├── docs/
-│   ├── diagrams/           # Architecture diagrams (HTML+SVG)
-│   ├── design/             # Design documents
-│   └── HYPERON_ANALYSIS.md # OpenCog Hyperon comparison + adoption plan
-├── tests/                  # 322 tests
-├── install.sh              # One-command installation
+│   ├── COMMITS.md
+│   ├── HYPERON_ANALYSIS.md
+│   ├── design/
+│   └── diagrams/           # 8 README diagrams (SVG)
+├── tests/
+├── install.sh
 ├── requirements.txt
-└── LICENSE                 # MIT
+└── LICENSE
 ```
-
----
-
-## Core Data Models
-
-```python
-@dataclass(frozen=True)
-class Fact:
-    subject: str
-    predicate: str
-    object: str
-    confidence: float  # 0.0-1.0
-    source: Source     # user, deduced, inferred, learned
-    timestamp: float
-
-@dataclass
-class Belief:
-    fact: Fact
-    proof_chain: list[str]
-```
-
----
-
-## Design Principles
-
-1. **Knowledge lives outside the model weights** — facts stored, retrieved, reasoned over — never baked into parameters
-2. **Reasoning is deterministic** — no hallucination, no probabilistic guessing
-3. **Memory is permanent** — nothing forgotten, everything connected
-4. **Learning is organic** — skills compiled from experience, not prompt-engineered
-5. **Every conclusion has a trace** — ask "how do you know?" and get the full reasoning chain
-6. **Thread-safe by default** — all mutating operations protected by RLock
-7. **O(n) inference** — predicate-indexed agenda system, no redundant re-scanning
-
----
-
-## Future Roadmap
-
-### V0.8 — Repo Overhaul (Current)
-- Professional README with badges and structure
-- One-command installation (`install.sh`)
-- Architecture diagrams for all versions
-- MIT license
-- USB deployment guide
-- Agent clones architecture
-
-### V0.9 — USB Deployment
-- Portable: runs from USB on any computer
-- Uses host CPU/RAM/GPU only
-- No local installation required
-- Self-contained with all models + runtime
-
-### V1.0 — Agent Clones
-- Specialized clones of ADAM core
-- Each clone focused on specific domain/task
-- Core has full oversight into all clones
-- Bidirectional knowledge transfer:
-  - Clone learns → core absorbs new info/skills
-  - Core teaches → clone benefits from accumulated knowledge
-- Double-progress: learning speed increases with each clone
-
-### V1.1 — Continuous Optimization
-- Custom everything for speed + quality
-- Profile-guided optimization
-- Hardware-specific tuning
-- Reduced latency, improved responses
 
 ---
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -v
-# 310 passed
+python -m pytest tests/ -q
+python -m pytest tests/integration/test_interface.py -q
 ```
+
+The interface suite currently covers 22 tests.
+
+---
+
+## Docs
+
+- [Commit history and design decisions](docs/COMMITS.md)
+- [OpenCog Hyperon analysis](docs/HYPERON_ANALYSIS.md)
+- [Thread safety](docs/design/thread-safety.md)
+- [USB deployment](docs/design/usb-deployment.md)
+- [Agent clones](docs/design/agent-clones.md)
+- [Future enhancements](docs/design/future-enhancements.md)
+
+---
+
+## Credits
+
+Diagrams follow the editorial grammar of
+[Diagram Design](https://github.com/cathrynlavery/diagram-design) by Cathryn
+Lavery (MIT), re-skinned to ADAM's interface tokens.
+
+The chat surface was informed by Vercel's AI Elements and rebuilt as a
+self-contained vanilla JavaScript port.
 
 ---
 
