@@ -58,6 +58,7 @@ export class Chat {
     ]);
 
     this.mount.append(this.conversation.el, this.thinking.el, this.suggestions.el, this.composer);
+    this.prompt.resize();
     this._restore();
     this._syncSuggestions();
     this.prompt.focus();

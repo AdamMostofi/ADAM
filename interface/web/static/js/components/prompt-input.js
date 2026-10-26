@@ -71,8 +71,13 @@ export class PromptInput {
   }
 
   _autoresize() {
+    if (!this.textarea.isConnected) return;
     this.textarea.style.height = "auto";
     this.textarea.style.height = `${Math.min(this.textarea.scrollHeight, 220)}px`;
+  }
+
+  resize() {
+    this._autoresize();
   }
 
   _sync() {

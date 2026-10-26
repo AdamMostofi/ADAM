@@ -264,6 +264,7 @@ body { overflow: hidden; }
 .chat-pane > .adam-suggestions,
 .chat-pane > .adam-thinking,
 .chat-pane > .adam-composer { width: min(860px, calc(100% - var(--space-8))); margin-inline: auto; }
+.chat-pane > .adam-suggestions { margin-bottom: var(--space-3); }
 .chat-pane > .adam-thinking { margin-bottom: var(--space-2); }
 .chat-pane > .adam-composer { margin-bottom: var(--space-4); }
 
