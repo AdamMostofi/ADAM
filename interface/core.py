@@ -30,8 +30,6 @@ class ADAMCore:
 
         if mode == "simple":
             memories = self.memory.recall(message, limit=5)
-            context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
-            core_response = self._format_response(message, params, context_text)
         else:
             relevant = self.memory.recall(message, limit=5)
             for fact in relevant:
@@ -40,14 +38,13 @@ class ADAMCore:
             for fact in inferred:
                 self.memory.store(fact)
             memories = self.memory.recall(message, limit=10)
-            context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
-            core_response = self._format_response(message, params, context_text)
 
-        response = self.mouth.format_response(core_response, {
+        context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
+        response = self.mouth.format_response(message, {
             "warmth": params.warmth,
             "depth": params.depth,
             "tone": user_state.emotional_tone.value,
-        })
+        }, context=context_text)
 
         self.eq.tracker.update(user_state)
         self.eq.baseline.record_interaction(user_state)
@@ -76,15 +73,6 @@ class ADAMCore:
             },
             "memories_used": len(memories) if 'memories' in dir() else 0,
         }
-
-    def _format_response(self, message: str, params, context: str) -> str:
-        parts = []
-        if params.empathetic_opening:
-            parts.append("I understand this might be frustrating.")
-        parts.append(f"Based on what I know: {message}")
-        if params.encouraging_closing:
-            parts.append("Let's keep going!")
-        return " ".join(parts)
 
     def add_fact(self, subject: str, predicate: str, obj: str) -> int:
         fact = Fact(

@@ -7,8 +7,8 @@ from interface.mouth import Mouth
 
 
 class FakeMouth:
-    def format_response(self, core_response: str, params: dict) -> str:
-        return f"[MOCK] {core_response}"
+    def format_response(self, user_message: str, params: dict, context: str = "") -> str:
+        return f"[MOCK] {user_message}"
 
 
 def test_ear_listen():
@@ -36,26 +36,45 @@ def test_ear_sentiment_negative():
 
 def test_mouth_build_prompt():
     mouth = Mouth(auto_start=False)
-    prompt = mouth._build_prompt("Based on what I know: hello", {"warmth": "high", "depth": "summary"})
-    assert "high-warmth" in prompt
-    assert "summary-depth" in prompt
-    assert "Based on what I know: hello" in prompt
-    assert prompt.startswith("[INST]")
-    assert prompt.endswith("[/INST]")
+    prompt = mouth._build_prompt(
+        "hello",
+        {"warmth": "high", "depth": "summary", "tone": "neutral"},
+        context="socrates is man",
+    )
+    assert "You are ADAM" in prompt
+    assert "high warmth" in prompt
+    assert "summary depth" in prompt
+    assert "socrates is man" in prompt
+    assert "hello" in prompt
+    assert prompt.startswith("<|im_start|>system")
+    assert prompt.endswith("<|im_start|>assistant\n")
+
+
+def test_mouth_small_talk_bypasses_model():
+    mouth = Mouth(auto_start=False)
+
+    def no_model(*args, **kwargs):
+        raise AssertionError("small talk must not call the model")
+
+    mouth.speak = no_model
+    assert "ADAM" in mouth.format_response("Hello!", {})
+    assert mouth.format_response("who are you?", {}) == (
+        "I am ADAM, a local machine intelligence with a persistent memory."
+    )
 
 
 def test_mouth_format_response():
     mouth = Mouth(auto_start=False)
     captured = {}
 
-    def fake_speak(prompt, max_tokens=100):
+    def fake_speak(prompt, max_tokens=120, stop=None):
         captured["prompt"] = prompt
         return "ok"
 
     mouth.speak = fake_speak
     result = mouth.format_response("core text", {"warmth": "high", "depth": "summary"})
     assert result == "ok"
-    assert "high-warmth" in captured["prompt"]
+    assert "high warmth" in captured["prompt"]
     assert "core text" in captured["prompt"]
 
 
