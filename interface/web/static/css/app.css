@@ -135,6 +135,14 @@
   border-left: 2px solid var(--gold);
   border-radius: var(--radius-sm);
   background: var(--steel);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.list-item:hover { background: var(--steel-2); border-color: var(--iron-strong); }
+.list-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 .list-item-title { font-size: 0.82rem; color: var(--bone); overflow-wrap: anywhere; }
 .list-item-meta {
@@ -143,6 +151,53 @@
   color: var(--ash);
   margin-top: 2px;
 }
+
+.badge {
+  flex: none;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--iron-strong);
+  border-radius: var(--radius-full);
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.badge-user { color: var(--gold); border-color: var(--gold); }
+.badge-deduced { color: var(--bone-2); border-color: var(--iron-strong); }
+.badge-learned { color: var(--gold-bright); border-color: var(--gold-bright); }
+.badge-inferred { color: var(--ash); }
+
+.list-state {
+  padding: var(--space-4);
+  font-size: 0.78rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: var(--ash);
+}
+
+/* Graph legend */
+.graph-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+.legend-dot + .legend-dot { margin-left: var(--space-2); }
+.legend-user { background: var(--gold); }
+.legend-deduced { background: var(--bone-2); }
+.legend-learned { background: var(--gold-bright); }
 
 /* Stats */
 .stats-panel {

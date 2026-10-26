@@ -104,6 +104,7 @@ class ADAMCore:
                 "predicate": r["predicate"],
                 "object": r["object"],
                 "confidence": r["confidence"],
+                "source": r.get("source", "user"),
                 "id": r["id"],
             }
             for r in results
@@ -111,20 +112,16 @@ class ADAMCore:
 
     def get_graph_data(self) -> dict:
         graph = self.memory.graph
-        nodes = []
-        seen = set()
+        nodes = {}
         for u, v, d in graph.get_all_edges():
-            if u not in seen:
-                nodes.append({"id": u, "label": u})
-                seen.add(u)
-            if v not in seen:
-                nodes.append({"id": v, "label": v})
-                seen.add(v)
+            source = d.get("source", "user")
+            nodes.setdefault(u, {"id": u, "label": u, "source": source})
+            nodes.setdefault(v, {"id": v, "label": v, "source": source})
         edges = [
             {"from": u, "to": v, "label": d.get("predicate", "")}
             for u, v, d in graph.get_all_edges()
         ]
-        return {"nodes": nodes, "edges": edges}
+        return {"nodes": list(nodes.values()), "edges": edges}
 
     def get_skills(self) -> list[dict]:
         return [
@@ -139,6 +136,7 @@ class ADAMCore:
         ]
 
     def get_stats(self) -> dict:
+        by_source = self.memory.exact.count_by_source()
         return {
             "facts": self.memory.count(),
             "skills": len(self.learning.skill_compiler.skills),
@@ -146,6 +144,10 @@ class ADAMCore:
             "edges": len(self.memory.graph.get_all_edges()),
             "baseline": self.eq.get_baseline(),
             "mood_shift": self.eq.detect_mood_shift(),
+            "by_source": by_source,
+            "deduced": by_source.get("deduced", 0),
+            "contradictions": len(self.engine.resolver.get_contradictions()),
+            "trace_steps": len(self.engine.trace),
         }
 
     def save(self, path: str) -> None:

@@ -37,7 +37,8 @@ def facts():
         return jsonify(core.query_knowledge(query))
     all_facts = core.memory.get_all_facts()
     return jsonify([
-        {"subject": f.subject, "predicate": f.predicate, "object": f.object, "confidence": f.confidence}
+        {"subject": f.subject, "predicate": f.predicate, "object": f.object,
+         "confidence": f.confidence, "source": f.source.value}
         for f in all_facts
     ])
 

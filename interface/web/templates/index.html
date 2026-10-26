@@ -23,42 +23,59 @@
     </header>
 
     <main class="main">
-      <nav class="tabs" aria-label="Sections">
-        <button class="tab active" data-tab="chat" type="button">Vox</button>
-        <button class="tab" data-tab="graph" type="button">Cognition</button>
-        <button class="tab" data-tab="memory" type="button">Data-Vaults</button>
-        <button class="tab" data-tab="skills" type="button">Skills</button>
-        <button class="tab" data-tab="settings" type="button">Rites</button>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button class="tab active" role="tab" aria-selected="true" aria-controls="tab-chat" data-tab="chat" type="button">Vox</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-graph" data-tab="graph" type="button">Cognition</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-memory" data-tab="memory" type="button">Data-Vaults</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-skills" data-tab="skills" type="button">Skills</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" type="button">Rites</button>
       </nav>
 
-      <section id="tab-chat" class="tab-content active">
+      <section id="tab-chat" class="tab-content active" role="tabpanel" aria-labelledby="tab-chat-label">
         <div id="chat-pane" class="chat-pane"></div>
       </section>
 
-      <section id="tab-graph" class="tab-content">
-        <div class="pane-head"><h2>Knowledge Graph</h2><button id="graph-refresh" class="ghost-btn" type="button">Refresh</button></div>
+      <section id="tab-graph" class="tab-content" role="tabpanel">
+        <div class="pane-head">
+          <h2>Knowledge Graph</h2>
+          <div class="pane-controls">
+            <span class="graph-legend">
+              <span class="legend-dot legend-user" title="User inscription"></span>user
+              <span class="legend-dot legend-deduced" title="Deduced"></span>deduced
+              <span class="legend-dot legend-learned" title="Learned"></span>learned
+            </span>
+            <button id="graph-refresh" class="ghost-btn" type="button">Refresh</button>
+          </div>
+        </div>
         <div id="graph-container" class="graph-container"></div>
       </section>
 
-      <section id="tab-memory" class="tab-content">
+      <section id="tab-memory" class="tab-content" role="tabpanel">
         <div class="pane-head">
           <h2>Data-Vaults</h2>
           <div class="pane-controls">
+            <select id="memory-source" class="ghost-input" aria-label="Filter by source">
+              <option value="">All sources</option>
+              <option value="user">User</option>
+              <option value="deduced">Deduced</option>
+              <option value="learned">Learned</option>
+              <option value="inferred">Inferred</option>
+            </select>
             <input id="memory-search" class="ghost-input" type="text" placeholder="Search the vaults…" aria-label="Search memories">
             <button id="memory-refresh" class="ghost-btn" type="button">Refresh</button>
           </div>
         </div>
-        <div id="memory-list" class="scroll-list"></div>
+        <div id="memory-list" class="scroll-list" aria-live="polite"></div>
       </section>
 
-      <section id="tab-skills" class="tab-content">
+      <section id="tab-skills" class="tab-content" role="tabpanel">
         <div class="pane-head"><h2>Skills</h2><button id="skills-refresh" class="ghost-btn" type="button">Refresh</button></div>
-        <div id="skills-list" class="scroll-list"></div>
+        <div id="skills-list" class="scroll-list" aria-live="polite"></div>
       </section>
 
-      <section id="tab-settings" class="tab-content">
+      <section id="tab-settings" class="tab-content" role="tabpanel">
         <div class="pane-head"><h2>Rites</h2></div>
-        <div id="stats-panel" class="stats-panel"></div>
+        <div id="stats-panel" class="stats-panel" aria-live="polite"></div>
         <div class="settings-actions">
           <button id="save-btn" class="gold-btn" type="button">Save State</button>
           <button id="add-fact-btn" class="ghost-btn" type="button">Inscribe Fact</button>

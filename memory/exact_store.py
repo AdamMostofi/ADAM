@@ -128,5 +128,10 @@ class ExactStore:
         with sqlite3.connect(self.db_path) as conn:
             return conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
 
+    def count_by_source(self) -> dict[str, int]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute("SELECT source, COUNT(*) FROM facts GROUP BY source").fetchall()
+        return {source: count for source, count in rows}
+
     def close(self) -> None:
         pass

@@ -3,7 +3,7 @@
 import { api } from "./api.js";
 import { Conversation } from "./components/conversation.js";
 import { Message } from "./components/message.js";
-import { markdownToNode, renderMarkdown } from "./components/markdown.js";
+import { renderMarkdown } from "./components/markdown.js";
 import { PromptInput } from "./components/prompt-input.js";
 import { Reveal } from "./components/reveal.js";
 import { Suggestions } from "./components/suggestion.js";
@@ -11,6 +11,9 @@ import { ModelSelector } from "./components/model-selector.js";
 import { ThinkingIndicator } from "./components/shimmer.js";
 
 const $ = (sel) => document.querySelector(sel);
+
+const loaders = {};
+const loaded = new Set();
 
 function setupTheme() {
   const root = document.documentElement;
@@ -28,13 +31,32 @@ function setupTheme() {
   sync();
 }
 
+function activate(tab) {
+  document.querySelectorAll(".tab").forEach((b) => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+    b.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
+  $(`#tab-${tab}`).classList.add("active");
+  if (loaders[tab] && !loaded.has(tab)) {
+    loaded.add(tab);
+    loaders[tab]();
+  }
+}
+
 function setupTabs() {
-  document.querySelectorAll(".tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
-      btn.classList.add("active");
-      $(`#tab-${btn.dataset.tab}`).classList.add("active");
+  const tabs = [...document.querySelectorAll(".tab")];
+  tabs.forEach((btn, i) => {
+    btn.tabIndex = btn.classList.contains("active") ? 0 : -1;
+    btn.addEventListener("click", () => activate(btn.dataset.tab));
+    btn.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      activate(next.dataset.tab);
     });
   });
 }
@@ -102,66 +124,82 @@ function setupChat() {
 function setupMemory() {
   const list = $("#memory-list");
   const search = $("#memory-search");
+  const source = $("#memory-source");
 
   async function load() {
+    list.replaceChildren(state("Consulting the archives…"));
     try {
       const q = search.value.trim();
       const data = await api.facts(q);
-      list.innerHTML = "";
-      if (data.length === 0) {
-        list.append(el("div", { class: "list-item" }, [el("div", { class: "list-item-title", text: "The vaults stand empty." })]));
+      const rows = source.value ? data.filter((f) => (f.source || "user") === source.value) : data;
+      list.replaceChildren();
+      if (rows.length === 0) {
+        list.append(state(q ? "No records match that query." : "The vaults stand empty."));
         return;
       }
-      for (const f of data) {
-        const meta = `confidence ${(f.confidence * 100).toFixed(0)}%${f.similarity ? ` · similarity ${(f.similarity * 100).toFixed(0)}%` : ""}`;
+      for (const f of rows) {
+        const src = f.source || "user";
+        const meta = `confidence ${pct(f.confidence)}${f.similarity ? ` · similarity ${pct(f.similarity)}` : ""}`;
         list.append(el("div", { class: "list-item" }, [
-          el("div", { class: "list-item-title", text: `${f.subject} ${f.predicate} ${f.object}` }),
+          el("div", { class: "list-item-head" }, [
+            el("div", { class: "list-item-title", text: `${f.subject} ${f.predicate} ${f.object}` }),
+            badge(src, `badge-${src}`),
+          ]),
           el("div", { class: "list-item-meta", text: meta }),
         ]));
       }
     } catch (err) {
-      list.innerHTML = `<div class="list-item list-item-title">Vox error: ${escapeHtml(err.message)}</div>`;
+      list.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
 
   $("#memory-refresh").addEventListener("click", load);
   search.addEventListener("keydown", (e) => { if (e.key === "Enter") load(); });
-  load();
+  source.addEventListener("change", load);
+  loaders.memory = load;
 }
 
 function setupSkills() {
   const list = $("#skills-list");
   async function load() {
+    list.replaceChildren(state("Reviewing the librarium…"));
     try {
       const data = await api.skills();
-      list.innerHTML = "";
+      list.replaceChildren();
       if (data.length === 0) {
-        list.append(el("div", { class: "list-item" }, [el("div", { class: "list-item-title", text: "No skills compiled yet." })]));
+        list.append(state("No skills compiled yet."));
         return;
       }
       for (const s of data) {
+        const premises = Array.isArray(s.premises) ? s.premises.length : 0;
         list.append(el("div", { class: "list-item" }, [
-          el("div", { class: "list-item-title", text: s.name }),
-          el("div", { class: "list-item-meta", text: `${s.domain} · confidence ${(s.confidence * 100).toFixed(0)}%` }),
+          el("div", { class: "list-item-head" }, [
+            el("div", { class: "list-item-title", text: s.name }),
+            badge(s.domain || "general", "badge-learned"),
+          ]),
+          el("div", { class: "list-item-meta", text: `${premises} premise${premises === 1 ? "" : "s"} · confidence ${pct(s.confidence)}` }),
         ]));
       }
     } catch (err) {
-      list.innerHTML = `<div class="list-item list-item-title">Vox error: ${escapeHtml(err.message)}</div>`;
+      list.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
   $("#skills-refresh").addEventListener("click", load);
-  load();
+  loaders.skills = load;
 }
 
 function setupStats() {
   const panel = $("#stats-panel");
   async function load() {
+    panel.replaceChildren(state("Interrogating the Machine Spirit…"));
     try {
       const s = await api.stats();
-      panel.innerHTML = "";
+      panel.replaceChildren();
       const rows = [
-        ["Facts", s.facts], ["Skills", s.skills], ["Graph nodes", s.nodes],
-        ["Graph edges", s.edges], ["EQ baseline", s.baseline.toFixed(2)], ["Mood shift", s.mood_shift],
+        ["Facts", s.facts], ["Deduced", s.deduced ?? 0], ["Skills", s.skills],
+        ["Graph nodes", s.nodes], ["Graph edges", s.edges],
+        ["Contradictions", s.contradictions ?? 0], ["Trace steps", s.trace_steps ?? 0],
+        ["EQ baseline", Number(s.baseline).toFixed(2)], ["Mood shift", s.mood_shift],
       ];
       for (const [label, value] of rows) {
         panel.append(el("div", { class: "stat-row" }, [
@@ -170,7 +208,7 @@ function setupStats() {
         ]));
       }
     } catch (err) {
-      panel.innerHTML = `<div class="stat-row">Vox error: ${escapeHtml(err.message)}</div>`;
+      panel.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
 
@@ -187,10 +225,12 @@ function setupStats() {
       await api.addFact(s, p, o);
       $("#fact-subject").value = $("#fact-predicate").value = $("#fact-object").value = "";
       $("#add-fact-form").classList.add("hidden");
+      loaded.delete("memory");
+      loaded.delete("graph");
       flash("Fact inscribed.");
     } catch (err) { flash(err.message); }
   });
-  load();
+  loaders.settings = load;
 }
 
 function setupGraph() {
@@ -199,21 +239,57 @@ function setupGraph() {
     try {
       const data = await api.graph();
       if (!window.vis) {
-        container.innerHTML = `<p style="padding:20px;color:var(--ash)">vis.js unavailable.</p>`;
+        container.replaceChildren(state("vis.js unavailable."));
         return;
       }
-      const nodes = new window.vis.DataSet((data.nodes || []).map((n) => ({ id: n.id, label: n.label, color: "var(--gold)" })));
-      const edges = new window.vis.DataSet((data.edges || []).map((e) => ({ from: e.from, to: e.to, arrows: "to", color: "var(--iron)" })));
+      const palette = {
+        user: cssVar("--gold", "#c9a227"),
+        deduced: cssVar("--bone-2", "#c8bda4"),
+        learned: cssVar("--gold-bright", "#e6c35c"),
+        inferred: cssVar("--ash", "#8a8375"),
+      };
+      const nodes = new window.vis.DataSet((data.nodes || []).map((n) => {
+        const source = n.source || "user";
+        return {
+          id: n.id,
+          label: n.label,
+          color: { background: palette[source] || palette.user, border: cssVar("--iron", "#3a3733") },
+          font: { color: cssVar("--void", "#12110f") },
+        };
+      }));
+      const edges = new window.vis.DataSet((data.edges || []).map((e) => ({
+        from: e.from, to: e.to, label: e.label, arrows: "to", color: cssVar("--iron", "#3a3733"), font: { color: cssVar("--ash", "#8a8375"), size: 10 },
+      })));
+      container.replaceChildren();
       new window.vis.Network(container, { nodes, edges }, {
-        nodes: { shape: "dot", size: 12, font: { color: "var(--bone)" } },
-        interaction: { hover: true },
+        nodes: { shape: "dot", size: 12, borderWidth: 2 },
+        edges: { width: 1.5, smooth: { type: "continuous" } },
+        physics: { stabilization: { iterations: 120 } },
+        interaction: { hover: true, tooltipDelay: 200 },
       });
     } catch (err) {
-      container.innerHTML = `<p style="padding:20px;color:var(--ash)">Vox error: ${escapeHtml(err.message)}</p>`;
+      container.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
   $("#graph-refresh").addEventListener("click", load);
-  load();
+  loaders.graph = load;
+}
+
+function cssVar(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function pct(value) {
+  return `${(Number(value) * 100).toFixed(0)}%`;
+}
+
+function badge(text, className) {
+  return el("span", { class: `badge ${className}`, text });
+}
+
+function state(text) {
+  return el("div", { class: "list-state", text });
 }
 
 function flash(text) {
@@ -223,18 +299,11 @@ function flash(text) {
   setTimeout(() => (status.textContent = prev), 1800);
 }
 
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
     if (k === "class") node.className = v;
     else if (k === "text") node.textContent = v;
-    else if (k === "html") node.innerHTML = v;
     else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
     else if (v !== null && v !== undefined) node.setAttribute(k, v);
   }
@@ -254,4 +323,3 @@ document.addEventListener("DOMContentLoaded", () => {
   setupStats();
   setupGraph();
 });
-
