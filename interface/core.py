@@ -19,6 +19,8 @@ class ADAMCore:
         self.learning = LearningEngine(memory_system=self.memory)
         self.eq = EQEngine(db_path)
         self.engine = self.memory.engine
+        for rule in self.learning.skill_compiler.rules():
+            self.engine.add_rule(rule)
         self.ear = Ear()
         self.mouth = mouth if mouth is not None else Mouth()
 

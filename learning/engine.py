@@ -13,7 +13,7 @@ from pathlib import Path
 from kernel.facts import Fact, Source
 from kernel.engine import InferenceEngine
 from learning.pattern_extractor import PatternExtractor
-from learning.skill_compiler import SkillCompiler
+from learning.skill_compiler import SkillCompiler, skill_to_rule
 from learning.cross_domain import CrossDomainMapper
 from learning.error_correction import ErrorCorrector
 
@@ -32,7 +32,16 @@ class LearningEngine:
         return self.pattern_extractor.analyze(proof_chain)
 
     def compile_skill(self, name: str, domain: str, premises: list[Fact], conclusion: Fact, confidence: float):
-        return self.skill_compiler.compile_skill(name, domain, premises, conclusion, confidence)
+        skill = self.skill_compiler.compile_skill(name, domain, premises, conclusion, confidence)
+        self._register_rule(skill)
+        return skill
+
+    def _register_rule(self, skill) -> None:
+        if self.memory is None:
+            return
+        rule = skill_to_rule(skill)
+        if rule is not None:
+            self.memory.engine.add_rule(rule)
 
     def get_skill(self, name: str):
         return self.skill_compiler.get_skill(name)
@@ -79,7 +88,10 @@ class LearningEngine:
         self.skill_compiler.export_skills(zip_path)
 
     def import_skills(self, zip_path: str) -> int:
-        return self.skill_compiler.import_skills(zip_path)
+        count = self.skill_compiler.import_skills(zip_path)
+        for skill in self.skill_compiler.skills.values():
+            self._register_rule(skill)
+        return count
 
     def deep_learn(self) -> list:
         return self.pattern_extractor.get_frequent_patterns()

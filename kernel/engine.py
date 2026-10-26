@@ -10,24 +10,9 @@ import collections
 import threading
 
 from kernel.facts import Belief, Fact, Source
-from kernel.foundations import (
-    conditional_proof,
-    contradiction_detection,
-    de_morgan_and,
-    de_morgan_or,
-    disjunctive_syllogism,
-    double_negation,
-    equality_substitution,
-    existential_generalization,
-    is_transitivity,
-    modus_ponens,
-    modus_tollens,
-    subtype_transitivity,
-    transitivity,
-    universal_generalization,
-    universal_instantiation,
-)
 from kernel.contradictions import ContradictionResolver
+from kernel.foundations import contradiction_detection
+from kernel.rules import BUILTIN_RULES, Rule
 
 
 class InferenceEngine:
@@ -37,6 +22,10 @@ class InferenceEngine:
         self.resolver = ContradictionResolver()
         self.lock = threading.RLock()
         self.agenda: collections.deque[Fact] = collections.deque()
+        self.rules: list[Rule] = list(BUILTIN_RULES)
+        self.rules_by_trigger: dict[str, list[Rule]] = {}
+        for rule in self.rules:
+            self.rules_by_trigger.setdefault(rule.trigger, []).append(rule)
         self.index: dict[str, set[str]] = {
             "implies": set(),
             "is": set(),
@@ -65,6 +54,17 @@ class InferenceEngine:
         for f in facts:
             self.add_fact(f)
 
+    def add_rule(self, rule: Rule) -> None:
+        """Register a layer-2 rule (e.g. a compiled skill)."""
+        with self.lock:
+            if any(existing.name == rule.name for existing in self.rules):
+                return
+            self.rules.append(rule)
+            self.rules_by_trigger.setdefault(rule.trigger, []).append(rule)
+            self.index.setdefault(rule.trigger, set())
+            if rule.partner is not None:
+                self.index.setdefault(rule.partner, set())
+
     def retract(self, fact: Fact) -> None:
         with self.lock:
             key = str(fact)
@@ -89,140 +89,46 @@ class InferenceEngine:
             while self.agenda and iterations < max_iterations:
                 fact = self.agenda.popleft()
                 results = self._apply_rules_indexed(fact)
-                for result in results:
+                for rule_name, result in results:
                     key = str(result)
                     if key not in self.beliefs:
-                        rule_name = self._get_rule_name(fact, result)
                         proof = f"[{rule_name}] {fact} -> {result}"
                         self.beliefs[key] = Belief(fact=result, proof_chain=[proof])
-                        self.index[result.predicate].add(key)
+                        self.index.setdefault(result.predicate, set()).add(key)
                         self.agenda.append(result)
                         all_new_facts.append(result)
                         self.trace.append(proof)
                 iterations += 1
             return all_new_facts
 
-    def _apply_rules_indexed(self, fact: Fact) -> list[Fact]:
-        results: list[Fact] = []
-
-        if fact.predicate == "implies":
-            for other_key in self.index["is"]:
-                other = self.beliefs[other_key].fact
-                r = modus_ponens(fact, other)
-                if r:
-                    results.append(r)
-            for other_key in self.index["implies"]:
-                other = self.beliefs[other_key].fact
-                r = transitivity(fact, other)
-                if r:
-                    results.append(r)
-            for other_key in self.index["not_is"]:
-                other = self.beliefs[other_key].fact
-                r = modus_tollens(fact, other)
-                if r:
-                    results.append(r)
-
-        if fact.predicate == "is":
-            r = existential_generalization(fact)
-            if r:
-                results.append(r)
-            for other_key in self.index["implies"]:
-                other = self.beliefs[other_key].fact
-                r = subtype_transitivity(fact, other)
-                if r:
-                    results.append(r)
-            for other_key in self.index["is"]:
-                other = self.beliefs[other_key].fact
-                r = is_transitivity(fact, other)
-                if r:
-                    results.append(r)
-
-        if fact.predicate == "all_are":
-            for other_key in self.index["is"]:
-                other = self.beliefs[other_key].fact
-                r = universal_instantiation(fact, other)
-                if r:
-                    results.append(r)
-            r = universal_generalization(fact)
-            if r:
-                results.append(r)
-
-        if fact.predicate == "equals":
-            for other_key in self.index["is"]:
-                other = self.beliefs[other_key].fact
-                results.extend(equality_substitution(fact, other))
-            for other_key in self.index["equals"]:
-                other = self.beliefs[other_key].fact
-                results.extend(equality_substitution(fact, other))
-
-        if fact.predicate == "or":
-            for other_key in self.index["not_is"]:
-                other = self.beliefs[other_key].fact
-                r = disjunctive_syllogism(fact, other)
-                if r:
-                    results.append(r)
-
-        if fact.predicate == "not_and":
-            results.extend(de_morgan_and(fact))
-
-        if fact.predicate == "not_or":
-            results.extend(de_morgan_or(fact))
-
-        if fact.predicate == "not_not":
-            r = double_negation(fact)
-            if r:
-                results.append(r)
-
-        if fact.predicate == "assumes":
-            for other_key in self.index["derives"]:
-                other = self.beliefs[other_key].fact
-                r = conditional_proof(fact, other)
-                if r:
-                    results.append(r)
+    def _apply_rules_indexed(self, fact: Fact) -> list[tuple[str, Fact]]:
+        results: list[tuple[str, Fact]] = []
+        for rule in self.rules_by_trigger.get(fact.predicate, ()):
+            if rule.partner is None:
+                outcome = rule.apply(fact)
+                if outcome is not None:
+                    for result in (outcome if isinstance(outcome, list) else [outcome]):
+                        results.append((rule.name, result))
+                continue
+            for key in self.index.get(rule.partner, ()):
+                outcome = rule.apply(fact, self.beliefs[key].fact)
+                if outcome is None:
+                    continue
+                for result in (outcome if isinstance(outcome, list) else [outcome]):
+                    results.append((rule.name, result))
 
         for other_key in self.index["is"]:
             other = self.beliefs[other_key].fact
             r = contradiction_detection(fact, other)
             if r:
-                results.append(r)
+                results.append(("contradiction_detection", r))
         for other_key in self.index["not_is"]:
             other = self.beliefs[other_key].fact
             r = contradiction_detection(fact, other)
             if r:
-                results.append(r)
+                results.append(("contradiction_detection", r))
 
         return results
-
-    def _get_rule_name(self, source_fact: Fact, result: Fact) -> str:
-        if result.predicate == "is" and source_fact.predicate == "implies":
-            return "modus_ponens"
-        if result.predicate == "not_is" and source_fact.predicate == "implies":
-            return "modus_tollens"
-        if result.predicate == "implies" and source_fact.predicate == "implies":
-            return "transitivity"
-        if result.predicate == "implies" and source_fact.predicate == "is":
-            return "subtype_transitivity"
-        if result.predicate == "is" and source_fact.predicate == "is":
-            return "is_transitivity"
-        if result.predicate == "is" and source_fact.predicate == "all_are":
-            return "universal_instantiation"
-        if source_fact.predicate == "equals":
-            return "equality_substitution"
-        if result.predicate == "is" and source_fact.predicate == "or":
-            return "disjunctive_syllogism"
-        if result.predicate == "contradiction":
-            return "contradiction_detection"
-        if result.predicate == "not_is" and source_fact.predicate == "not_and":
-            return "de_morgan_and"
-        if result.predicate == "not_is" and source_fact.predicate == "not_or":
-            return "de_morgan_or"
-        if result.predicate == "is" and source_fact.predicate == "not_not":
-            return "double_negation"
-        if result.predicate == "implies" and source_fact.predicate == "assumes":
-            return "conditional_proof"
-        if result.predicate == "all_are":
-            return "universal_generalization"
-        return "unknown"
 
     def _check_contradictions(self, new_fact: Fact) -> None:
         for key in self.index["is"]:

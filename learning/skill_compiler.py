@@ -13,6 +13,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 from kernel.facts import Fact, Source
+from kernel.rules import Rule
 
 
 @dataclass
@@ -33,6 +34,71 @@ class Skill:
     @classmethod
     def from_dict(cls, data: dict) -> "Skill":
         return cls(**data)
+
+
+def _bind(term: str, value: str, bindings: dict[str, str]) -> bool:
+    """A term starting with `?` is a variable; anything else is literal."""
+    if term.startswith("?"):
+        if term in bindings:
+            return bindings[term] == value
+        bindings[term] = value
+        return True
+    return term == value
+
+
+def _match(spec: dict, fact: Fact, bindings: dict[str, str]) -> bool:
+    return (
+        _bind(spec.get("subject", ""), fact.subject, bindings)
+        and _bind(spec.get("predicate", ""), fact.predicate, bindings)
+        and _bind(spec.get("object", ""), fact.object, bindings)
+    )
+
+
+def _ground(term: str, bindings: dict[str, str]) -> str:
+    if term.startswith("?") and term in bindings:
+        return bindings[term]
+    return term
+
+
+def skill_to_rule(skill: "Skill") -> Rule | None:
+    """Compile a skill into an executable layer-2 inference rule.
+
+    Terms beginning with `?` are variables, so a generalised skill fires on
+    any matching facts, not just the trajectory it was learned from.
+
+    chisel: pairwise matching only (<=2 premises); skills with more premises
+    return None rather than inferring from a partial match. Upgrade to n-ary
+    matching when n-ary atoms land.
+    """
+    premises = skill.premises
+    if not premises or len(premises) > 2:
+        return None
+    trigger = premises[0].get("predicate", "")
+    if not trigger or trigger.startswith("?"):
+        return None
+
+    def apply(fact: Fact, partner: Fact | None) -> Fact | None:
+        bindings: dict[str, str] = {}
+        if not _match(premises[0], fact, bindings):
+            return None
+        confidence = fact.confidence * skill.confidence
+        if len(premises) == 2:
+            if partner is None or not _match(premises[1], partner, bindings):
+                return None
+            confidence *= partner.confidence
+        conclusion = skill.conclusion
+        return Fact(
+            subject=_ground(conclusion["subject"], bindings),
+            predicate=conclusion["predicate"],
+            object=_ground(conclusion["object"], bindings),
+            confidence=min(1.0, confidence),
+            source=Source.LEARNED,
+        )
+
+    partner_predicate = premises[1].get("predicate") if len(premises) == 2 else None
+    if partner_predicate is not None and partner_predicate.startswith("?"):
+        return None
+    return Rule(f"skill:{skill.name}", trigger, partner_predicate, apply)
 
 
 class SkillCompiler:
@@ -72,6 +138,10 @@ class SkillCompiler:
         domain_dir.mkdir(parents=True, exist_ok=True)
         with open(domain_dir / f"{skill.name}.json", "w") as f:
             json.dump(skill.to_dict(), f, indent=2)
+
+    def rules(self) -> list[Rule]:
+        compiled = (skill_to_rule(skill) for skill in self.skills.values())
+        return [rule for rule in compiled if rule is not None]
 
     def get_skill(self, name: str) -> Skill | None:
         return self.skills.get(name)
