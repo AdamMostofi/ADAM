@@ -859,6 +859,26 @@
 .adam-task-item-title { overflow-wrap: anywhere; }
 
 /* ---------- Phase 12: Fake streaming reveal ---------- */
+.adam-reveal { position: relative; }
+
+.adam-reveal-skip {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  z-index: 1;
+  padding: 2px 8px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.adam-reveal-skip:hover { color: var(--accent); border-color: var(--accent); }
+
 .adam-reveal-token {
   opacity: 0;
   transition: opacity 0.12s ease;
@@ -879,6 +899,21 @@
   0%, 55% { opacity: 1; }
   56%, 100% { opacity: 0; }
 }
+
+/* ---------- Vox errors ---------- */
+.adam-message.is-error .adam-message-content {
+  padding: var(--space-3);
+  border-left-color: var(--danger);
+  background: var(--surface-2);
+}
+.adam-error-text {
+  margin: 0 0 var(--space-2);
+  color: var(--danger-text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.adam-error-actions { display: flex; gap: var(--space-2); }
 
 @media (prefers-reduced-motion: reduce) {
   .adam-reveal-token { transition: none; }

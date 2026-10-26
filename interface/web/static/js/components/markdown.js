@@ -1,26 +1,66 @@
-// Markdown — render assistant responses as HTML (marked.js), sanitized.
-// AI Elements uses Streamdown; we use marked + a small allowlist sanitizer.
+// Markdown — render assistant responses as HTML (marked.js), sanitized by allowlist.
 
-const BLOCKED_TAGS = new Set([
-  "script", "style", "iframe", "object", "embed", "link", "meta",
-  "form", "input", "button", "select", "textarea", "base", "frame", "frameset",
+const ALLOWED_TAGS = new Set([
+  "p", "br", "strong", "em", "del", "code", "pre", "blockquote",
+  "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6",
+  "a", "img", "hr", "table", "thead", "tbody", "tr", "th", "td",
 ]);
-const ALLOWED_SCHEMES = new Set(["http:", "https:", "mailto:", "data:image/"]);
+
+const DROP_TAGS = new Set([
+  "script", "style", "iframe", "object", "embed", "link", "meta", "base",
+  "frame", "frameset", "form", "input", "button", "select", "textarea",
+  "svg", "math", "foreignobject", "template", "audio", "video", "source",
+  "track", "canvas", "portal", "noscript",
+]);
+
+const NO_ATTRS = new Set();
+
+const ALLOWED_ATTRS = {
+  a: new Set(["href", "title"]),
+  img: new Set(["src", "alt"]),
+  code: new Set(["class"]),
+  ol: new Set(["start"]),
+  th: new Set(["align"]),
+  td: new Set(["align"]),
+};
 
 function sanitize(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const walk = (node) => {
     for (const child of [...node.children]) {
-      if (BLOCKED_TAGS.has(child.tagName.toLowerCase())) {
-        child.remove();
+      const tag = child.tagName.toLowerCase();
+      if (!ALLOWED_TAGS.has(tag)) {
+        if (DROP_TAGS.has(tag)) {
+          child.remove();
+        } else {
+          walk(child);
+          child.replaceWith(...child.childNodes);
+        }
         continue;
       }
+
+      const allowed = ALLOWED_ATTRS[tag] || NO_ATTRS;
       for (const attr of [...child.attributes]) {
         const name = attr.name.toLowerCase();
-        const value = attr.value.trim().toLowerCase();
-        if (name.startsWith("on")) child.removeAttribute(attr.name);
-        else if ((name === "href" || name === "src") && !isSafeUrl(value)) child.removeAttribute(attr.name);
+        if (!allowed.has(name)) {
+          child.removeAttribute(attr.name);
+          continue;
+        }
+        if (name === "href" && !isSafeUrl(attr.value, false)) child.removeAttribute(attr.name);
+        if (name === "src" && !isSafeUrl(attr.value, true)) child.removeAttribute(attr.name);
       }
+
+      if (tag === "code" && child.hasAttribute("class")) {
+        const lang = child.className.match(/language-[a-z0-9_+-]+/i);
+        if (lang) child.className = lang[0];
+        else child.removeAttribute("class");
+      }
+      if (tag === "a") child.setAttribute("rel", "noopener noreferrer");
+      if (tag === "img") {
+        child.setAttribute("loading", "lazy");
+        child.setAttribute("referrerpolicy", "no-referrer");
+      }
+
       walk(child);
     }
   };
@@ -28,9 +68,20 @@ function sanitize(html) {
   return doc.body.innerHTML;
 }
 
-function isSafeUrl(value) {
-  if (value.startsWith("#")) return true;
-  return [...ALLOWED_SCHEMES].some((scheme) => value.startsWith(scheme));
+function isSafeUrl(value, image) {
+  const v = value.trim().replace(/[\u0000-\u0020]+/g, "");
+  if (!v) return false;
+  if (!image && v.startsWith("#")) return true;
+  if (/^data:/i.test(v)) {
+    return image && /^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(v);
+  }
+  try {
+    const url = new URL(v, location.origin);
+    if (image) return url.protocol === "http:" || url.protocol === "https:";
+    return ["http:", "https:", "mailto:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
 }
 
 export function renderMarkdown(text) {

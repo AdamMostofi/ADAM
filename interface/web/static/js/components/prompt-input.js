@@ -77,9 +77,10 @@ export class PromptInput {
 
   _sync() {
     const empty = this.value.trim().length === 0;
-    this.submit.classList.toggle("is-disabled", empty || this.disabled);
-    this.submit.setAttribute("aria-disabled", String(empty || this.disabled));
-    this.submit.disabled = empty || this.disabled;
+    const blocked = empty || this.disabled || this.status === "streaming";
+    this.submit.classList.toggle("is-disabled", blocked);
+    this.submit.setAttribute("aria-disabled", String(blocked));
+    this.submit.disabled = blocked;
   }
 
   _submit() {

@@ -1,16 +1,8 @@
 // ADAM web app — shell, routing, panes, and chat wiring.
 
 import { api } from "./api.js";
-import { Conversation } from "./components/conversation.js";
-import { Message } from "./components/message.js";
-import { renderMarkdown } from "./components/markdown.js";
-import { PromptInput } from "./components/prompt-input.js";
-import { Reveal } from "./components/reveal.js";
-import { Suggestions } from "./components/suggestion.js";
-import { ModelSelector } from "./components/model-selector.js";
-import { ThinkingIndicator } from "./components/shimmer.js";
-
-const $ = (sel) => document.querySelector(sel);
+import { Chat } from "./chat.js";
+import { $, el } from "./dom.js";
 
 const SECTIONS = {
   vox: { crumb: "Vox // Transmission", title: "Conversation" },
@@ -126,7 +118,16 @@ function activateSection(name, { focus = false } = {}) {
 function renderActions(name) {
   const actions = [];
   if (name === "vox") {
-    actions.push({ label: "Export transcript", onClick: () => chatController?.download() });
+    actions.push({
+      label: "New",
+      onClick: () => {
+        if (chatController?.clear()) {
+          toast("Transcript cleared.", "success");
+          refreshTelemetry();
+        }
+      },
+    });
+    actions.push({ label: "Export", onClick: () => chatController?.download() });
   } else if (name === "cognition") {
     actions.push({ label: "Fit", onClick: () => graphNetwork?.fit({ animation: { duration: 220, easingFunction: "easeInOutQuad" } }) });
     actions.push({ label: "Refresh", onClick: () => loaders.cognition?.() });
@@ -148,66 +149,14 @@ function renderActions(name) {
 }
 
 function setupChat() {
-  const conversation = new Conversation({});
-  $("#chat-pane").append(conversation.el);
-
-  const thinking = new ThinkingIndicator();
-  thinking.el.classList.add("hidden");
-
-  const mode = new ModelSelector({ label: "Cogitator mode", value: "full" });
-  $("#chat-pane").append(mode.el);
-
-  const suggestions = new Suggestions({ label: "Sanctioned inquiries" });
-  ["Recite the Litany", "Status of the cogitator", "What is the Machine Spirit?"].forEach((s) =>
-    suggestions.add(s, ({ text }) => prompt.setValue(text))
-  );
-
-  const prompt = new PromptInput({
-    placeholder: "Open a vox channel…",
-    onSubmit: ({ text }) => send(text),
-  });
-
-  $("#chat-pane").append(suggestions.el, prompt.el, thinking.el);
-
-  let busy = false;
-
-  async function send(text) {
-    if (busy) return;
-    busy = true;
-    prompt.setStatus("streaming");
-    thinking.el.classList.remove("hidden");
-    conversation.scrollToBottom();
-
-    const user = new Message({ from: "user" });
-    user.setContent(document.createTextNode(text));
-    conversation.addMessage("user", user.el);
-
-    try {
-      const result = await api.chat(text, mode.value);
-      const assistant = new Message({ from: "assistant" });
-      assistant.addAction({ icon: "copy", label: "Copy", tooltip: "Copy", onClick: () => navigator.clipboard.writeText(result.response) });
-      assistant.addAction({ icon: "retry", label: "Retry", tooltip: "Retry", onClick: () => send(text) });
-      conversation.addMessage("assistant", assistant.el);
-
-      const reveal = new Reveal({ mode: "word", speed: 14 });
-      assistant.content.replaceChildren(reveal.container);
-      await reveal.show(renderMarkdown(result.response));
+  chatController = new Chat({
+    mount: $("#chat-pane"),
+    onChange: () => {
       invalidate("cognition", "vaults", "skills", "rites");
-    } catch (err) {
-      const errMsg = new Message({ from: "assistant" });
-      errMsg.setContent(document.createTextNode(`Vox error: ${err.message}`));
-      conversation.addMessage("assistant", errMsg.el);
-    } finally {
-      thinking.el.classList.add("hidden");
-      prompt.setStatus("ready");
-      prompt.focus();
-      busy = false;
       refreshTelemetry();
-    }
-  }
-
-  prompt.focus();
-  chatController = { download: () => conversation.download() };
+    },
+    onToast: (message, tone) => toast(message, tone),
+  });
 }
 
 function setupMemory() {
@@ -475,21 +424,6 @@ function badge(text, className) {
 
 function state(text) {
   return el("div", { class: "list-state", text });
-}
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if (v !== null && v !== undefined) node.setAttribute(k, v);
-  }
-  for (const child of [].concat(children)) {
-    if (child == null) continue;
-    node.append(child.nodeType ? child : document.createTextNode(String(child)));
-  }
-  return node;
 }
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -46,10 +46,15 @@ export class Loader {
 }
 
 export class ThinkingIndicator {
-  constructor() {
-    this.el = el("div", { class: "adam-thinking" }, [
+  constructor({ text = "The Machine Spirit deliberates" } = {}) {
+    this.shimmer = new Shimmer({ text });
+    this.el = el("div", { class: "adam-thinking", role: "status", "aria-live": "polite" }, [
       el("span", { class: "adam-thinking-cog", html: COG }),
-      new Shimmer({ text: "The Machine Spirit deliberates" }).el,
+      this.shimmer.el,
     ]);
+  }
+
+  setText(text) {
+    this.shimmer.el.textContent = text;
   }
 }

@@ -45,6 +45,7 @@ export class ModelSelector {
         el("span", { class: "adam-segment-option-label", text: opt.label }),
         el("span", { class: "adam-segment-option-desc", text: opt.description }),
       ]);
+      if (opt.value === value) btn.classList.add("is-active");
       btn.addEventListener("click", () => this.setValue(opt.value));
       this.buttons.set(opt.value, btn);
       row.append(btn);

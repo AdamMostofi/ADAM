@@ -1,21 +1,6 @@
 // Message — user/assistant turns, bubbles, actions, toolbar.
-// Ported from AI Elements `message.tsx` (vercel/ai-elements).
 
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k === "html") node.innerHTML = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if (v !== null && v !== undefined) node.setAttribute(k, v);
-  }
-  for (const child of [].concat(children)) {
-    if (child == null) continue;
-    node.append(child.nodeType ? child : document.createTextNode(String(child)));
-  }
-  return node;
-}
+import { el } from "../dom.js";
 
 export const ICONS = {
   copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="1"/><path d="M5 15V5a1 1 0 0 1 1-1h9"/></svg>`,
@@ -27,7 +12,7 @@ export const ICONS = {
 };
 
 export class Message {
-  constructor({ from = "assistant", label, actions } = {}) {
+  constructor({ from = "assistant", label, actions, error = false } = {}) {
     this.from = from;
     this.content = el("div", { class: "adam-message-content" });
     this.actions = el("div", { class: "adam-message-actions hidden" });
@@ -41,7 +26,10 @@ export class Message {
       text: label ?? (from === "user" ? "Vox Transmission" : "Machine Spirit"),
     });
 
-    this.el = el("div", { class: `adam-message is-${from}`, "data-role": from }, [
+    this.el = el("div", {
+      class: `adam-message is-${from}${error ? " is-error" : ""}`,
+      "data-role": from,
+    }, [
       roleLabel,
       this.content,
       this.toolbar,
@@ -62,6 +50,11 @@ export class Message {
 
   setText(text) {
     this.content.replaceChildren(document.createTextNode(text));
+    return this;
+  }
+
+  setBusy(busy) {
+    this.content.setAttribute("aria-busy", String(busy));
     return this;
   }
 
@@ -87,30 +80,5 @@ export class Message {
 
   hideActions() {
     this.actions.classList.add("hidden");
-  }
-}
-
-export class MessageActions {
-  constructor(children = []) {
-    this.el = el("div", { class: "adam-message-actions" }, children);
-  }
-}
-
-export class MessageAction {
-  constructor({ icon, label, tooltip, onClick } = {}) {
-    this.el = el("button", {
-      class: "adam-message-action",
-      type: "button",
-      "aria-label": label || tooltip,
-      title: tooltip || label,
-      html: ICONS[icon] ?? icon,
-      onclick: onClick,
-    });
-  }
-}
-
-export class MessageToolbar {
-  constructor(children = []) {
-    this.el = el("div", { class: "adam-message-toolbar" }, children);
   }
 }

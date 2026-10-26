@@ -1,21 +1,6 @@
 // Conversation — scroll container, empty state, scroll button, transcript export.
-// Ported from AI Elements `conversation.tsx` (CC BY / MIT, vercel/ai-elements).
 
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k === "html") node.innerHTML = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if (v !== null && v !== undefined) node.setAttribute(k, v);
-  }
-  for (const child of [].concat(children)) {
-    if (child == null) continue;
-    node.append(child.nodeType ? child : document.createTextNode(String(child)));
-  }
-  return node;
-}
+import { el } from "../dom.js";
 
 const VOX_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
   <circle cx="12" cy="12" r="3"/>
@@ -25,10 +10,6 @@ const VOX_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 
 const ARROW_DOWN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
   <path d="M12 5v14M5 12l7 7 7-7"/>
-</svg>`;
-
-const DOWNLOAD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-  <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
 </svg>`;
 
 export class Conversation {
@@ -51,20 +32,10 @@ export class Conversation {
       onclick: () => this.scrollToBottom(),
     });
 
-    this.downloadButton = el("button", {
-      class: "adam-download-button",
-      type: "button",
-      "aria-label": "Export transcript",
-      title: "Export transcript",
-      html: DOWNLOAD,
-      onclick: () => this.download(),
-    });
-
     this.content = el("div", { class: "adam-conversation-content" }, [this.emptyState]);
 
     this.el = el("div", { class: "adam-conversation", role: "log", "aria-label": "Conversation" }, [
       this.content,
-      this.downloadButton,
       this.scrollButton,
     ]);
 
@@ -85,9 +56,16 @@ export class Conversation {
     this.content.append(message);
     this.messages.push({ role, node: message });
     this.emptyState.classList.add("hidden");
-    this.scrollToBottom();
+    if (!this.restoring) this.scrollToBottom();
     this._sync();
     return message;
+  }
+
+  remove(node) {
+    this.messages = this.messages.filter((m) => m.node !== node);
+    node.remove();
+    if (this.messages.length === 0) this.emptyState.classList.remove("hidden");
+    this._sync();
   }
 
   clear() {
