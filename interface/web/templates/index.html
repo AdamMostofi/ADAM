@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="PRIMARCH ADAM — a local reasoning machine with persistent memory.">
-  <meta name="theme-color" content="#0c0e11">
+  <meta name="theme-color" content="#0b0d10">
   <title>PRIMARCH ADAM</title>
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
@@ -13,85 +13,174 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div class="app">
-    <header class="header">
-      <div class="brand">
-        <span class="brand-title">Primarch Adam</span>
-        <span class="brand-sub">First Of It's Kind</span>
-      </div>
-      <div class="header-right">
-        <span class="header-status" id="header-status">Machine Spirit · online</span>
-        <button id="theme-toggle" class="header-btn" type="button" title="High contrast" aria-label="Use high contrast" aria-pressed="false">HC</button>
-      </div>
-    </header>
 
-    <main class="main" id="main">
-      <nav class="tabs" role="tablist" aria-label="Sections">
-        <button id="tab-chat-label" class="tab active" role="tab" aria-selected="true" aria-controls="tab-chat" data-tab="chat" type="button">Vox</button>
-        <button id="tab-graph-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-graph" data-tab="graph" type="button">Cognition</button>
-        <button id="tab-memory-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-memory" data-tab="memory" type="button">Data-Vaults</button>
-        <button id="tab-skills-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-skills" data-tab="skills" type="button">Skills</button>
-        <button id="tab-settings-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" type="button">Rites</button>
+  <div class="app" id="app">
+    <aside class="rail" id="rail" aria-label="Primary">
+      <div class="rail-top">
+        <a class="rail-brand" href="#vox" aria-label="Primarch Adam — Vox">
+          <span class="brand-sigil" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2l8 5v10l-8 5-8-5V7z"/>
+              <path d="M12 7v10M8 10h8"/>
+            </svg>
+          </span>
+          <span class="rail-brand-text">
+            <span class="rail-brand-title">Primarch Adam</span>
+            <span class="rail-brand-sub">First of its kind</span>
+          </span>
+        </a>
+      </div>
+
+      <nav class="rail-nav" id="rail-nav" aria-label="Sections">
+        <button class="rail-item is-active" data-section="vox" type="button" aria-current="page">
+          <span class="rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square">
+              <circle cx="12" cy="12" r="2.2"/>
+              <path d="M7.5 8.5a6 6 0 0 0 0 7M16.5 8.5a6 6 0 0 1 0 7"/>
+              <path d="M4.5 5.5a10 10 0 0 0 0 13M19.5 5.5a10 10 0 0 1 0 13"/>
+            </svg>
+          </span>
+          <span class="rail-label">Vox</span>
+        </button>
+        <button class="rail-item" data-section="cognition" type="button">
+          <span class="rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square">
+              <circle cx="6" cy="6" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="12" cy="18" r="2"/>
+              <path d="M7.7 7.2l3.1 9.1M17 8.6l-3.7 7.8M8 6.3h7.9"/>
+            </svg>
+          </span>
+          <span class="rail-label">Cognition</span>
+        </button>
+        <button class="rail-item" data-section="vaults" type="button">
+          <span class="rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square">
+              <path d="M4 7h16v13H4z"/><path d="M4 7l2-4h12l2 4"/><path d="M9 12h6"/>
+            </svg>
+          </span>
+          <span class="rail-label">Data-Vaults</span>
+        </button>
+        <button class="rail-item" data-section="skills" type="button">
+          <span class="rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square">
+              <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/>
+              <path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h7"/>
+            </svg>
+          </span>
+          <span class="rail-label">Skills</span>
+        </button>
+        <button class="rail-item" data-section="rites" type="button">
+          <span class="rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>
+            </svg>
+          </span>
+          <span class="rail-label">Rites</span>
+        </button>
       </nav>
 
-      <section id="tab-chat" class="tab-content active" role="tabpanel" aria-labelledby="tab-chat-label" tabindex="0">
-        <div id="chat-pane" class="chat-pane"></div>
-      </section>
+      <div class="rail-foot">
+        <div class="rail-telemetry" aria-hidden="true">
+          <div class="telemetry-row"><span>Facts</span><span id="tele-facts">—</span></div>
+          <div class="telemetry-row"><span>Skills</span><span id="tele-skills">—</span></div>
+        </div>
+        <div class="rail-status" id="rail-status" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="rail-status-text">Machine spirit online</span>
+        </div>
+        <div class="rail-tools">
+          <button id="contrast-toggle" class="rail-tool" type="button" aria-pressed="false" title="Use high contrast">HC</button>
+          <button id="rail-collapse" class="rail-tool" type="button" aria-label="Collapse navigation" title="Collapse navigation">«</button>
+        </div>
+      </div>
+    </aside>
 
-      <section id="tab-graph" class="tab-content" role="tabpanel" aria-labelledby="tab-graph-label" tabindex="0">
-        <div class="pane-head">
-          <h2>Knowledge Graph</h2>
-          <div class="pane-controls">
-            <span class="graph-legend">
-              <span class="legend-dot legend-user" title="User inscription"></span>user
-              <span class="legend-dot legend-deduced" title="Deduced"></span>deduced
-              <span class="legend-dot legend-learned" title="Learned"></span>learned
-              <span class="legend-dot legend-inferred" title="Inferred"></span>inferred
-            </span>
-            <button id="graph-refresh" class="ghost-btn" type="button">Refresh</button>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-heading">
+          <p class="topbar-crumb" id="topbar-crumb">Vox // Transmission</p>
+          <h1 class="topbar-title" id="topbar-title">Conversation</h1>
+        </div>
+        <div class="topbar-actions" id="topbar-actions"></div>
+      </header>
+
+      <main class="main" id="main">
+        <section id="section-vox" class="section is-active" data-section="vox" aria-labelledby="section-vox-title" tabindex="-1">
+          <h2 class="sr-only" id="section-vox-title">Vox — conversation</h2>
+          <div id="chat-pane" class="chat-pane"></div>
+        </section>
+
+        <section id="section-cognition" class="section" data-section="cognition" aria-labelledby="section-cognition-title" tabindex="-1">
+          <h2 class="sr-only" id="section-cognition-title">Cognition — knowledge graph</h2>
+          <div class="cognition-layout">
+            <div class="graph-shell">
+              <div class="pane-toolbar">
+                <div class="graph-legend">
+                  <span class="legend-dot legend-user" title="User"></span>user
+                  <span class="legend-dot legend-deduced" title="Deduced"></span>deduced
+                  <span class="legend-dot legend-learned" title="Learned"></span>learned
+                  <span class="legend-dot legend-inferred" title="Inferred"></span>inferred
+                </div>
+                <span class="pane-count" id="graph-count"></span>
+              </div>
+              <div id="graph-container" class="graph-container"></div>
+            </div>
+            <aside id="graph-inspector" class="inspector" aria-label="Node inspector" hidden></aside>
           </div>
-        </div>
-        <div id="graph-container" class="graph-container"></div>
-      </section>
+        </section>
 
-      <section id="tab-memory" class="tab-content" role="tabpanel" aria-labelledby="tab-memory-label" tabindex="0">
-        <div class="pane-head">
-          <h2>Data-Vaults</h2>
-          <div class="pane-controls">
-            <select id="memory-source" class="ghost-input" aria-label="Filter by source">
-              <option value="">All sources</option>
-              <option value="user">User</option>
-              <option value="deduced">Deduced</option>
-              <option value="learned">Learned</option>
-              <option value="inferred">Inferred</option>
-            </select>
-            <input id="memory-search" class="ghost-input" type="text" placeholder="Search the vaults…" aria-label="Search memories">
-            <button id="memory-refresh" class="ghost-btn" type="button">Refresh</button>
+        <section id="section-vaults" class="section" data-section="vaults" aria-labelledby="section-vaults-title" tabindex="-1">
+          <h2 class="sr-only" id="section-vaults-title">Data-Vaults — memory</h2>
+          <div class="pane-toolbar">
+            <div class="pane-toolbar-group">
+              <label class="sr-only" for="memory-search">Search memories</label>
+              <input id="memory-search" class="ghost-input" type="text" placeholder="Search the vaults…">
+              <label class="sr-only" for="memory-source">Filter by source</label>
+              <select id="memory-source" class="ghost-input">
+                <option value="">All sources</option>
+                <option value="user">User</option>
+                <option value="deduced">Deduced</option>
+                <option value="learned">Learned</option>
+                <option value="inferred">Inferred</option>
+              </select>
+            </div>
+            <span class="pane-count" id="memory-count"></span>
           </div>
-        </div>
-        <div id="memory-list" class="scroll-list" aria-live="polite"></div>
-      </section>
 
-      <section id="tab-skills" class="tab-content" role="tabpanel" aria-labelledby="tab-skills-label" tabindex="0">
-        <div class="pane-head"><h2>Skills</h2><button id="skills-refresh" class="ghost-btn" type="button">Refresh</button></div>
-        <div id="skills-list" class="scroll-list" aria-live="polite"></div>
-      </section>
+          <div id="add-fact-panel" class="fact-drawer hidden">
+            <div class="fact-drawer-head">
+              <span>Inscribe a fact</span>
+              <button id="fact-cancel" class="icon-btn" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="fact-drawer-fields">
+              <input id="fact-subject" class="ghost-input" type="text" placeholder="Subject" aria-label="Subject">
+              <input id="fact-predicate" class="ghost-input" type="text" placeholder="Predicate" aria-label="Predicate">
+              <input id="fact-object" class="ghost-input" type="text" placeholder="Object" aria-label="Object">
+              <button id="fact-submit" class="gold-btn" type="button">Inscribe</button>
+            </div>
+          </div>
 
-      <section id="tab-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-settings-label" tabindex="0">
-        <div class="pane-head"><h2>Rites</h2></div>
-        <div id="stats-panel" class="stats-panel" aria-live="polite"></div>
-        <div class="settings-actions">
-          <button id="save-btn" class="gold-btn" type="button">Save State</button>
-          <button id="add-fact-btn" class="ghost-btn" type="button">Inscribe Fact</button>
-        </div>
-        <div id="add-fact-form" class="add-fact-form hidden">
-          <input id="fact-subject" class="ghost-input" type="text" placeholder="Subject" aria-label="Subject">
-          <input id="fact-predicate" class="ghost-input" type="text" placeholder="Predicate" aria-label="Predicate">
-          <input id="fact-object" class="ghost-input" type="text" placeholder="Object" aria-label="Object">
-          <button id="fact-submit" class="gold-btn" type="button">Inscribe</button>
-        </div>
-      </section>
-    </main>
+          <div id="memory-list" class="scroll-list" aria-live="polite"></div>
+        </section>
+
+        <section id="section-skills" class="section" data-section="skills" aria-labelledby="section-skills-title" tabindex="-1">
+          <h2 class="sr-only" id="section-skills-title">Skills — compiled librarium</h2>
+          <div class="pane-toolbar">
+            <span class="pane-hint">Skills compile from repeated reasoning and are weighted by observed fitness.</span>
+            <span class="pane-count" id="skills-count"></span>
+          </div>
+          <div id="skills-list" class="scroll-list" aria-live="polite"></div>
+        </section>
+
+        <section id="section-rites" class="section" data-section="rites" aria-labelledby="section-rites-title" tabindex="-1">
+          <h2 class="sr-only" id="section-rites-title">Rites — system</h2>
+          <div id="stats-panel" class="stats-panel" aria-live="polite"></div>
+          <p class="rites-note">State is stored locally. Saving writes the current memory, graph and affect state to disk.</p>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
   </div>
 
   <script src="/static/js/lib/marked.min.js"></script>

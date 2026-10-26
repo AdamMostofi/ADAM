@@ -1,4 +1,4 @@
-// ADAM web app — bootstrap, theme, tabs, and chat wiring.
+// ADAM web app — shell, routing, panes, and chat wiring.
 
 import { api } from "./api.js";
 import { Conversation } from "./components/conversation.js";
@@ -12,12 +12,24 @@ import { ThinkingIndicator } from "./components/shimmer.js";
 
 const $ = (sel) => document.querySelector(sel);
 
+const SECTIONS = {
+  vox: { crumb: "Vox // Transmission", title: "Conversation" },
+  cognition: { crumb: "Cognition // Knowledge Graph", title: "Cognition" },
+  vaults: { crumb: "Data-Vaults // Memory", title: "Data-Vaults" },
+  skills: { crumb: "Librarium // Compiled Skills", title: "Skills" },
+  rites: { crumb: "Rites // System", title: "Rites" },
+};
+
 const loaders = {};
 const loaded = new Set();
+const dirty = new Set();
+let activeSection = "vox";
+let chatController = null;
+let graphNetwork = null;
 
 function setupContrast() {
   const root = document.documentElement;
-  const btn = $("#theme-toggle");
+  const btn = $("#contrast-toggle");
   const stored = localStorage.getItem("adam-contrast");
   const prefersHigh = window.matchMedia?.("(prefers-contrast: more)").matches;
   const mode = stored ?? (prefersHigh ? "high" : "standard");
@@ -25,7 +37,6 @@ function setupContrast() {
 
   const sync = () => {
     const high = root.getAttribute("data-contrast") === "high";
-    btn.textContent = "HC";
     btn.setAttribute("aria-pressed", String(high));
     btn.title = high ? "Use standard contrast" : "Use high contrast";
     btn.setAttribute("aria-label", btn.title);
@@ -42,36 +53,98 @@ function setupContrast() {
   sync();
 }
 
-function activate(tab) {
-  document.querySelectorAll(".tab").forEach((b) => {
-    const on = b.dataset.tab === tab;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-selected", String(on));
-    b.tabIndex = on ? 0 : -1;
-  });
-  document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
-  $(`#tab-${tab}`).classList.add("active");
-  if (loaders[tab] && !loaded.has(tab)) {
-    loaded.add(tab);
-    loaders[tab]();
-  }
-}
+function setupRail() {
+  const app = $("#app");
+  const railButtons = [...document.querySelectorAll(".rail-item")];
+  const collapse = $("#rail-collapse");
 
-function setupTabs() {
-  const tabs = [...document.querySelectorAll(".tab")];
-  tabs.forEach((btn, i) => {
-    btn.tabIndex = btn.classList.contains("active") ? 0 : -1;
-    btn.addEventListener("click", () => activate(btn.dataset.tab));
+  const setCollapsed = (on) => {
+    app.classList.toggle("rail-collapsed", on);
+    localStorage.setItem("adam-rail", on ? "collapsed" : "open");
+    collapse.textContent = on ? "»" : "«";
+    collapse.title = on ? "Expand navigation" : "Collapse navigation";
+    collapse.setAttribute("aria-label", collapse.title);
+    collapse.setAttribute("aria-expanded", String(!on));
+  };
+  setCollapsed(localStorage.getItem("adam-rail") === "collapsed");
+  collapse.addEventListener("click", () => setCollapsed(!app.classList.contains("rail-collapsed")));
+
+  railButtons.forEach((btn, i) => {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.section;
+      if (location.hash === `#${name}`) activateSection(name, { focus: true });
+      else location.hash = name;
+    });
     btn.addEventListener("keydown", (e) => {
-      if (e.key === "Home") { e.preventDefault(); tabs[0].focus(); activate(tabs[0].dataset.tab); return; }
-      if (e.key === "End") { e.preventDefault(); const last = tabs[tabs.length - 1]; last.focus(); activate(last.dataset.tab); return; }
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
+      if (!keys.includes(e.key)) return;
       e.preventDefault();
-      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
-      next.focus();
-      activate(next.dataset.tab);
+      let next = i;
+      if (e.key === "ArrowDown") next = (i + 1) % railButtons.length;
+      if (e.key === "ArrowUp") next = (i - 1 + railButtons.length) % railButtons.length;
+      if (e.key === "Home") next = 0;
+      if (e.key === "End") next = railButtons.length - 1;
+      railButtons[next].focus();
     });
   });
+
+  window.addEventListener("hashchange", () => activateSection(sectionFromHash(), { focus: true }));
+}
+
+function sectionFromHash() {
+  const name = location.hash.replace("#", "");
+  return SECTIONS[name] ? name : "vox";
+}
+
+function activateSection(name, { focus = false } = {}) {
+  if (!SECTIONS[name]) name = "vox";
+  activeSection = name;
+
+  document.querySelectorAll(".rail-item").forEach((btn) => {
+    const on = btn.dataset.section === name;
+    btn.classList.toggle("is-active", on);
+    if (on) btn.setAttribute("aria-current", "page");
+    else btn.removeAttribute("aria-current");
+  });
+  document.querySelectorAll(".section").forEach((section) => {
+    section.classList.toggle("is-active", section.dataset.section === name);
+  });
+
+  $("#topbar-crumb").textContent = SECTIONS[name].crumb;
+  $("#topbar-title").textContent = SECTIONS[name].title;
+  document.title = `${SECTIONS[name].title} · Primarch Adam`;
+  renderActions(name);
+
+  if (loaders[name] && (!loaded.has(name) || dirty.has(name))) {
+    dirty.delete(name);
+    loaded.add(name);
+    loaders[name]();
+  }
+  if (focus) $(`#section-${name}`).focus({ preventScroll: true });
+}
+
+function renderActions(name) {
+  const actions = [];
+  if (name === "vox") {
+    actions.push({ label: "Export transcript", onClick: () => chatController?.download() });
+  } else if (name === "cognition") {
+    actions.push({ label: "Fit", onClick: () => graphNetwork?.fit({ animation: { duration: 220, easingFunction: "easeInOutQuad" } }) });
+    actions.push({ label: "Refresh", onClick: () => loaders.cognition?.() });
+  } else if (name === "vaults") {
+    actions.push({ label: "Inscribe", gold: true, onClick: () => toggleFactDrawer() });
+  } else if (name === "skills") {
+    actions.push({ label: "Refresh", onClick: () => loaders.skills?.() });
+  } else if (name === "rites") {
+    actions.push({ label: "Save state", gold: true, onClick: saveState });
+  }
+  $("#topbar-actions").replaceChildren(
+    ...actions.map((a) => el("button", {
+      class: a.gold ? "gold-btn" : "ghost-btn",
+      type: "button",
+      text: a.label,
+      onclick: a.onClick,
+    }))
+  );
 }
 
 function setupChat() {
@@ -119,6 +192,7 @@ function setupChat() {
       const reveal = new Reveal({ mode: "word", speed: 14 });
       assistant.content.replaceChildren(reveal.container);
       await reveal.show(renderMarkdown(result.response));
+      invalidate("cognition", "vaults", "skills", "rites");
     } catch (err) {
       const errMsg = new Message({ from: "assistant" });
       errMsg.setContent(document.createTextNode(`Vox error: ${err.message}`));
@@ -128,16 +202,20 @@ function setupChat() {
       prompt.setStatus("ready");
       prompt.focus();
       busy = false;
+      refreshTelemetry();
     }
   }
 
   prompt.focus();
+  chatController = { download: () => conversation.download() };
 }
 
 function setupMemory() {
   const list = $("#memory-list");
   const search = $("#memory-search");
   const source = $("#memory-source");
+  const count = $("#memory-count");
+  const panel = $("#add-fact-panel");
 
   async function load() {
     list.replaceChildren(state("Consulting the archives…"));
@@ -145,6 +223,7 @@ function setupMemory() {
       const q = search.value.trim();
       const data = await api.facts(q);
       const rows = source.value ? data.filter((f) => (f.source || "user") === source.value) : data;
+      count.textContent = `${rows.length} record${rows.length === 1 ? "" : "s"}`;
       list.replaceChildren();
       if (rows.length === 0) {
         list.append(state(q ? "No records match that query." : "The vaults stand empty."));
@@ -162,22 +241,64 @@ function setupMemory() {
         ]));
       }
     } catch (err) {
+      count.textContent = "";
       list.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
 
-  $("#memory-refresh").addEventListener("click", load);
   search.addEventListener("keydown", (e) => { if (e.key === "Enter") load(); });
   source.addEventListener("change", load);
-  loaders.memory = load;
+
+  $("#fact-cancel").addEventListener("click", closeFactDrawer);
+  $("#fact-submit").addEventListener("click", submitFact);
+  panel.addEventListener("keydown", (e) => { if (e.key === "Escape") closeFactDrawer(); });
+
+  loaders.vaults = load;
+}
+
+function toggleFactDrawer() {
+  const panel = $("#add-fact-panel");
+  if (panel.classList.contains("hidden")) {
+    panel.classList.remove("hidden");
+    $("#fact-subject").focus();
+  } else {
+    closeFactDrawer();
+  }
+}
+
+function closeFactDrawer() {
+  $("#add-fact-panel").classList.add("hidden");
+}
+
+async function submitFact() {
+  const s = $("#fact-subject").value.trim();
+  const p = $("#fact-predicate").value.trim();
+  const o = $("#fact-object").value.trim();
+  if (!s || !p || !o) {
+    toast("All three fields are required.", "error");
+    return;
+  }
+  try {
+    await api.addFact(s, p, o);
+    $("#fact-subject").value = $("#fact-predicate").value = $("#fact-object").value = "";
+    closeFactDrawer();
+    toast("Fact inscribed.", "success");
+    invalidate("vaults", "cognition", "rites");
+    refreshIfActive("vaults");
+    refreshTelemetry();
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 function setupSkills() {
   const list = $("#skills-list");
+  const count = $("#skills-count");
   async function load() {
     list.replaceChildren(state("Reviewing the librarium…"));
     try {
       const data = await api.skills();
+      count.textContent = `${data.length} skill${data.length === 1 ? "" : "s"}`;
       list.replaceChildren();
       if (data.length === 0) {
         list.append(state("No skills compiled yet."));
@@ -194,10 +315,10 @@ function setupSkills() {
         ]));
       }
     } catch (err) {
+      count.textContent = "";
       list.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
-  $("#skills-refresh").addEventListener("click", load);
   loaders.skills = load;
 }
 
@@ -220,39 +341,34 @@ function setupStats() {
           el("span", { class: "stat-value", text: String(value) }),
         ]));
       }
+      refreshTelemetry(s);
     } catch (err) {
       panel.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
+  loaders.rites = load;
+}
 
-  $("#save-btn").addEventListener("click", async () => {
-    try { await api.save(); flash("State saved."); } catch (err) { flash(err.message); }
-  });
-  $("#add-fact-btn").addEventListener("click", () => $("#add-fact-form").classList.toggle("hidden"));
-  $("#fact-submit").addEventListener("click", async () => {
-    const s = $("#fact-subject").value.trim();
-    const p = $("#fact-predicate").value.trim();
-    const o = $("#fact-object").value.trim();
-    if (!s || !p || !o) return flash("All fields required.");
-    try {
-      await api.addFact(s, p, o);
-      $("#fact-subject").value = $("#fact-predicate").value = $("#fact-object").value = "";
-      $("#add-fact-form").classList.add("hidden");
-      loaded.delete("memory");
-      loaded.delete("graph");
-      flash("Fact inscribed.");
-    } catch (err) { flash(err.message); }
-  });
-  loaders.settings = load;
+async function saveState() {
+  try { await api.save(); toast("State saved.", "success"); }
+  catch (err) { toast(err.message, "error"); }
 }
 
 function setupGraph() {
   const container = $("#graph-container");
+  const count = $("#graph-count");
   async function load() {
     try {
       const data = await api.graph();
+      const nodeCount = (data.nodes || []).length;
+      const edgeCount = (data.edges || []).length;
+      count.textContent = `${nodeCount} nodes · ${edgeCount} edges`;
       if (!window.vis) {
         container.replaceChildren(state("vis.js unavailable."));
+        return;
+      }
+      if (nodeCount === 0) {
+        container.replaceChildren(state("No connections yet. Inscribe a fact to begin."));
         return;
       }
       const palette = {
@@ -266,26 +382,82 @@ function setupGraph() {
         return {
           id: n.id,
           label: n.label,
-          color: { background: palette[source] || palette.user, border: cssVar("--iron", "#3a3733") },
-          font: { color: cssVar("--void", "#0c0e11") },
+          color: { background: palette[source] || palette.user, border: cssVar("--edge", "#3a3733") },
+          font: { color: cssVar("--surface-0", "#0c0e11") },
         };
       }));
       const edges = new window.vis.DataSet((data.edges || []).map((e) => ({
-        from: e.from, to: e.to, label: e.label, arrows: "to", color: cssVar("--iron", "#3a3733"), font: { color: cssVar("--ash", "#8a8375"), size: 10 },
+        from: e.from, to: e.to, label: e.label, arrows: "to", color: cssVar("--edge", "#3a3733"), font: { color: cssVar("--text-mute", "#8a8375"), size: 10 },
       })));
       container.replaceChildren();
-      new window.vis.Network(container, { nodes, edges }, {
+      graphNetwork = new window.vis.Network(container, { nodes, edges }, {
         nodes: { shape: "dot", size: 12, borderWidth: 2 },
         edges: { width: 1.5, smooth: { type: "continuous" } },
         physics: { stabilization: { iterations: 120 } },
         interaction: { hover: true, tooltipDelay: 200 },
       });
     } catch (err) {
+      count.textContent = "";
       container.replaceChildren(state(`Vox error: ${err.message}`));
     }
   }
-  $("#graph-refresh").addEventListener("click", load);
-  loaders.graph = load;
+  loaders.cognition = load;
+  window.addEventListener("contrastchange", () => { if (loaded.has("cognition")) load(); });
+}
+
+async function refreshTelemetry(stats) {
+  try {
+    const s = stats || await api.stats();
+    $("#tele-facts").textContent = fmt(s.facts);
+    $("#tele-skills").textContent = fmt(s.skills);
+    setStatus("Machine spirit online", true);
+  } catch {
+    setStatus("Machine spirit offline", false);
+  }
+}
+
+function setStatus(text, online) {
+  $("#rail-status-text").textContent = text;
+  $("#rail-status").classList.toggle("is-offline", !online);
+}
+
+function invalidate(...names) {
+  names.forEach((n) => dirty.add(n));
+}
+
+function refreshIfActive(name) {
+  if (activeSection !== name || !loaders[name]) return;
+  dirty.delete(name);
+  loaded.add(name);
+  loaders[name]();
+}
+
+function toast(message, tone = "info") {
+  const t = el("div", { class: "toast", "data-tone": tone });
+  t.append(
+    el("span", { class: "toast-message", text: message }),
+    el("button", { class: "toast-close", type: "button", "aria-label": "Dismiss", text: "×" })
+  );
+  const region = $("#toast-region");
+  region.append(t);
+
+  let timer = setTimeout(dismiss, 4000);
+  function dismiss() {
+    clearTimeout(timer);
+    t.classList.add("is-leaving");
+    setTimeout(() => t.remove(), 180);
+  }
+  function pause() { clearTimeout(timer); }
+  function resume() { clearTimeout(timer); timer = setTimeout(dismiss, 2000); }
+  t.querySelector(".toast-close").addEventListener("click", dismiss);
+  t.addEventListener("mouseenter", pause);
+  t.addEventListener("mouseleave", resume);
+  t.addEventListener("focusin", pause);
+  t.addEventListener("focusout", resume);
+}
+
+function fmt(n) {
+  return Number(n ?? 0).toLocaleString();
 }
 
 function cssVar(name, fallback) {
@@ -305,13 +477,6 @@ function state(text) {
   return el("div", { class: "list-state", text });
 }
 
-function flash(text) {
-  const status = $("#header-status");
-  const prev = status.textContent;
-  status.textContent = text;
-  setTimeout(() => (status.textContent = prev), 1800);
-}
-
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
@@ -329,10 +494,12 @@ function el(tag, props = {}, children = []) {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupContrast();
-  setupTabs();
   setupChat();
   setupMemory();
   setupSkills();
   setupStats();
   setupGraph();
+  setupRail();
+  refreshTelemetry();
+  activateSection(sectionFromHash());
 });
