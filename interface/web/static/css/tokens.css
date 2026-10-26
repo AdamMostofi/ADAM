@@ -141,20 +141,20 @@
   --text-dim: oklch(37.0% 0.012 250);
   --text-mute: oklch(49.0% 0.012 250);
 
-  --metal-gold: oklch(49.0% 0.090 82);
-  --metal-gold-bright: oklch(58.0% 0.105 88);
-  --metal-silver: oklch(62.0% 0.010 250);
-  --metal-bronze: oklch(45.0% 0.060 62);
-  --metal-copper: oklch(45.0% 0.090 45);
+  --metal-gold: oklch(43.0% 0.085 82);
+  --metal-gold-bright: oklch(51.0% 0.100 88);
+  --metal-silver: oklch(50.0% 0.010 250);
+  --metal-bronze: oklch(40.0% 0.055 62);
+  --metal-copper: oklch(40.0% 0.085 45);
 
-  --neon-lime: oklch(55.0% 0.170 130);
-  --neon-pink: oklch(52.0% 0.210 350);
-  --neon-cyan: oklch(52.0% 0.110 215);
+  --neon-lime: oklch(43.0% 0.155 132);
+  --neon-pink: oklch(44.0% 0.190 350);
+  --neon-cyan: oklch(43.0% 0.100 215);
 
-  --jewel-emerald: oklch(45.0% 0.115 165);
-  --jewel-sapphire: oklch(42.0% 0.140 260);
-  --jewel-ruby: oklch(42.0% 0.170 22);
-  --jewel-amethyst: oklch(44.0% 0.150 305);
+  --jewel-emerald: oklch(40.0% 0.110 165);
+  --jewel-sapphire: oklch(38.0% 0.135 260);
+  --jewel-ruby: oklch(38.0% 0.160 22);
+  --jewel-amethyst: oklch(40.0% 0.145 305);
 
   --void: var(--surface-0);
   --void-2: var(--surface-1);
@@ -172,6 +172,6 @@
   --accent: var(--neon-lime);
   --accent-2: var(--neon-pink);
   --shadow: oklch(22.0% 0.012 250 / 0.18);
-  --glow: oklch(55.0% 0.170 130 / 0.16);
+  --glow: oklch(43.0% 0.155 132 / 0.16);
   color-scheme: light;
 }
