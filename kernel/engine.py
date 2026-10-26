@@ -85,19 +85,28 @@ class InferenceEngine:
     def infer(self, max_iterations: int = 10000) -> list[Fact]:
         with self.lock:
             all_new_facts: list[Fact] = []
+            touched: set[str] = set()
             iterations = 0
             while self.agenda and iterations < max_iterations:
                 fact = self.agenda.popleft()
                 results = self._apply_rules_indexed(fact)
                 for rule_name, result in results:
                     key = str(result)
+                    proof = f"[{rule_name}] {fact} -> {result}"
                     if key not in self.beliefs:
-                        proof = f"[{rule_name}] {fact} -> {result}"
                         self.beliefs[key] = Belief(fact=result, proof_chain=[proof])
                         self.index.setdefault(result.predicate, set()).add(key)
                         self.agenda.append(result)
                         all_new_facts.append(result)
                         self.trace.append(proof)
+                    elif key not in touched:
+                        # chisel: revise only pre-existing beliefs, once per
+                        # pass; intra-run duplicates collapse for determinism.
+                        # Upgrade to full PLN revision when confidence
+                        # contracts are re-baselined.
+                        self.beliefs[key].revise(result.confidence, proof)
+                        self.trace.append(proof)
+                    touched.add(key)
                 iterations += 1
             return all_new_facts
 
