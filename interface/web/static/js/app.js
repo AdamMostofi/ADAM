@@ -243,10 +243,10 @@ function setupGraph() {
         return;
       }
       const palette = {
-        user: cssVar("--gold", "#c9a227"),
-        deduced: cssVar("--bone-2", "#c8bda4"),
-        learned: cssVar("--gold-bright", "#e6c35c"),
-        inferred: cssVar("--ash", "#8a8375"),
+        user: cssVar("--metal-gold", "#c9a227"),
+        deduced: cssVar("--jewel-sapphire", "#4a6fd8"),
+        learned: cssVar("--jewel-emerald", "#2f9e7a"),
+        inferred: cssVar("--metal-silver", "#c0c7d0"),
       };
       const nodes = new window.vis.DataSet((data.nodes || []).map((n) => {
         const source = n.source || "user";
@@ -254,7 +254,7 @@ function setupGraph() {
           id: n.id,
           label: n.label,
           color: { background: palette[source] || palette.user, border: cssVar("--iron", "#3a3733") },
-          font: { color: cssVar("--void", "#12110f") },
+          font: { color: cssVar("--void", "#0c0e11") },
         };
       }));
       const edges = new window.vis.DataSet((data.edges || []).map((e) => ({

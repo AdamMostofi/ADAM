@@ -1,4 +1,4 @@
-/* ADAM — Warhammer 40K Imperium of Man design tokens (OKLCH) */
+/* ADAM — matte / neon / metallic / jewel design tokens (OKLCH) */
 
 @font-face {
   font-family: "Cinzel";
@@ -62,8 +62,8 @@
   --font-ui: "Oswald", "Arial Narrow", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --radius-sm: 3px;
-  --radius-md: 5px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
   --radius-full: 999px;
 
   --space-1: 4px;
@@ -73,44 +73,105 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  --header-h: 56px;
+  --header-h: 58px;
 }
 
-/* Light — parchment & bone */
+/* Dark — matte graphite, neon highlights, metal trim, jewel data */
 :root,
-[data-theme="light"] {
-  --void: oklch(90.8% 0.027 88);
-  --void-2: oklch(86.9% 0.036 87);
-  --steel: oklch(85.0% 0.041 88);
-  --steel-2: oklch(81.0% 0.046 89);
-  --iron: oklch(73.7% 0.048 84);
-  --iron-strong: oklch(58.5% 0.052 86);
-  --gold: oklch(54.9% 0.103 88);
-  --gold-bright: oklch(67.6% 0.124 87);
-  --crimson: oklch(37.7% 0.137 21);
-  --bone: oklch(26.3% 0.023 84);
-  --bone-2: oklch(37.7% 0.029 79);
-  --ash: oklch(48.7% 0.034 75);
-  --shadow: oklch(26.3% 0.023 84 / 0.18);
-  --glow: oklch(54.9% 0.103 88 / 0.18);
-  color-scheme: light;
+[data-theme="dark"] {
+  --surface-0: oklch(12.0% 0.008 240);
+  --surface-1: oklch(15.5% 0.010 240);
+  --surface-2: oklch(19.0% 0.012 240);
+  --surface-3: oklch(23.5% 0.014 240);
+
+  --edge: oklch(32.0% 0.016 240);
+  --edge-strong: oklch(46.0% 0.020 240);
+
+  --text: oklch(92.0% 0.008 95);
+  --text-dim: oklch(74.0% 0.012 95);
+  --text-mute: oklch(58.0% 0.012 95);
+
+  --metal-gold: oklch(78.0% 0.105 86);
+  --metal-gold-bright: oklch(88.0% 0.110 92);
+  --metal-silver: oklch(84.0% 0.008 250);
+  --metal-bronze: oklch(62.0% 0.075 62);
+  --metal-copper: oklch(60.0% 0.110 45);
+
+  --neon-lime: oklch(89.0% 0.240 128);
+  --neon-pink: oklch(68.0% 0.280 350);
+  --neon-cyan: oklch(85.0% 0.160 205);
+
+  --jewel-emerald: oklch(64.0% 0.140 165);
+  --jewel-sapphire: oklch(58.0% 0.160 260);
+  --jewel-ruby: oklch(54.0% 0.190 22);
+  --jewel-amethyst: oklch(60.0% 0.170 305);
+
+  /* legacy aliases used by existing components */
+  --void: var(--surface-0);
+  --void-2: var(--surface-1);
+  --steel: var(--surface-2);
+  --steel-2: var(--surface-3);
+  --iron: var(--edge);
+  --iron-strong: var(--edge-strong);
+  --gold: var(--metal-gold);
+  --gold-bright: var(--metal-gold-bright);
+  --crimson: var(--jewel-ruby);
+  --bone: var(--text);
+  --bone-2: var(--text-dim);
+  --ash: var(--text-mute);
+
+  --accent: var(--neon-lime);
+  --accent-2: var(--neon-pink);
+  --shadow: oklch(0% 0 0 / 0.55);
+  --glow: oklch(89.0% 0.240 128 / 0.18);
+  color-scheme: dark;
 }
 
-/* Dark — void & steel */
-[data-theme="dark"] {
-  --void: oklch(14.6% 0.004 286);
-  --void-2: oklch(17.5% 0.008 286);
-  --steel: oklch(20.2% 0.008 286);
-  --steel-2: oklch(23.8% 0.011 285);
-  --iron: oklch(30.4% 0.014 286);
-  --iron-strong: oklch(41.3% 0.018 286);
-  --gold: oklch(72.8% 0.138 90);
-  --gold-bright: oklch(80.6% 0.136 91);
-  --crimson: oklch(46.0% 0.173 24);
-  --bone: oklch(89.6% 0.035 89);
-  --bone-2: oklch(75.0% 0.038 88);
-  --ash: oklch(61.7% 0.020 89);
-  --shadow: oklch(0% 0 0 / 0.5);
-  --glow: oklch(72.8% 0.138 90 / 0.16);
-  color-scheme: dark;
+/* Light — matte field stone (no parchment), deep metal + jewel accents */
+[data-theme="light"] {
+  --surface-0: oklch(84.0% 0.008 240);
+  --surface-1: oklch(88.5% 0.006 240);
+  --surface-2: oklch(80.0% 0.008 240);
+  --surface-3: oklch(74.5% 0.010 240);
+
+  --edge: oklch(65.0% 0.012 240);
+  --edge-strong: oklch(48.0% 0.016 240);
+
+  --text: oklch(22.0% 0.012 250);
+  --text-dim: oklch(37.0% 0.012 250);
+  --text-mute: oklch(49.0% 0.012 250);
+
+  --metal-gold: oklch(49.0% 0.090 82);
+  --metal-gold-bright: oklch(58.0% 0.105 88);
+  --metal-silver: oklch(62.0% 0.010 250);
+  --metal-bronze: oklch(45.0% 0.060 62);
+  --metal-copper: oklch(45.0% 0.090 45);
+
+  --neon-lime: oklch(55.0% 0.170 130);
+  --neon-pink: oklch(52.0% 0.210 350);
+  --neon-cyan: oklch(52.0% 0.110 215);
+
+  --jewel-emerald: oklch(45.0% 0.115 165);
+  --jewel-sapphire: oklch(42.0% 0.140 260);
+  --jewel-ruby: oklch(42.0% 0.170 22);
+  --jewel-amethyst: oklch(44.0% 0.150 305);
+
+  --void: var(--surface-0);
+  --void-2: var(--surface-1);
+  --steel: var(--surface-2);
+  --steel-2: var(--surface-3);
+  --iron: var(--edge);
+  --iron-strong: var(--edge-strong);
+  --gold: var(--metal-gold);
+  --gold-bright: var(--metal-gold-bright);
+  --crimson: var(--jewel-ruby);
+  --bone: var(--text);
+  --bone-2: var(--text-dim);
+  --ash: var(--text-mute);
+
+  --accent: var(--neon-lime);
+  --accent-2: var(--neon-pink);
+  --shadow: oklch(22.0% 0.012 250 / 0.18);
+  --glow: oklch(55.0% 0.170 130 / 0.16);
+  color-scheme: light;
 }

@@ -132,14 +132,14 @@
   width: fit-content;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--iron);
-  border-left: 2px solid var(--gold);
+  border-left: 2px solid var(--accent);
   border-radius: var(--radius-md);
   background: var(--steel);
-  box-shadow: 0 2px 12px var(--shadow);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.05), 0 2px 12px var(--shadow);
 }
 .adam-message.is-assistant .adam-message-content {
   padding-left: var(--space-3);
-  border-left: 2px solid var(--iron);
+  border-left: 2px solid var(--edge-strong);
 }
 
 .adam-message-actions {
@@ -286,17 +286,17 @@
   align-items: flex-end;
   gap: var(--space-2);
   padding: var(--space-2);
-  border: 1px solid var(--iron);
-  border-left: 2px solid var(--gold);
+  border: 1px solid var(--edge-strong);
+  border-left: 2px solid var(--accent);
   border-radius: var(--radius-md);
   background: var(--steel);
-  box-shadow: 0 2px 12px var(--shadow);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.05), 0 2px 12px var(--shadow);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .adam-prompt:focus-within {
-  border-color: var(--gold);
-  border-left-color: var(--gold-bright);
-  box-shadow: 0 0 0 1px var(--gold), 0 2px 16px var(--glow);
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 2px 22px var(--glow);
 }
 
 .adam-prompt-field {
@@ -331,13 +331,14 @@
   border: 1px solid var(--iron);
   border-radius: var(--radius-sm);
   background: var(--void-2);
-  color: var(--gold);
+  color: var(--accent);
   transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 .adam-prompt-submit:hover:not(:disabled) {
-  background: var(--gold);
+  background: var(--accent);
   color: var(--void);
-  border-color: var(--gold);
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--glow);
 }
 .adam-prompt-submit svg { width: 17px; height: 17px; }
 .adam-prompt-submit.is-disabled,
@@ -452,9 +453,10 @@
 }
 .adam-suggestion:hover {
   background: var(--steel-2);
-  color: var(--gold-bright);
-  border-color: var(--gold);
+  color: var(--accent);
+  border-color: var(--accent);
   transform: translateY(-1px);
+  box-shadow: 0 0 14px var(--glow);
 }
 .adam-suggestion:active { transform: translateY(0); }
 
@@ -521,10 +523,11 @@
 .adam-segment-option:hover { color: var(--bone); }
 .adam-segment-option.is-active {
   background: var(--steel);
-  border-color: var(--gold);
+  border-color: var(--accent);
   color: var(--bone);
+  box-shadow: inset 0 0 12px var(--glow);
 }
-.adam-segment-option.is-active .adam-segment-option-label { color: var(--gold); }
+.adam-segment-option.is-active .adam-segment-option-label { color: var(--accent); }
 .adam-segment-option.is-active .adam-segment-option-desc { color: var(--bone-2); }
 
 /* ---------- Phase 8: Reasoning ---------- */
@@ -634,14 +637,14 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--iron);
-  border-left: 2px solid var(--gold);
+  border-left: 2px solid var(--jewel-emerald);
   border-radius: var(--radius-sm);
   background: var(--steel);
   color: var(--bone);
   text-decoration: none;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.adam-source:hover { background: var(--steel-2); border-color: var(--gold); }
+.adam-source:hover { background: var(--steel-2); border-color: var(--jewel-emerald); }
 .adam-source-icon {
   width: 15px;
   height: 15px;
@@ -721,9 +724,9 @@
   text-transform: uppercase;
   color: var(--ash);
 }
-.adam-tool-badge[data-tone="running"] { color: var(--gold); border-color: var(--gold); animation: adam-pulse 1.4s ease-in-out infinite; }
-.adam-tool-badge[data-tone="completed"] { color: var(--gold-bright); border-color: var(--gold-bright); }
-.adam-tool-badge[data-tone="error"] { color: var(--crimson); border-color: var(--crimson); }
+.adam-tool-badge[data-tone="running"] { color: var(--accent); border-color: var(--accent); animation: adam-pulse 1.4s ease-in-out infinite; }
+.adam-tool-badge[data-tone="completed"] { color: var(--jewel-emerald); border-color: var(--jewel-emerald); }
+.adam-tool-badge[data-tone="error"] { color: var(--jewel-ruby); border-color: var(--jewel-ruby); }
 
 .adam-tool-content {
   overflow: hidden;
@@ -829,8 +832,8 @@
 }
 .adam-task-item[data-status="done"] { color: var(--bone); }
 .adam-task-item[data-status="done"] .adam-task-item-marker {
-  background: var(--gold);
-  border-color: var(--gold);
+  background: var(--accent);
+  border-color: var(--accent);
   box-shadow: inset 0 0 0 2px var(--void-2);
 }
 .adam-task-item[data-status="running"] .adam-task-item-marker {
@@ -853,7 +856,7 @@
   height: 1em;
   margin-left: 2px;
   vertical-align: -0.15em;
-  background: var(--gold);
+  background: var(--accent);
   animation: adam-caret-blink 0.9s steps(1) infinite;
 }
 @keyframes adam-caret-blink {
