@@ -7,6 +7,15 @@ architecture.*
 
 ---
 
+## Status legend
+
+| Status | Meaning |
+|---|---|
+| **ADOPTED** | Implemented and tested in ADAM |
+| **NEXT** | Decided, not yet built |
+| **LATER** | Decided, blocked on a structural change |
+| **SKIPPED** | Explicitly not doing, with a reason |
+
 ## 1. Executive summary
 
 Hyperon is a research platform built around one bet: **represent knowledge,
@@ -34,10 +43,32 @@ The honest comparison:
 | Operability | research build | one `pip install`, one process | ADAM |
 | LLM integration | external | first-class (embeddings, chat) | ADAM |
 
-**Verdict:** do not port Hyperon. Adopt four specific ideas that fix real
-weaknesses in ADAM, in this order: attention (done), goal-directed proof
-(done), declarative rules, n-ary atoms. Skip MeTTa-the-language and a Rust
-rewrite for now.
+**Verdict:** do not port Hyperon. Adopt five specific ideas that fix real
+weaknesses in ADAM: attention, goal-directed proof, declarative rules,
+pattern queries, and evidence revision — all **ADOPTED** below. n-ary terms
+are **LATER**. MeTTa-the-language, Rust, DAS, MOSES-evolution and PRIMUS are
+**SKIPPED**.
+
+### Adoption status at a glance
+
+| Idea | Status | Where |
+|---|---|---|
+| ECAN attention | **ADOPTED** | `memory/attention.py` |
+| NARS goal-directed answering | **ADOPTED** | `kernel/prove.py` |
+| MeTTa rules-as-data | **ADOPTED** | `kernel/rules.py`, `learning/skill_compiler.py` |
+| MeTTa pattern matching | **ADOPTED** | `InferenceEngine.query_pattern` |
+| PLN evidence revision | **ADOPTED (staged)** | `kernel/truth.py`, `Belief.revise` |
+| MOSES fitness weighting | **ADOPTED (partial)** | `Skill.fitness` |
+| Atomspace n-ary terms | **LATER** | needs a term-model migration |
+| Attention persistence + global budget | **LATER** | `memory/attention.py` |
+| Goal register | **LATER** | `interface/core.py` |
+| Optional PyO3 fast path | **LATER** | only if profiling demands |
+| MeTTa interpreter | **SKIPPED** | language runtime outweighs benefit |
+| Distributed Atomspace | **SKIPPED** | single-process system |
+| MOSES program evolution | **SKIPPED** | no fitness oracle / compute budget |
+| PRIMUS blueprint | **SKIPPED** | under-specified |
+| Rust rewrite | **SKIPPED** | kernel is not the bottleneck |
+| Replacing SQLite facts | **SKIPPED** | durability is an advantage |
 
 ---
 
@@ -67,7 +98,7 @@ from SQLite on load.
 - **Content addressing.** Idempotent insertion for free. ADAM dedupes by
   `str(fact)` key, which breaks as soon as terms contain spaces.
 
-**Verdict: ADAPT (later).** Keep SQLite as the durable store; add an
+**Status: LATER.** Keep SQLite as the durable store; add an
 `Atom`-shaped layer above `Fact` rather than replacing it. Concretely:
 allow `object` to be a JSON-encoded term list, or add a `terms` column. This
 is the single highest-leverage structural change available, but it touches
@@ -115,9 +146,9 @@ they are JSON records the engine never consults.
 - **Ecosystem.** ADAM's rules are Python and can call embeddings, SQLite, the
   LLM. MeTTa rules would need FFI for all of that.
 
-**Verdict: SKIP the language; ADOPT its two mechanisms.**
+**Status: language SKIPPED; mechanisms ADOPTED.**
 
-**(a) Declarative rule registry (Next).** Replace the hardcoded dispatch with
+**(a) Declarative rule registry (ADOPTED).** Replace the hardcoded dispatch with
 a table of rule objects, keeping the built-ins as the initial entries:
 
 ```python
@@ -137,10 +168,10 @@ agenda tests.
 
 **(b) Variable-bearing queries (Next).** `kernel/unification.py` already has
 `unify` and `find_unifiable` with an occurs check, but nothing exposes them.
-Add `engine.query_pattern(subject, predicate, object)` where `?x` terms bind —
-the MeTTa `match` operation, minus the language.
+Implemented as `engine.query_pattern(subject, predicate, object)`, where `?x`
+terms bind — the MeTTa `match` operation, minus the language.
 
-**(c) `engine.prove(...)` (Done).** Backward chaining was missing entirely:
+**(c) `engine.prove(...)` (ADOPTED).** Backward chaining was missing entirely:
 the engine could only saturate forward. `kernel/prove.py` now searches from
 the goal and returns a readable proof chain without mutating beliefs. That is
 the NARS/PLN query discipline applied to ADAM's rule set.
@@ -167,7 +198,7 @@ So ADAM systematically under-reports confidence when evidence converges.
   and rewards independent confirmation.
 - Contradiction handling is graded rather than a boolean flag.
 
-**Verdict: ADAPT (Next, staged).** Do **not** change the rule formulas —
+**Status: ADOPTED, staged.** Do **not** change the rule formulas —
 `tests/integration/test_engine_confidence.py` pins `0.9 × 0.9 = 0.81` and
 that contract is fine for single-proof chains. Instead:
 
@@ -203,7 +234,7 @@ system currently thinking about".
 store*, not a post-hoc ranking, and the budget is global so everything
 competes on one scale.
 
-**Verdict: ADOPT (Done, small).** `memory/attention.py` implements STI/LTI,
+**Status: ADOPTED.** `memory/attention.py` implements STI/LTI,
 decay, and a stable rank; `recall()` now decays, stimulates returned facts, and
 orders by attention. Deliberately minimal:
 
@@ -232,14 +263,14 @@ variation, and no execution of learned skills.
 just observed patterns, and it optimises a fitness signal instead of counting
 repetitions.
 
-**Verdict: ADAPT selectively (Later).**
-- Worth borrowing: **fitness-weighted skill quality**. Replace `usage_count`
-  with `successes / attempts` (a skill that fires and leads to a verified
-  conclusion goes up; a retracted conclusion goes down). That is a one-field
-  change and makes `should_use_skill` meaningful.
-- Worth borrowing: **variation**. When two skills share premises, propose a
-  merged generalised skill and test it — a minimal genetic operator.
-- Skip: full EDAs/program-tree evolution. ADAM has no fitness oracle for
+**Status: fitness ADOPTED; evolution SKIPPED (later).**
+- **Done: fitness-weighted skill quality.** `Skill` now tracks
+  `successes / attempts`; `fitness = confidence × success rate` (untested
+  skills keep their confidence), and corrections penalise the skill that
+  claimed the corrected fact. `should_use_skill` consults fitness.
+- **LATER: variation.** When two skills share premises, propose a merged
+  generalised skill and test it — a minimal genetic operator.
+- **SKIPPED: full EDAs / program-tree evolution.** ADAM has no fitness oracle for
   arbitrary programs and no compute budget for a population loop. Revisit only
   if there is a real task distribution to evolve against.
 
@@ -261,7 +292,7 @@ not.
 when the budget is spent and return the best partial evidence with its
 confidence. That is how a real system behaves under load.
 
-**Verdict: ADOPT the discipline (Done + Next).**
+**Status: ADOPTED (prove); step-budget surfacing NEXT.**
 - Done: `engine.prove()` answers a specific goal without saturating the whole
   agenda — the query pays for the query, not the closure.
 - Next: give `prove()` a **step budget** (already present as `STEP_LIMIT`)
@@ -282,7 +313,7 @@ system — Hyperon is the infrastructure built to make it possible.
 EQ (emotional state) and `Ear`/`Mouth` (intent/tone) are ADAM's own additions
 that Hyperon does not have equivalents for.
 
-**Verdict: SKIP as a blueprint.** PRIMUS is under-specified by its authors'
+**Status: SKIPPED as a blueprint.** PRIMUS is under-specified by its authors'
 own admission. Copying its structure would add ceremony without capability.
 ADAM's facade is a better fit for its size and has things PRIMUS lacks
 (emotional state, LLM I/O).
@@ -351,31 +382,29 @@ knowledge representation and reasoning quality, not throughput.
 
 ## 5. Adoption roadmap
 
-### Done in this change
+### Adopted
 | Item | Where | Test |
 |---|---|---|
 | ECAN-style attention (STI/LTI, decay, ranking) | `memory/attention.py`, `memory/system.py` | `tests/unit/test_attention.py` |
 | Goal-directed backward chaining (NARS/PLN query discipline) | `kernel/prove.py`, `InferenceEngine.prove` | `tests/unit/test_prove.py` |
-| Stats surface for deduced facts/contradictions/trace | `interface/core.py`, `/api/stats` | interface tests |
+| Declarative rule registry + executable skills | `kernel/rules.py`, `learning/skill_compiler.py` | `tests/unit/test_rules_registry.py` |
+| Pattern queries with `?variables` | `InferenceEngine.query_pattern` | `tests/unit/test_query_pattern.py` |
+| PLN evidence revision (staged) | `kernel/truth.py`, `Belief.revise` | `tests/unit/test_truth_revision.py` |
+| Fitness-weighted skills | `Skill.fitness` | `tests/unit/test_skill_fitness.py` |
+| Stats surface for deduced facts/contradictions/trace | `interface/core.py`, `/api/stats` | `tests/integration/test_interface.py` |
 | Phase 14: lazy tabs, aria roles, keyboard nav, graph source colours, source filter/badges | `interface/web/*` | `tests/integration/test_interface.py` |
 
-### Next (high value, contained)
-1. **Declarative rule registry + executable skills** — `kernel/rules.py`;
-   `SkillCompiler` emits a `Rule`. Layer 1 stays immutable.
-2. **Pattern queries** — expose `kernel/unification.py` as
-   `engine.query_pattern("?x", "is", "mortal")`.
-3. **PLN truth values for duplicate derivations** — `kernel/truth.py` +
-   `Belief.evidence`; single-path confidence unchanged.
-4. **Fitness-weighted skills** — replace `usage_count`-only quality with
-   `successes/attempts`.
+### Next (decided, not built)
+1. **Surface the proof step budget** — `prove()` already counts steps; return
+   the budget used so `chat()` can report partial answers.
+2. **Attention persistence + global budget** — write attention into
+   `facts.metadata`, cap total STI, forget the weakest.
 
 ### Later (structural, needs a migration plan)
-5. **n-ary terms** — `Fact.object` accepts a term list; graph builder handles
+1. **n-ary terms** — `Fact.object` accepts a term list; graph builder handles
    relation nodes. Enables "gave(Alice, book, Bob)" without event-node hacks.
-6. **Attention persistence + global budget** — write `attention` into
-   `facts.metadata`, cap total STI, forget the weakest.
-7. **Goal register** — persistent multi-turn objectives in `interface/core.py`.
-8. **Optional PyO3 fast path** — only if profiling justifies it.
+2. **Goal register** — persistent multi-turn objectives in `interface/core.py`.
+3. **Optional PyO3 fast path** — only if profiling justifies it.
 
 ### Skip (with reasons)
 | Idea | Why skip |
