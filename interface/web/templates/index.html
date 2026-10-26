@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PRIMARCH ADAM — a local reasoning machine with persistent memory.">
+  <meta name="theme-color" content="#0c0e11">
   <title>PRIMARCH ADAM</title>
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
@@ -10,6 +12,7 @@
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <div class="app">
     <header class="header">
       <div class="brand">
@@ -18,24 +21,24 @@
       </div>
       <div class="header-right">
         <span class="header-status" id="header-status">Machine Spirit · online</span>
-        <button id="theme-toggle" class="header-btn" type="button" title="Toggle theme" aria-label="Toggle theme">☾</button>
+        <button id="theme-toggle" class="header-btn" type="button" title="Toggle theme" aria-label="Toggle theme" aria-pressed="false">☾</button>
       </div>
     </header>
 
-    <main class="main">
+    <main class="main" id="main">
       <nav class="tabs" role="tablist" aria-label="Sections">
-        <button class="tab active" role="tab" aria-selected="true" aria-controls="tab-chat" data-tab="chat" type="button">Vox</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-graph" data-tab="graph" type="button">Cognition</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-memory" data-tab="memory" type="button">Data-Vaults</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-skills" data-tab="skills" type="button">Skills</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" type="button">Rites</button>
+        <button id="tab-chat-label" class="tab active" role="tab" aria-selected="true" aria-controls="tab-chat" data-tab="chat" type="button">Vox</button>
+        <button id="tab-graph-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-graph" data-tab="graph" type="button">Cognition</button>
+        <button id="tab-memory-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-memory" data-tab="memory" type="button">Data-Vaults</button>
+        <button id="tab-skills-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-skills" data-tab="skills" type="button">Skills</button>
+        <button id="tab-settings-label" class="tab" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" type="button">Rites</button>
       </nav>
 
-      <section id="tab-chat" class="tab-content active" role="tabpanel" aria-labelledby="tab-chat-label">
+      <section id="tab-chat" class="tab-content active" role="tabpanel" aria-labelledby="tab-chat-label" tabindex="0">
         <div id="chat-pane" class="chat-pane"></div>
       </section>
 
-      <section id="tab-graph" class="tab-content" role="tabpanel">
+      <section id="tab-graph" class="tab-content" role="tabpanel" aria-labelledby="tab-graph-label" tabindex="0">
         <div class="pane-head">
           <h2>Knowledge Graph</h2>
           <div class="pane-controls">
@@ -43,6 +46,7 @@
               <span class="legend-dot legend-user" title="User inscription"></span>user
               <span class="legend-dot legend-deduced" title="Deduced"></span>deduced
               <span class="legend-dot legend-learned" title="Learned"></span>learned
+              <span class="legend-dot legend-inferred" title="Inferred"></span>inferred
             </span>
             <button id="graph-refresh" class="ghost-btn" type="button">Refresh</button>
           </div>
@@ -50,7 +54,7 @@
         <div id="graph-container" class="graph-container"></div>
       </section>
 
-      <section id="tab-memory" class="tab-content" role="tabpanel">
+      <section id="tab-memory" class="tab-content" role="tabpanel" aria-labelledby="tab-memory-label" tabindex="0">
         <div class="pane-head">
           <h2>Data-Vaults</h2>
           <div class="pane-controls">
@@ -68,12 +72,12 @@
         <div id="memory-list" class="scroll-list" aria-live="polite"></div>
       </section>
 
-      <section id="tab-skills" class="tab-content" role="tabpanel">
+      <section id="tab-skills" class="tab-content" role="tabpanel" aria-labelledby="tab-skills-label" tabindex="0">
         <div class="pane-head"><h2>Skills</h2><button id="skills-refresh" class="ghost-btn" type="button">Refresh</button></div>
         <div id="skills-list" class="scroll-list" aria-live="polite"></div>
       </section>
 
-      <section id="tab-settings" class="tab-content" role="tabpanel">
+      <section id="tab-settings" class="tab-content" role="tabpanel" aria-labelledby="tab-settings-label" tabindex="0">
         <div class="pane-head"><h2>Rites</h2></div>
         <div id="stats-panel" class="stats-panel" aria-live="polite"></div>
         <div class="settings-actions">

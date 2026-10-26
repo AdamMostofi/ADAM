@@ -90,6 +90,24 @@ button {
   overflow: hidden;
 }
 
+/* Skip link */
+.skip-link {
+  position: fixed;
+  top: -48px;
+  left: var(--space-4);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--accent);
+  background: var(--void);
+  color: var(--accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: var(--space-2); }
+
 /* Utility */
 .hidden { display: none !important; }
 .sr-only {

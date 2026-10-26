@@ -21,7 +21,12 @@ function setupTheme() {
   const theme = stored ?? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
   root.setAttribute("data-theme", theme);
   const btn = $("#theme-toggle");
-  const sync = () => (btn.textContent = root.getAttribute("data-theme") === "dark" ? "☀" : "☾");
+  const sync = () => {
+    const dark = root.getAttribute("data-theme") === "dark";
+    btn.textContent = dark ? "☀" : "☾";
+    btn.setAttribute("aria-pressed", String(dark));
+    btn.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+  };
   btn.addEventListener("click", () => {
     const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
     root.setAttribute("data-theme", next);
@@ -52,6 +57,8 @@ function setupTabs() {
     btn.tabIndex = btn.classList.contains("active") ? 0 : -1;
     btn.addEventListener("click", () => activate(btn.dataset.tab));
     btn.addEventListener("keydown", (e) => {
+      if (e.key === "Home") { e.preventDefault(); tabs[0].focus(); activate(tabs[0].dataset.tab); return; }
+      if (e.key === "End") { e.preventDefault(); const last = tabs[tabs.length - 1]; last.focus(); activate(last.dataset.tab); return; }
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
       e.preventDefault();
       const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
