@@ -13,7 +13,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_MODEL = os.path.normpath(os.path.join(_HERE, "..", "models", "TinyChat15M.gguf"))
 SYSTEM_PROMPT = "You are ADAM. Answer briefly and truthfully. If unsure, say so."
 
-# chisel: 15M model clamps to a 128-token context; keep prompt + output inside it.
+# chisel: 15M model clamps to 128 tokens; swap to a larger model when coherence matters.
 _CONTEXT_CHARS = 60
 
 _SMALL_TALK = {
@@ -123,7 +123,7 @@ class Mouth:
         except urllib.error.HTTPError as exc:
             if exc.code != 400:
                 raise
-            # chisel: retry only the hard 128-token limit; drop context and trim input.
+            # chisel: retry only the 128-token limit; add server-side token counting if prompts grow.
             text = self.speak(self._build_prompt(user_message[:40], params), max_tokens=24)
         return text or "I do not have a good answer for that yet."
 
