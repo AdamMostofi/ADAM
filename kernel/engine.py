@@ -164,6 +164,24 @@ class InferenceEngine:
                 results.append(belief)
             return results
 
+    def query_pattern(
+        self,
+        subject: str | None = None,
+        predicate: str | None = None,
+        object: str | None = None,
+    ) -> list[tuple[Belief, dict[str, str]]]:
+        """MeTTa-style match: `?x` terms bind; return (belief, bindings) pairs."""
+        from kernel.unification import unify
+
+        pattern = Fact(subject or "?s", predicate or "?p", object or "?o")
+        with self.lock:
+            matches = []
+            for belief in self.beliefs.values():
+                bindings = unify(pattern, belief.fact)
+                if bindings is not None:
+                    matches.append((belief, bindings))
+            return matches
+
     def get_trace(self) -> list[str]:
         with self.lock:
             return list(self.trace)
