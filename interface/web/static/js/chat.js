@@ -61,7 +61,6 @@ export class Chat {
     this.prompt.resize();
     this._restore();
     this._syncSuggestions();
-    this.prompt.focus();
   }
 
   get hasTurns() {

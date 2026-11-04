@@ -89,7 +89,7 @@
           <span id="rail-status-text">Machine spirit online</span>
         </div>
         <div class="rail-tools">
-          <button id="contrast-toggle" class="rail-tool" type="button" aria-pressed="false" title="Use high contrast">HC</button>
+          <button id="contrast-toggle" class="rail-tool" type="button" data-contrast-toggle aria-pressed="false" title="Use high contrast">HC</button>
           <button id="rail-collapse" class="rail-tool" type="button" aria-label="Collapse navigation" title="Collapse navigation">«</button>
         </div>
       </div>
@@ -101,10 +101,13 @@
           <p class="topbar-crumb" id="topbar-crumb">Vox // Transmission</p>
           <h1 class="topbar-title" id="topbar-title">Conversation</h1>
         </div>
-        <div class="topbar-actions" id="topbar-actions"></div>
+        <div class="topbar-tools">
+          <div class="topbar-actions" id="topbar-actions"></div>
+          <button id="contrast-toggle-mobile" class="rail-tool topbar-contrast" type="button" data-contrast-toggle aria-pressed="false" title="Use high contrast" aria-label="Use high contrast">HC</button>
+        </div>
       </header>
 
-      <main class="main" id="main">
+      <main class="main" id="main" tabindex="-1">
         <section id="section-vox" class="section is-active" data-section="vox" aria-labelledby="section-vox-title" tabindex="-1">
           <h2 class="sr-only" id="section-vox-title">Vox — conversation</h2>
           <div id="chat-pane" class="chat-pane"></div>

@@ -21,7 +21,7 @@ let graphNetwork = null;
 
 function setupContrast() {
   const root = document.documentElement;
-  const btn = $("#contrast-toggle");
+  const buttons = [...document.querySelectorAll("[data-contrast-toggle]")];
   const stored = localStorage.getItem("adam-contrast");
   const prefersHigh = window.matchMedia?.("(prefers-contrast: more)").matches;
   const mode = stored ?? (prefersHigh ? "high" : "standard");
@@ -29,9 +29,11 @@ function setupContrast() {
 
   const sync = () => {
     const high = root.getAttribute("data-contrast") === "high";
-    btn.setAttribute("aria-pressed", String(high));
-    btn.title = high ? "Use standard contrast" : "Use high contrast";
-    btn.setAttribute("aria-label", btn.title);
+    for (const btn of buttons) {
+      btn.setAttribute("aria-pressed", String(high));
+      btn.title = high ? "Use standard contrast" : "Use high contrast";
+      btn.setAttribute("aria-label", btn.title);
+    }
   };
   const apply = (next) => {
     root.setAttribute("data-contrast", next);
@@ -39,9 +41,11 @@ function setupContrast() {
     sync();
     window.dispatchEvent(new Event("contrastchange"));
   };
-  btn.addEventListener("click", () => {
-    apply(root.getAttribute("data-contrast") === "high" ? "standard" : "high");
-  });
+  for (const btn of buttons) {
+    btn.addEventListener("click", () => {
+      apply(root.getAttribute("data-contrast") === "high" ? "standard" : "high");
+    });
+  }
   sync();
 }
 
@@ -80,7 +84,15 @@ function setupRail() {
     });
   });
 
-  window.addEventListener("hashchange", () => activateSection(sectionFromHash(), { focus: true }));
+  window.addEventListener("hashchange", () => {
+    const name = location.hash.replace("#", "");
+    if (!name) {
+      activateSection("vox", { focus: true });
+      return;
+    }
+    if (!SECTIONS[name]) return;
+    activateSection(name, { focus: true });
+  });
 }
 
 function sectionFromHash() {
@@ -282,7 +294,7 @@ function setupStats() {
         ["Facts", s.facts], ["Deduced", s.deduced ?? 0], ["Skills", s.skills],
         ["Graph nodes", s.nodes], ["Graph edges", s.edges],
         ["Contradictions", s.contradictions ?? 0], ["Trace steps", s.trace_steps ?? 0],
-        ["EQ baseline", Number(s.baseline).toFixed(2)], ["Mood shift", s.mood_shift],
+        ["EQ baseline", Number(s.baseline).toFixed(2)], ["Mood shift", s.mood_shift ? "Detected" : "None"],
       ];
       for (const [label, value] of rows) {
         panel.append(el("div", { class: "stat-row" }, [
@@ -332,11 +344,28 @@ function setupGraph() {
           id: n.id,
           label: n.label,
           color: { background: palette[source] || palette.user, border: cssVar("--edge", "#3a3733") },
-          font: { color: cssVar("--surface-0", "#0c0e11") },
+          font: {
+            color: cssVar("--text", "#e8e6df"),
+            size: 13,
+            face: "IBM Plex Mono",
+            strokeWidth: 3,
+            strokeColor: cssVar("--surface-0", "#0b0d10"),
+          },
         };
       }));
       const edges = new window.vis.DataSet((data.edges || []).map((e) => ({
-        from: e.from, to: e.to, label: e.label, arrows: "to", color: cssVar("--edge", "#3a3733"), font: { color: cssVar("--text-mute", "#8a8375"), size: 10 },
+        from: e.from,
+        to: e.to,
+        label: e.label,
+        arrows: "to",
+        color: cssVar("--edge", "#3a3733"),
+        font: {
+          color: cssVar("--text-dim", "#b8b4a8"),
+          size: 11,
+          face: "IBM Plex Mono",
+          strokeWidth: 3,
+          strokeColor: cssVar("--surface-0", "#0b0d10"),
+        },
       })));
       container.replaceChildren();
       graphNetwork = new window.vis.Network(container, { nodes, edges }, {
