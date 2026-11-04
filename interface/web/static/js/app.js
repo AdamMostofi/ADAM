@@ -19,31 +19,30 @@ let activeSection = "vox";
 let chatController = null;
 let graphNetwork = null;
 
-function setupContrast() {
+function setupTheme() {
   const root = document.documentElement;
-  const buttons = [...document.querySelectorAll("[data-contrast-toggle]")];
-  const stored = localStorage.getItem("adam-contrast");
-  const prefersHigh = window.matchMedia?.("(prefers-contrast: more)").matches;
-  const mode = stored ?? (prefersHigh ? "high" : "standard");
-  root.setAttribute("data-contrast", mode);
+  const buttons = [...document.querySelectorAll("[data-theme-toggle]")];
+  const mode = root.dataset.theme === "light" ? "light" : "dark";
+  root.dataset.theme = mode;
 
   const sync = () => {
-    const high = root.getAttribute("data-contrast") === "high";
+    const light = root.dataset.theme === "light";
     for (const btn of buttons) {
-      btn.setAttribute("aria-pressed", String(high));
-      btn.title = high ? "Use standard contrast" : "Use high contrast";
-      btn.setAttribute("aria-label", btn.title);
+      btn.setAttribute("aria-pressed", String(light));
+      btn.title = light ? "Switch to dark theme" : "Switch to light theme";
     }
   };
   const apply = (next) => {
-    root.setAttribute("data-contrast", next);
-    localStorage.setItem("adam-contrast", next);
+    root.dataset.theme = next;
+    localStorage.setItem("adam-theme", next);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = next === "light" ? "#ece6db" : "#0b0d10";
     sync();
-    window.dispatchEvent(new Event("contrastchange"));
+    window.dispatchEvent(new Event("themechange"));
   };
   for (const btn of buttons) {
     btn.addEventListener("click", () => {
-      apply(root.getAttribute("data-contrast") === "high" ? "standard" : "high");
+      apply(root.dataset.theme === "light" ? "dark" : "light");
     });
   }
   sync();
@@ -333,23 +332,23 @@ function setupGraph() {
         return;
       }
       const palette = {
-        user: cssVar("--metal-gold", "#c9a227"),
-        deduced: cssVar("--jewel-sapphire", "#4a6fd8"),
-        learned: cssVar("--jewel-emerald", "#2f9e7a"),
-        inferred: cssVar("--metal-silver", "#c0c7d0"),
+        user: cssVar("--graph-user", "#c9a227"),
+        deduced: cssVar("--graph-deduced", "#4a6fd8"),
+        learned: cssVar("--graph-learned", "#2f9e7a"),
+        inferred: cssVar("--graph-inferred", "#c0c7d0"),
       };
       const nodes = new window.vis.DataSet((data.nodes || []).map((n) => {
         const source = n.source || "user";
         return {
           id: n.id,
           label: n.label,
-          color: { background: palette[source] || palette.user, border: cssVar("--edge", "#3a3733") },
+          color: { background: palette[source] || palette.user, border: cssVar("--graph-edge", "#3a3733") },
           font: {
-            color: cssVar("--text", "#e8e6df"),
+            color: cssVar("--graph-label", "#e8e6df"),
             size: 13,
             face: "IBM Plex Mono",
             strokeWidth: 3,
-            strokeColor: cssVar("--surface-0", "#0b0d10"),
+            strokeColor: cssVar("--graph-stroke", "#0b0d10"),
           },
         };
       }));
@@ -358,13 +357,13 @@ function setupGraph() {
         to: e.to,
         label: e.label,
         arrows: "to",
-        color: cssVar("--edge", "#3a3733"),
+        color: cssVar("--graph-edge", "#3a3733"),
         font: {
-          color: cssVar("--text-dim", "#b8b4a8"),
+          color: cssVar("--graph-label-dim", "#b8b4a8"),
           size: 11,
           face: "IBM Plex Mono",
           strokeWidth: 3,
-          strokeColor: cssVar("--surface-0", "#0b0d10"),
+          strokeColor: cssVar("--graph-stroke", "#0b0d10"),
         },
       })));
       container.replaceChildren();
@@ -380,7 +379,7 @@ function setupGraph() {
     }
   }
   loaders.cognition = load;
-  window.addEventListener("contrastchange", () => { if (loaded.has("cognition")) load(); });
+  window.addEventListener("themechange", () => { if (loaded.has("cognition")) load(); });
 }
 
 async function refreshTelemetry(stats) {
@@ -456,7 +455,7 @@ function state(text) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  setupContrast();
+  setupTheme();
   setupChat();
   setupMemory();
   setupSkills();

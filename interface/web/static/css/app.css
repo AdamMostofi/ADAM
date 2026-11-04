@@ -212,6 +212,7 @@ body { overflow: hidden; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   gap: 16px;
   padding: 0 clamp(16px, 3vw, 32px);
   background: linear-gradient(180deg, var(--surface-2), var(--surface-0));
@@ -253,7 +254,7 @@ body { overflow: hidden; }
 }
 .topbar-actions { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .topbar-tools { display: flex; align-items: center; gap: 8px; flex: none; }
-.topbar-contrast { display: none; }
+.topbar-theme { display: none; }
 
 .main { display: flex; min-height: 0; overflow: hidden; }
 .main:focus-visible { outline: 2px solid var(--focus); outline-offset: -4px; }
@@ -596,16 +597,6 @@ body { overflow: hidden; }
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- High contrast ---------- */
-[data-contrast="high"] .rail-item.is-active { background: var(--surface-2); }
-[data-contrast="high"] .brand-sigil { border-width: 2px; }
-[data-contrast="high"] .topbar::after { height: 2px; opacity: 1; }
-[data-contrast="high"] .list-item,
-[data-contrast="high"] .stat-row,
-[data-contrast="high"] .toast,
-[data-contrast="high"] .fact-drawer { border-width: 2px; }
-[data-contrast="high"] .rail-brand-sub { color: var(--text); }
-
 /* ---------- Responsive ---------- */
 @media (max-width: 1180px) {
   .app { grid-template-columns: var(--rail-w-collapsed) minmax(0, 1fr); }
@@ -668,7 +659,7 @@ body { overflow: hidden; }
   .topbar-actions { flex-wrap: nowrap; }
   .topbar-actions .gold-btn,
   .topbar-actions .ghost-btn { min-height: 44px; padding: 4px 10px; font-size: 0.6875rem; }
-  .topbar-contrast {
+  .topbar-theme {
     display: grid;
     place-items: center;
     width: 44px;

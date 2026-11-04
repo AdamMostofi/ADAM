@@ -76,7 +76,7 @@ The Layer 1 rule floor stays immutable. Learning is additive.
 The V0.8 pass replaced the single-page shell with a machined Imperial console:
 
 - **Token system v2** — sRGB graphite, brass structure, neon state colors,
-  jewel data colors, and an amber high-contrast mode.
+  jewel data colors, and a warm light/dark theme toggle.
 - **Shell** — left rail for Vox, Cognition, Data-Vaults, Skills, and Rites; hash
   routing; topbar; toasts; collapsed rail; mobile dock.
 - **Chat** — session transcript persistence, a `full` / `simple` mode selector,

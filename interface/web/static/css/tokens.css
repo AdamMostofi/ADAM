@@ -101,9 +101,9 @@
   --z-overlay: 70;
 }
 
-/* Standard — matte graphite, brass structure, neon state */
+/* Dark — matte graphite, brass structure, neon state */
 :root,
-[data-contrast="standard"] {
+[data-theme="dark"] {
   --surface-0: #0b0d10;
   --surface-1: #101318;
   --surface-2: #151920;
@@ -143,6 +143,15 @@
   --danger-text: var(--jewel-ruby-text);
   --focus: var(--neon-lime);
 
+  --graph-user: var(--metal-gold);
+  --graph-deduced: var(--jewel-sapphire);
+  --graph-learned: var(--jewel-emerald);
+  --graph-inferred: var(--metal-silver);
+  --graph-edge: var(--edge);
+  --graph-label: var(--text);
+  --graph-label-dim: var(--text-dim);
+  --graph-stroke: var(--surface-0);
+
   --shadow: rgba(0, 0, 0, 0.55);
   --shadow-soft: rgba(0, 0, 0, 0.35);
   --glow: rgba(200, 255, 61, 0.18);
@@ -166,51 +175,60 @@
   color-scheme: dark;
 }
 
-/* High contrast — black / white / amber, no decorative texture */
-[data-contrast="high"] {
-  --surface-0: #000000;
-  --surface-1: #050505;
-  --surface-2: #0a0a0a;
-  --surface-3: #111111;
-  --surface-inset: #000000;
+/* Light — warm paper, graphite ink, brass structure */
+[data-theme="light"] {
+  --surface-0: #ece6db;
+  --surface-1: #f3eee5;
+  --surface-2: #f8f4ec;
+  --surface-3: #fdfaf4;
+  --surface-inset: #e3dccf;
 
-  --edge: #6b6b6b;
-  --edge-strong: #d0d0d0;
+  --edge: #c8bfb0;
+  --edge-strong: #948b7c;
 
-  --text: #ffffff;
-  --text-dim: #ececec;
-  --text-mute: #cfcfcf;
+  --text: #202327;
+  --text-dim: #4b4c4a;
+  --text-mute: #66655d;
 
-  --metal-gold: #ffd400;
-  --metal-gold-bright: #ffe45c;
-  --metal-silver: #ffffff;
-  --metal-bronze: #e0b25c;
-  --metal-copper: #ffb37a;
+  --metal-gold: #7a5200;
+  --metal-gold-bright: #8a5b00;
+  --metal-silver: #4d5965;
+  --metal-bronze: #8a6a3f;
+  --metal-copper: #8a4f2f;
 
-  --neon-lime: #ffd400;
-  --neon-pink: #ff7ad9;
-  --neon-cyan: #7fe9ff;
+  --neon-lime: #3f5d00;
+  --neon-pink: #a12a5a;
+  --neon-cyan: #006d7a;
 
-  --jewel-emerald: #4dffc3;
-  --jewel-sapphire: #a8c0ff;
-  --jewel-ruby: #ff8a99;
-  --jewel-amethyst: #d0a8ff;
+  --jewel-emerald: #176b54;
+  --jewel-sapphire: #3157c4;
+  --jewel-ruby: #b02a42;
+  --jewel-amethyst: #6d3fb0;
 
-  --jewel-emerald-text: #4dffc3;
-  --jewel-sapphire-text: #a8c0ff;
-  --jewel-ruby-text: #ff8a99;
-  --jewel-amethyst-text: #d0a8ff;
+  --jewel-emerald-text: #176b54;
+  --jewel-sapphire-text: #2949a8;
+  --jewel-ruby-text: #a02038;
+  --jewel-amethyst-text: #5d3498;
 
-  --accent: #ffd400;
-  --accent-2: #ff6b6b;
-  --danger: #ff8a99;
-  --danger-text: #ff8a99;
-  --focus: #ffd400;
+  --accent: #3f5d00;
+  --accent-2: #a12a5a;
+  --danger: #b02a42;
+  --danger-text: #a02038;
+  --focus: #3f5d00;
 
-  --shadow: #000000;
-  --shadow-soft: #000000;
-  --glow: rgba(255, 212, 0, 0.22);
-  --highlight: rgba(255, 255, 255, 0.14);
-  --highlight-soft: rgba(255, 255, 255, 0.08);
-  color-scheme: dark;
+  --graph-user: #d9a94e;
+  --graph-deduced: #8fa9e8;
+  --graph-learned: #6fcbb0;
+  --graph-inferred: #b9c0c8;
+  --graph-edge: #8e8576;
+  --graph-label: #202327;
+  --graph-label-dim: #4b4c4a;
+  --graph-stroke: var(--surface-1);
+
+  --shadow: rgba(60, 50, 30, 0.18);
+  --shadow-soft: rgba(60, 50, 30, 0.10);
+  --glow: rgba(63, 93, 0, 0.16);
+  --highlight: rgba(255, 255, 255, 0.65);
+  --highlight-soft: rgba(255, 255, 255, 0.35);
+  color-scheme: light;
 }

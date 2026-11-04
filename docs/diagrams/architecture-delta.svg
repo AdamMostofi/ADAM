@@ -76,7 +76,7 @@
 
     <rect x="784" y="442" width="276" height="52" rx="4" fill="#151920" stroke="#2c333e"/>
     <text x="800" y="464" font-size="12" font-weight="600" fill="#e8e6df">THEME</text>
-    <text x="800" y="481" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">dark + amber high contrast</text>
+    <text x="800" y="481" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">dark + warm light</text>
     <rect x="1040" y="452" width="14" height="14" rx="2" fill="#1c212a" stroke="#d4a94a"/>
     <text x="1047" y="462" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#d4a94a">Δ</text>
 
@@ -98,7 +98,7 @@
     <rect x="372" y="230" width="42" height="16" rx="2" fill="#1c212a" stroke="#c8ff3d"/>
     <text x="393" y="241" text-anchor="middle" font-size="7" fill="#c8ff3d">ADDED</text>
     <text x="426" y="242" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Token system v2</text>
-    <text x="426" y="258" font-size="9" fill="#8a877e">sRGB graphite + brass; amber high contrast</text>
+    <text x="426" y="258" font-size="9" fill="#8a877e">sRGB graphite + brass; light/dark</text>
 
     <rect x="372" y="300" width="52" height="16" rx="2" fill="#1c212a" stroke="#d4a94a"/>
     <text x="398" y="311" text-anchor="middle" font-size="7" fill="#d4a94a">CHANGED</text>
@@ -118,7 +118,7 @@
     <rect x="372" y="510" width="52" height="16" rx="2" fill="#1c212a" stroke="#d4a94a"/>
     <text x="398" y="521" text-anchor="middle" font-size="7" fill="#d4a94a">CHANGED</text>
     <text x="436" y="522" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="12" font-weight="600" fill="#e8e6df">Theme</text>
-    <text x="436" y="538" font-size="9" fill="#8a877e">light / dark → dark + high contrast</text>
+    <text x="436" y="538" font-size="9" fill="#8a877e">light / dark → dark / light</text>
   </g>
 
   <line x1="44" y1="636" x2="1076" y2="636" stroke="#2c333e"/>

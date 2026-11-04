@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="en" data-contrast="standard">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="PRIMARCH ADAM — a local reasoning machine with persistent memory.">
   <meta name="theme-color" content="#0b0d10">
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const stored = localStorage.getItem("adam-theme");
+      const mode = stored === "light" || stored === "dark"
+        ? stored
+        : (window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      root.dataset.theme = mode;
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = mode === "light" ? "#ece6db" : "#0b0d10";
+    })();
+  </script>
   <title>PRIMARCH ADAM</title>
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
@@ -89,7 +101,7 @@
           <span id="rail-status-text">Machine spirit online</span>
         </div>
         <div class="rail-tools">
-          <button id="contrast-toggle" class="rail-tool" type="button" data-contrast-toggle aria-pressed="false" title="Use high contrast">HC</button>
+          <button id="theme-toggle" class="rail-tool" type="button" data-theme-toggle aria-pressed="false" title="Switch to light theme" aria-label="Light theme">LIGHT</button>
           <button id="rail-collapse" class="rail-tool" type="button" aria-label="Collapse navigation" title="Collapse navigation">«</button>
         </div>
       </div>
@@ -103,7 +115,7 @@
         </div>
         <div class="topbar-tools">
           <div class="topbar-actions" id="topbar-actions"></div>
-          <button id="contrast-toggle-mobile" class="rail-tool topbar-contrast" type="button" data-contrast-toggle aria-pressed="false" title="Use high contrast" aria-label="Use high contrast">HC</button>
+          <button id="theme-toggle-mobile" class="rail-tool topbar-theme" type="button" data-theme-toggle aria-pressed="false" title="Switch to light theme" aria-label="Light theme">LIGHT</button>
         </div>
       </header>
 
