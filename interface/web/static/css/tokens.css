@@ -5,42 +5,42 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("../fonts/Cinzel-400.woff2") format("woff2");
+  src: url("../fonts/Cinzel.woff2") format("woff2");
 }
 @font-face {
   font-family: "Cinzel";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("../fonts/Cinzel-700.woff2") format("woff2");
+  src: url("../fonts/Cinzel.woff2") format("woff2");
 }
 @font-face {
   font-family: "Oswald";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url("../fonts/Oswald-300.woff2") format("woff2");
+  src: url("../fonts/Oswald.woff2") format("woff2");
 }
 @font-face {
   font-family: "Oswald";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("../fonts/Oswald-400.woff2") format("woff2");
+  src: url("../fonts/Oswald.woff2") format("woff2");
 }
 @font-face {
   font-family: "Oswald";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url("../fonts/Oswald-500.woff2") format("woff2");
+  src: url("../fonts/Oswald.woff2") format("woff2");
 }
 @font-face {
   font-family: "Oswald";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url("../fonts/Oswald-600.woff2") format("woff2");
+  src: url("../fonts/Oswald.woff2") format("woff2");
 }
 @font-face {
   font-family: "IBM Plex Mono";
