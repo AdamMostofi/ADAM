@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
+import time
 from typing import Any, Iterable
 
 import numpy as np
@@ -33,6 +34,11 @@ MODEL_FILE = "onnx/model_quantized.onnx"
 TOKENIZER_FILE = "tokenizer.json"
 MAX_TOKENS = 256
 EMBEDDING_DIM = 384
+INDEX_SCHEMA_VERSION = 1
+
+
+class IndexMismatchError(RuntimeError):
+    """The index was built with a different model, dimension, or schema; rebuild it."""
 
 
 class MiniLMEncoder:
@@ -102,12 +108,21 @@ class SemanticIndex:
         return vector / norm if norm else vector
 
     # --------------------------------------------------------------- storage
-    def _db(self) -> sqlite3.Connection:
+    def _expected_meta(self) -> dict[str, str]:
+        return {"schema_version": str(INDEX_SCHEMA_VERSION), "embedding_model": self.model_name,
+                "embedding_dim": str(EMBEDDING_DIM)}
+
+    def _write_meta(self, conn: sqlite3.Connection) -> None:
+        for key, value in self._expected_meta().items():
+            conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, value))
+        conn.execute("INSERT OR IGNORE INTO meta VALUES ('created_at', ?)", (time.strftime("%Y-%m-%dT%H:%M:%S%z"),))
+
+    def _db(self, check: bool = True) -> sqlite3.Connection:
         if self._conn is None:
             directory = os.path.dirname(os.path.abspath(self.db_path))
             os.makedirs(directory, exist_ok=True)
-            self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            self._conn.execute(
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn.execute(
                 """CREATE TABLE IF NOT EXISTS vectors (
                        id TEXT PRIMARY KEY,
                        subject TEXT NOT NULL,
@@ -119,8 +134,27 @@ class SemanticIndex:
                        embedding BLOB NOT NULL
                    )"""
             )
-            self._conn.commit()
+            conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+            stored = dict(conn.execute("SELECT key, value FROM meta").fetchall())
+            rows = conn.execute("SELECT COUNT(*) FROM vectors").fetchone()[0]
+            if not stored and rows == 0:
+                self._write_meta(conn)
+            elif check:
+                expected = self._expected_meta()
+                wrong = {k: stored.get(k) for k in expected if stored.get(k) != expected[k]}
+                if wrong:
+                    conn.close()
+                    raise IndexMismatchError(
+                        f"{self.db_path} was built with {wrong} but ADAM now uses {expected}. "
+                        "Rebuild the index from the fact store (MemorySystem.rebuild_index())."
+                    )
+            conn.commit()
+            self._conn = conn
         return self._conn
+
+    def meta(self) -> dict[str, str]:
+        with self._lock:
+            return dict(self._db().execute("SELECT key, value FROM meta").fetchall())
 
     def _invalidate(self) -> None:
         self._ids = self._rows = self._matrix = None
@@ -142,10 +176,12 @@ class SemanticIndex:
         """Replace the whole index with embeddings of `facts` (id, fact). Returns the row count."""
         rows = [self._row(fact_id, fact, self._vector(str(fact))) for fact_id, fact in facts]
         with self._lock:
-            conn = self._db()
+            conn = self._db(check=False)
             with conn:
                 conn.execute("DELETE FROM vectors")
                 conn.executemany("INSERT OR REPLACE INTO vectors VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+                conn.execute("DELETE FROM meta WHERE key != 'created_at'")
+                self._write_meta(conn)
             self._invalidate()
             return self.count()
 

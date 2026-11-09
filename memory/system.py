@@ -42,8 +42,12 @@ class MemorySystem:
         self.lock = threading.RLock()
 
     def store(self, fact: Fact) -> int:
+        """Store a fact once; storing it again only updates confidence and timestamp."""
         with self.lock:
-            fact_id = self.exact.store(fact)
+            fact_id, created = self.exact.upsert(fact)
+            if not created:
+                self.semantic.store(fact_id, self.exact.get(fact_id) or fact)
+                return fact_id
             self.graph.add_fact(fact)
             self.semantic.store(fact_id, fact)
             if self.graph.similarity_fn is None:
@@ -55,10 +59,12 @@ class MemorySystem:
             return fact_id
 
     def store_with_proof(self, fact: Fact, proof_chain: list[str]) -> int:
-        fact_id = self.exact.store(fact, proof_chain)
-        self.graph.add_fact(fact)
-        self.semantic.store(fact_id, fact)
-        return fact_id
+        with self.lock:
+            fact_id, created = self.exact.upsert(fact, proof_chain)
+            if created:
+                self.graph.add_fact(fact)
+            self.semantic.store(fact_id, self.exact.get(fact_id) or fact)
+            return fact_id
 
     def recall(self, query: str, limit: int = 10) -> list[Fact]:
         with self.lock:

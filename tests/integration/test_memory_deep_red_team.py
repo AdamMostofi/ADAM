@@ -113,7 +113,7 @@ def test_store_duplicate_facts():
         memory = MemorySystem(db_path=os.path.join(tmpdir, "test.db"))
         memory.store(Fact("a", "is", "b", source=Source.USER))
         memory.store(Fact("a", "is", "b", source=Source.USER))
-        assert memory.count() == 2
+        assert memory.count() == 1  # stored once since Stage 0.6 (#23)
 
 
 def test_save_to_nonexistent_directory():
