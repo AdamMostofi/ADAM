@@ -1,0 +1,215 @@
+{
+ "budget_mb": 400.0,
+ "enforced_states": [
+  "startup",
+  "chat"
+ ],
+ "states_total_rss_mb": {
+  "startup": 211.6,
+  "chat": 565.0,
+  "ingest": 575.9,
+  "peak": 575.9
+ },
+ "lifecycle": [
+  {
+   "step": "python_started",
+   "total_rss_mb": 16.7,
+   "total_pss_mb": 11.1,
+   "main_rss_mb": 16.7,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 16.7,
+     "pss_mb": 11.1,
+     "hwm_mb": 16.7
+    }
+   ]
+  },
+  {
+   "step": "libraries_imported",
+   "total_rss_mb": 160.6,
+   "total_pss_mb": 153.9,
+   "main_rss_mb": 160.6,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 160.6,
+     "pss_mb": 153.9,
+     "hwm_mb": 160.6
+    }
+   ]
+  },
+  {
+   "step": "adam_imported",
+   "total_rss_mb": 161.3,
+   "total_pss_mb": 154.6,
+   "main_rss_mb": 161.3,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 161.3,
+     "pss_mb": 154.6,
+     "hwm_mb": 161.3
+    }
+   ]
+  },
+  {
+   "step": "startup",
+   "total_rss_mb": 211.6,
+   "total_pss_mb": 204.5,
+   "main_rss_mb": 211.6,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 211.6,
+     "pss_mb": 204.5,
+     "hwm_mb": 242.2
+    }
+   ],
+   "seconds": 0.61
+  },
+  {
+   "step": "first_facts_stored",
+   "total_rss_mb": 413.7,
+   "total_pss_mb": 406.7,
+   "main_rss_mb": 413.7,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 413.7,
+     "pss_mb": 406.7,
+     "hwm_mb": 413.7
+    }
+   ],
+   "seconds": 0.29
+  },
+  {
+   "step": "chat",
+   "total_rss_mb": 565.0,
+   "total_pss_mb": 552.6,
+   "main_rss_mb": 435.3,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 435.3,
+     "pss_mb": 427.9,
+     "hwm_mb": 435.3
+    },
+    {
+     "pid": 39537,
+     "name": "llama-server",
+     "rss_mb": 129.7,
+     "pss_mb": 124.7,
+     "hwm_mb": 129.7
+    }
+   ],
+   "seconds": 2.8,
+   "turns": 3,
+   "first_reply": "it feels like a lot of time and effort is needed for that."
+  },
+  {
+   "step": "ingest",
+   "total_rss_mb": 575.9,
+   "total_pss_mb": 563.4,
+   "main_rss_mb": 446.2,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 446.2,
+     "pss_mb": 438.8,
+     "hwm_mb": 446.2
+    },
+    {
+     "pid": 39537,
+     "name": "llama-server",
+     "rss_mb": 129.7,
+     "pss_mb": 124.7,
+     "hwm_mb": 129.7
+    }
+   ],
+   "seconds": 1.67,
+   "facts": 200
+  },
+  {
+   "step": "after_ingest_idle",
+   "total_rss_mb": 575.9,
+   "total_pss_mb": 563.4,
+   "main_rss_mb": 446.2,
+   "processes": [
+    {
+     "pid": 39448,
+     "name": "python",
+     "rss_mb": 446.2,
+     "pss_mb": 438.8,
+     "hwm_mb": 446.2
+    },
+    {
+     "pid": 39537,
+     "name": "llama-server",
+     "rss_mb": 129.7,
+     "pss_mb": 124.7,
+     "hwm_mb": 129.7
+    }
+   ]
+  }
+ ],
+ "isolated": {
+  "ear_only": {
+   "baseline_mb": 16.6,
+   "total_rss_mb": 101.4,
+   "total_pss_mb": 95.2,
+   "main_rss_mb": 101.4,
+   "processes": [
+    {
+     "pid": 39563,
+     "name": "python",
+     "rss_mb": 101.4,
+     "pss_mb": 95.2,
+     "hwm_mb": 125.2
+    }
+   ]
+  },
+  "embedding_only": {
+   "baseline_mb": 16.3,
+   "total_rss_mb": 223.7,
+   "total_pss_mb": 216.8,
+   "main_rss_mb": 223.7,
+   "processes": [
+    {
+     "pid": 39590,
+     "name": "python",
+     "rss_mb": 223.7,
+     "pss_mb": 216.8,
+     "hwm_mb": 224.5
+    }
+   ]
+  },
+  "lancedb_only": {
+   "baseline_mb": 16.5,
+   "total_rss_mb": 194.3,
+   "total_pss_mb": 187.5,
+   "main_rss_mb": 194.3,
+   "processes": [
+    {
+     "pid": 39620,
+     "name": "python",
+     "rss_mb": 194.3,
+     "pss_mb": 187.5,
+     "hwm_mb": 194.3
+    }
+   ]
+  }
+ },
+ "python": "3.11.15",
+ "time": "2026-11-09T13:13:58",
+ "violations": [
+  "chat: 565.0 MB exceeds the 400 MB budget"
+ ]
+}

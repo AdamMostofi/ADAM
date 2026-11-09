@@ -162,7 +162,7 @@ Only generalize a procedure after three real traces share the same shape
 - **Use an app factory and dependency injection for tests.** The current global
   `ADAMCore` at import time is the root cause of test pollution.
 - **Add audit, backup, and clear commands** before any migration.
-- **Keep the 400 MB peak-RSS target.** The documented current state is roughly
+- **Keep the 400 MB peak-RSS target.** *(Superseded 2026-11-09: the current definition is in [memory-budget.md](./memory-budget.md).)* The documented current state is roughly
   397 MB for the core plus 62 MB for `llama-server`; that is already at the
   ceiling, so new components need measured headroom.
 - **Book learning writes to memory through review.** Do not let ingestion write

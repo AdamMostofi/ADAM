@@ -206,7 +206,7 @@ the tradeoff, because the reason keeps the next implementation from drifting.
 
 | Decision | Why | Tradeoff |
 |---|---|---|
-| Local-first, 400 MB cap | Privacy and offline use | At the ceiling |
+| Local-first, 400 MB cap ([definition](./memory-budget.md)) | Privacy and offline use | At the ceiling |
 | Mouth only | Small model cannot read | Separate Reader needed |
 | Immutable L0 | Auditability; no drift | Learned layer constrained |
 | Five memory types | Provenance; no taint | More schema and review |

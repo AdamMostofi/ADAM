@@ -4,6 +4,8 @@
 **Date:** 2026-10-28  
 **Repository:** ADAM
 
+**Note (2026-11-09):** the memory budget wording below is historical; the current definition is in [memory-budget.md](./memory-budget.md).
+
 This document records the design conversation that produced the current
 neuro-symbolic direction for ADAM. It preserves the original prompts, the
 architecture response, the user's decisions, the execution plan, and the
