@@ -25,19 +25,31 @@ import os
 import sqlite3
 import sys
 
-# Baseline from #21 (recorded during planning; this audit confirms or corrects it).
-EXPECTED = {
-    ("sqlite", "fact_rows"): 16,
-    ("sqlite", "unique_spo_tuples"): 1,
-    ("sqlite", "eq_rows"): 49,
-    ("lance", "rows"): 5401,
-    ("lance", "unique_ids"): 1001,
-    ("lance", "unique_fact_strings"): 1132,
-    ("lance", "placeholder_rows"): 1,
-    ("lance", "version_files"): 5402,
-    ("adam_save", "bytes"): 45655,
-    ("skills", "skill_files"): 0,
+EXPECTATIONS = {
+    # Baseline from #21, confirmed in Stage 0.1 before the reset.
+    "baseline-2026-11-09": {
+        ("sqlite", "fact_rows"): 16,
+        ("sqlite", "unique_spo_tuples"): 1,
+        ("sqlite", "eq_rows"): 49,
+        ("lance", "rows"): 5401,
+        ("lance", "unique_ids"): 1001,
+        ("lance", "unique_fact_strings"): 1132,
+        ("lance", "placeholder_rows"): 1,
+        ("lance", "version_files"): 5402,
+        ("adam_save", "bytes"): 45655,
+        ("skills", "skill_files"): 0,
+    },
+    # A store straight after scripts/reset_store.py (Stage 0.6, #23).
+    "fresh": {
+        ("sqlite", "fact_rows"): 0,
+        ("sqlite", "user_version"): 1,
+        ("vectors", "rows"): 0,
+        ("vectors", "placeholder_rows"): 0,
+        ("vectors", "under_10_mb"): True,
+        ("skills", "skill_files"): 0,
+    },
 }
+STORE_NAMES = ("adam_memory.db", "adam_vectors.db", "adam_vectors.lance", "adam_save")
 
 
 def tree_fingerprint(paths: list[str]) -> dict[str, tuple]:
@@ -87,6 +99,8 @@ def audit_sqlite(path: str, store: str) -> list[dict]:
                 "SELECT COUNT(*) FROM facts WHERE proof_chain IS NOT NULL").fetchone()[0]))
         if "eq_state" in tables:
             rows.append(("eq_rows", conn.execute("SELECT COUNT(*) FROM eq_state").fetchone()[0]))
+        if "meta" in tables:
+            rows.append(("meta", dict(conn.execute("SELECT key, value FROM meta").fetchall())))
     rows.append(("bytes", os.path.getsize(path)))
     return [{"store": store, "check": k, "value": v} for k, v in rows]
 
@@ -119,6 +133,20 @@ def audit_lance(path: str, store: str) -> list[dict]:
         ("current_version", table.version),
     ]
     return [{"store": store, "check": k, "value": v} for k, v in out]
+
+
+def audit_vectors_db(path: str) -> list[dict]:
+    """The SQLite vector index introduced in Stage 0.5."""
+    with ro_connect(path) as conn:
+        rows = conn.execute("SELECT COUNT(*) FROM vectors").fetchone()[0]
+        placeholder = conn.execute("SELECT COUNT(*) FROM vectors WHERE id = 'placeholder'").fetchone()[0]
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        meta = dict(conn.execute("SELECT key, value FROM meta").fetchall()) if "meta" in tables else {}
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+    size = os.path.getsize(path)
+    return [{"store": "vectors", "check": k, "value": v} for k, v in (
+        ("rows", rows), ("placeholder_rows", placeholder), ("meta", meta), ("integrity_check", integrity),
+        ("bytes", size), ("under_10_mb", size < 10_000_000))]
 
 
 def audit_save(path: str) -> list[dict]:
@@ -160,33 +188,43 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="folder holding the stores (repo root or a backup folder)")
     parser.add_argument("--out", required=True, help="folder for audit.jsonl and audit-summary.md")
     parser.add_argument("--skills-root", help="where to look for skills/ (default: --root)")
+    parser.add_argument("--expect", choices=sorted(EXPECTATIONS), default="baseline-2026-11-09",
+                        help="which recorded state to compare against")
     args = parser.parse_args()
 
     root = os.path.abspath(args.root)
     out_dir = os.path.abspath(args.out)
-    stores = [os.path.join(root, s) for s in ("adam_memory.db", "adam_vectors.lance", "adam_save")]
+    stores = [os.path.join(root, s) for s in STORE_NAMES if os.path.exists(os.path.join(root, s))]
+    if not stores:
+        print(f"no stores found in {root}", file=sys.stderr)
+        return 1
     for store in stores:
-        if not os.path.exists(store):
-            print(f"missing store: {store}", file=sys.stderr)
-            return 1
         if os.path.commonpath([out_dir, store]) == store:
             print("--out must be outside the stores", file=sys.stderr)
             return 1
 
     before = tree_fingerprint(stores)
-    records = []
-    records += audit_sqlite(stores[0], "adam_memory.db")
-    records += audit_lance(stores[1], "adam_vectors.lance")
-    records += audit_save(stores[2])
+    records = [{"store": "all", "check": "stores_present", "value": [os.path.basename(s) for s in stores]}]
+    for store in stores:
+        name = os.path.basename(store)
+        if name == "adam_memory.db":
+            records += audit_sqlite(store, "adam_memory.db")
+        elif name == "adam_vectors.db":
+            records += audit_vectors_db(store)
+        elif name == "adam_vectors.lance":
+            records += audit_lance(store, "adam_vectors.lance")
+        else:
+            records += audit_save(store)
     records += audit_skills(os.path.abspath(args.skills_root or root))
     after = tree_fingerprint(stores)
     unchanged = before == after
 
     for r in records:
         key = (r["store"].replace("adam_memory.db", "sqlite").replace("adam_vectors.lance", "lance"), r["check"])
-        if key in EXPECTED:
-            r["expected"] = EXPECTED[key]
-            r["status"] = "match" if r["value"] == EXPECTED[key] else "differs"
+        expected = EXPECTATIONS[args.expect]
+        if key in expected:
+            r["expected"] = expected[key]
+            r["status"] = "match" if r["value"] == expected[key] else "differs"
     records.append({"store": "all", "check": "stores_unchanged_by_audit", "value": unchanged,
                     "files_fingerprinted": len(before)})
     meta = {"store": "all", "check": "audit_run", "value": {
@@ -207,7 +245,11 @@ def main() -> int:
             value = value if len(value) <= 120 else value[:117] + "..."
         lines.append(f"| {r['store']} | {r['check']} | {value} | {r.get('expected', '')} | {r.get('status', '')} |")
     differs = [r for r in records if r.get("status") == "differs"]
-    lines += ["", f"Baseline differences: {len(differs)}"]
+    missing = [k for k in EXPECTATIONS[args.expect]
+               if not any((r["store"].replace("adam_memory.db", "sqlite").replace("adam_vectors.lance", "lance"), r["check"]) == k
+                          for r in records)]
+    lines += ["", f"Compared with: {args.expect}", f"Differences: {len(differs)}",
+              f"Expected checks not found: {len(missing)}"]
     with open(os.path.join(out_dir, "audit-summary.md"), "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")
 
