@@ -9,7 +9,7 @@ import threading
 from kernel.facts import Fact
 from kernel.engine import InferenceEngine
 from memory.exact_store import ExactStore
-from memory.semantic_index import SemanticIndex
+from memory.semantic_index import DEFAULT_MODEL, SemanticIndex
 from memory.connection_graph import ConnectionGraph
 from memory.attention import AttentionBank
 
@@ -32,7 +32,7 @@ class MemorySystem:
         self,
         db_path: str = "adam_memory.db",
         lance_path: str = "adam_vectors.db",
-        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        embedding_model: str = DEFAULT_MODEL,
     ):
         self.exact = ExactStore(db_path)
         self.semantic = SemanticIndex(lance_path, embedding_model)

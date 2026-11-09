@@ -9,6 +9,11 @@ docs/design/vector-index.md for the benchmark and the rules used.
 - All vectors are kept in memory for search (about 1.5 KB per fact at 384
   dimensions); reconsider sqlite-vec if ADAM grows past ~50,000 facts.
 - The index is derived data: `rebuild()` recreates it from the fact store.
+
+Embeddings come from all-MiniLM-L6-v2 in its int8 ONNX form, run directly
+with onnxruntime and its memory arena off. In the Stage 0.5 benchmark this
+matched the best quality tested while using about 165 MB less than the
+same model through fastembed.
 """
 from __future__ import annotations
 
@@ -21,16 +26,47 @@ import numpy as np
 
 from kernel.facts import Fact
 
-DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+DEFAULT_MODEL = "all-MiniLM-L6-v2-int8"
+MODEL_REPO = "Xenova/all-MiniLM-L6-v2"
+MODEL_REVISION = "751bff37182d3f1213fa05d7196b954e230abad9"  # pinned commit (Apache-2.0)
+MODEL_FILE = "onnx/model_quantized.onnx"
+TOKENIZER_FILE = "tokenizer.json"
+MAX_TOKENS = 256
+EMBEDDING_DIM = 384
 
 
-def model_cache_dir() -> str:
-    """Where fastembed keeps models: FASTEMBED_CACHE_PATH, else ~/.cache/fastembed.
+class MiniLMEncoder:
+    """Sentence embeddings: tokenize, run the ONNX model, mean-pool, normalize.
 
-    fastembed's own default is the system temp folder, which WSL clears on
-    restart, so the model would be downloaded again after every restart.
+    Files are fetched once from the pinned commit into the Hugging Face cache
+    (~/.cache/huggingface, or HF_HOME), which survives restarts. Set
+    HF_HUB_OFFLINE=1 to forbid any network access once they are cached.
     """
-    return os.environ.get("FASTEMBED_CACHE_PATH") or os.path.join(os.path.expanduser("~"), ".cache", "fastembed")
+
+    def __init__(self):
+        import onnxruntime as ort
+        from huggingface_hub import hf_hub_download
+        from tokenizers import Tokenizer
+
+        model_path = hf_hub_download(MODEL_REPO, MODEL_FILE, revision=MODEL_REVISION)
+        tokenizer_path = hf_hub_download(MODEL_REPO, TOKENIZER_FILE, revision=MODEL_REVISION)
+        options = ort.SessionOptions()
+        options.enable_cpu_mem_arena = False
+        self._session = ort.InferenceSession(model_path, options, providers=["CPUExecutionProvider"])
+        self._inputs = {i.name for i in self._session.get_inputs()}
+        self._tokenizer = Tokenizer.from_file(tokenizer_path)
+        self._tokenizer.enable_truncation(max_length=MAX_TOKENS)
+        self._tokenizer.enable_padding(pad_id=0, pad_token="[PAD]")
+
+    def embed(self, texts: list[str]) -> np.ndarray:
+        encoded = self._tokenizer.encode_batch(texts)
+        ids = np.array([e.ids for e in encoded], dtype=np.int64)
+        mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
+        feeds = {"input_ids": ids, "attention_mask": mask, "token_type_ids": np.zeros_like(ids)}
+        hidden = self._session.run(None, {k: v for k, v in feeds.items() if k in self._inputs})[0]
+        pooled = (hidden * mask[..., None]).sum(axis=1) / np.clip(mask.sum(axis=1, keepdims=True), 1, None)
+        norms = np.linalg.norm(pooled, axis=1, keepdims=True)
+        return (pooled / np.where(norms == 0, 1, norms)).astype(np.float32)
 
 
 class SemanticIndex:
@@ -40,6 +76,8 @@ class SemanticIndex:
                 f"{db_path} is a directory (an old LanceDB store). The vector index is now a single "
                 "SQLite file; reset the store (Stage 0.6) or pass a new path."
             )
+        if model_name != DEFAULT_MODEL:
+            raise ValueError(f"unsupported embedding model {model_name!r}; ADAM uses {DEFAULT_MODEL!r}")
         self.db_path = db_path
         self.model_name = model_name
         self._model = None
@@ -52,13 +90,11 @@ class SemanticIndex:
     # ------------------------------------------------------------- embedding
     def _load_model(self):
         if self._model is None:
-            from fastembed import TextEmbedding
-            self._model = TextEmbedding(model_name=self.model_name, cache_dir=model_cache_dir())
+            self._model = MiniLMEncoder()
         return self._model
 
     def _embed(self, text: str) -> list[float]:
-        model = self._load_model()
-        return [float(x) for x in list(model.embed([text]))[0]]
+        return [float(x) for x in self._load_model().embed([text])[0]]
 
     def _vector(self, text: str) -> np.ndarray:
         vector = np.asarray(self._embed(text), dtype=np.float32)

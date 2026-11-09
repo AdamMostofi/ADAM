@@ -18,7 +18,7 @@ if command -v uv >/dev/null 2>&1; then
 else
     pip install -e "$ADAM_DIR[dev]"
 fi
-python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')" 2>/dev/null || echo "  fastembed model will download on first use"
+(cd "$ADAM_DIR" && python -c "from memory.semantic_index import MiniLMEncoder; MiniLMEncoder()") 2>/dev/null || echo "  embedding model will download on first use"
 
 echo "[2/5] Setting up llama.cpp..."
 if [ ! -x "$LLAMA_BIN" ]; then

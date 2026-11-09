@@ -4,7 +4,8 @@ import os
 import pytest
 
 from kernel.facts import Fact, Source
-from memory.semantic_index import SemanticIndex, model_cache_dir
+import memory.semantic_index as semantic_index
+from memory.semantic_index import SemanticIndex
 from memory.system import MemorySystem
 
 # Recorded limit for 1,000 facts at 384 dimensions (benchmark: about 2.1 MB).
@@ -76,8 +77,21 @@ def test_old_lancedb_directory_is_rejected_with_a_clear_error(tmp_path):
         SemanticIndex(str(old))
 
 
-def test_model_cache_survives_restarts(monkeypatch):
-    monkeypatch.delenv("FASTEMBED_CACHE_PATH", raising=False)
-    assert model_cache_dir() == os.path.join(os.path.expanduser("~"), ".cache", "fastembed")
-    monkeypatch.setenv("FASTEMBED_CACHE_PATH", "/data/models")
-    assert model_cache_dir() == "/data/models"
+def test_model_files_come_from_the_pinned_revision(monkeypatch):
+    import huggingface_hub
+    requested = []
+
+    def fake_download(repo, filename, revision=None, **kwargs):
+        requested.append((repo, filename, revision))
+        raise RuntimeError("stop after recording the request")
+
+    monkeypatch.setattr(huggingface_hub, "hf_hub_download", fake_download)
+    with pytest.raises(RuntimeError, match="stop after"):
+        semantic_index.MiniLMEncoder()
+    assert requested == [(semantic_index.MODEL_REPO, semantic_index.MODEL_FILE, semantic_index.MODEL_REVISION)]
+    assert len(semantic_index.MODEL_REVISION) == 40
+
+
+def test_unsupported_model_name_is_rejected(tmp_path):
+    with pytest.raises(ValueError, match="unsupported embedding model"):
+        SemanticIndex(str(tmp_path / "vectors.db"), model_name="some-other-model")

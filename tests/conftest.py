@@ -4,8 +4,8 @@ Every test:
 - runs in its own temporary working directory, so default relative store
   paths (adam_memory.db, adam_vectors.lance, adam_save, skills) land there;
 - gets ADAM_DB and ADAM_LANCE pointing at that directory;
-- uses a deterministic fake embedder and a fake Ear, so neither fastembed
-  nor Needle is loaded or downloaded (tests marked `real_model` are the
+- uses a deterministic fake embedder and a fake Ear, so neither the MiniLM
+  model nor Needle is loaded or downloaded (tests marked `real_model` are the
   exception);
 - cannot open network connections other than to this machine.
 

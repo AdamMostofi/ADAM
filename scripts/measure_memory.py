@@ -6,7 +6,7 @@ Usage:
 Every measurement runs in a fresh process with temporary stores, so the
 production stores are never opened. The run starts the real Ear (Needle),
 the real embedding model, and the Mouth's llama-server, so they must be
-installed; set FASTEMBED_CACHE_PATH and ADAM_LLAMA_SERVER as needed.
+installed; set ADAM_LLAMA_SERVER as needed.
 
 States (definition in docs/design/memory-budget.md):
 - startup: ADAM is running and ready, before any request
@@ -78,9 +78,9 @@ print(json.dumps({{"steps": steps, "peak_total_rss_mb": round(peak, 1)}}))
 ISOLATED = {
     "ear_only": "from interface.ear import Ear\nobj = Ear()\nobj.listen('hello there')",
     "embedding_only": (
-        "from fastembed import TextEmbedding\n"
-        "obj = TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2')\n"
-        "list(obj.embed(['socrates is man']))"
+        "from memory.semantic_index import MiniLMEncoder\n"
+        "obj = MiniLMEncoder()\n"
+        "obj.embed(['socrates is man'])"
     ),
     "vector_index_only": (
         "import os, tempfile\n"

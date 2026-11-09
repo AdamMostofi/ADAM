@@ -12,7 +12,9 @@ requires-python = ">=3.10"
 dependencies = [
     "networkx>=3.0",
     "numpy>=1.24.0",
-    "fastembed>=0.4.0",
+    "onnxruntime>=1.17",
+    "tokenizers>=0.15",
+    "huggingface-hub>=0.20",
     "flask>=3.0.0",
     "rich>=13.0.0",
     "pydantic>=2.0.0",
