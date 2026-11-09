@@ -37,7 +37,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cactus-needle", specifier = ">=3.2.0" },
+    { name = "cactus-needle", specifier = "==3.2.1" },
     { name = "fastembed", specifier = ">=0.4.0" },
     { name = "flask", specifier = ">=3.0.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.0.0" },
@@ -84,14 +84,14 @@ wheels = [
 
 [[package]]
 name = "cactus-needle"
-version = "3.2.10"
+version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/6f/d9fd512448cff9298ff6e114b8df7bc963f6950d886acd17adbd1f4893d6/cactus_needle-3.2.10.tar.gz", hash = "sha256:1b3d167def159d92a22c468a284469e57655579e05faf7b1e7ef83e3a9dadffa", size = 165715, upload-time = "2026-11-02T17:03:37.034Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/6a/ddd915844dbc5977e108b6cc0789ccff2711def93708039a0fb8304e6214/cactus_needle-3.2.1.tar.gz", hash = "sha256:8826ef63e19c4133b60df9b644f5c28e68ee0759cdf5f564efeaecc71475f309", size = 144313, upload-time = "2026-10-11T16:02:21.625Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/64/9d9c3fad9b1b31899a3f1f47f75c1f02e22556bafb19c6e570a881ec5a9e/cactus_needle-3.2.10-py3-none-any.whl", hash = "sha256:e584274185c77ba679aa3ac522344d91c27ff367b6d500357264c2292708139e", size = 130203, upload-time = "2026-11-02T17:03:35.429Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/e0/f596397df2bb0220f0fa40debff6b05335982f099e8208dade8ad26e23c8/cactus_needle-3.2.1-py3-none-any.whl", hash = "sha256:a37333d9a42909dd86035272e34ea6064ded5aee6837a6ff304dcc7570622a29", size = 114848, upload-time = "2026-10-11T16:02:20.107Z" },
 ]
 
 [[package]]

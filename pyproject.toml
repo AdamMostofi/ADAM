@@ -17,7 +17,7 @@ dependencies = [
     "flask>=3.0.0",
     "rich>=13.0.0",
     "pydantic>=2.0.0",
-    "cactus-needle>=3.2.0",
+    "cactus-needle==3.2.1",  # newer releases need a native library no longer hosted (2026-11-05)
 ]
 
 [project.optional-dependencies]
