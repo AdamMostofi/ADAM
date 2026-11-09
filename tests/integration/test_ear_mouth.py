@@ -1,5 +1,7 @@
 """Ear/Mouth integration tests — Needle 2 + TinyChat15M (llama-server HTTP)."""
 import sys, os, tempfile
+
+import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from interface.ear import Ear, UserIntent
@@ -11,6 +13,7 @@ class FakeMouth:
         return f"[MOCK] {user_message}"
 
 
+@pytest.mark.real_model
 def test_ear_listen():
     ear = Ear()
     intent = ear.listen("hello, how are you?")
@@ -20,6 +23,7 @@ def test_ear_listen():
     ear.close()
 
 
+@pytest.mark.real_model
 def test_ear_sentiment_positive():
     ear = Ear()
     intent = ear.listen("this is great and amazing")
@@ -27,6 +31,7 @@ def test_ear_sentiment_positive():
     ear.close()
 
 
+@pytest.mark.real_model
 def test_ear_sentiment_negative():
     ear = Ear()
     intent = ear.listen("this is terrible and awful")
@@ -109,3 +114,16 @@ def test_full_pipeline_with_ear_mouth():
         assert "intent" in result
         assert "action" in result["intent"]
         assert "topic" in result["intent"]
+
+
+def test_server_candidates_follow_adam_llama_dir(monkeypatch, tmp_path):
+    from interface.mouth import _server_candidates
+    monkeypatch.setenv("ADAM_LLAMA_DIR", str(tmp_path / "llama"))
+    assert _server_candidates()[0] == str(tmp_path / "llama" / "build" / "bin" / "llama-server")
+    assert _server_candidates()[-1] == "llama-server"
+
+
+def test_server_candidates_default_to_home(monkeypatch):
+    from interface.mouth import _server_candidates
+    monkeypatch.delenv("ADAM_LLAMA_DIR", raising=False)
+    assert _server_candidates()[0] == os.path.expanduser("~/llama.cpp/build/bin/llama-server")

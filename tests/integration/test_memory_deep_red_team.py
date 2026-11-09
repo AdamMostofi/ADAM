@@ -35,6 +35,7 @@ def test_auto_connection_finds_all_links():
         assert len(context) >= 2
 
 
+@pytest.mark.slow
 def test_large_scale_1000_facts_performance():
     with tempfile.TemporaryDirectory() as tmpdir:
         memory = MemorySystem(db_path=os.path.join(tmpdir, "test.db"))

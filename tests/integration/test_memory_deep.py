@@ -41,6 +41,7 @@ def test_memory_count_accuracy():
         assert memory.count() == 10
 
 
+@pytest.mark.slow
 def test_large_scale_1000_facts():
     with tempfile.TemporaryDirectory() as tmpdir:
         memory = MemorySystem(db_path=os.path.join(tmpdir, "test.db"))

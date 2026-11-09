@@ -4,8 +4,9 @@ Every test:
 - runs in its own temporary working directory, so default relative store
   paths (adam_memory.db, adam_vectors.lance, adam_save, skills) land there;
 - gets ADAM_DB and ADAM_LANCE pointing at that directory;
-- uses a deterministic fake embedder, so fastembed is never loaded or
-  downloaded (tests marked `real_model` are the exception);
+- uses a deterministic fake embedder and a fake Ear, so neither fastembed
+  nor Needle is loaded or downloaded (tests marked `real_model` are the
+  exception);
 - cannot open network connections other than to this machine.
 
 The whole run is guarded: production stores are fingerprinted before and
@@ -36,7 +37,8 @@ EMBED_DIM = 384
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "real_model: needs the real embedding model; set ADAM_REAL_MODEL=1 to run")
+    config.addinivalue_line("markers", "real_model: needs a real model (embedding or Needle); set ADAM_REAL_MODEL=1 to run")
+    config.addinivalue_line("markers", "slow: takes more than a few seconds; deselect with -m 'not slow'")
     problems = store_guard.env_problems(REPO, dict(os.environ))
     if problems:
         # UsageError gives a non-zero exit status (4); pytest.exit here does not.
@@ -44,9 +46,13 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
+    stress_dir = Path(__file__).resolve().parent / "stress"
+    for item in items:
+        if stress_dir in Path(str(item.fspath)).resolve().parents:
+            item.add_marker(pytest.mark.slow)
     if REAL_MODEL:
         return
-    skip = pytest.mark.skip(reason="needs the real embedding model; set ADAM_REAL_MODEL=1")
+    skip = pytest.mark.skip(reason="needs a real model; set ADAM_REAL_MODEL=1")
     for item in items:
         if "real_model" in item.keywords:
             item.add_marker(skip)
@@ -82,6 +88,27 @@ def fake_embed(self, text: str) -> list[float]:
     return [v / norm for v in vector]
 
 
+class FakeEar:
+    """Stands in for the Needle-backed Ear, using the Ear's own keyword fallback."""
+
+    def __init__(self):
+        from interface.ear import UserIntent
+        self._intent = UserIntent
+
+    def listen(self, text: str):
+        lowered = text.lower()
+        if any(w in lowered for w in ("great", "good", "awesome", "amazing", "love", "fantastic")):
+            sentiment = "positive"
+        elif any(w in lowered for w in ("terrible", "awful", "bad", "hate", "horrible", "frustrating")):
+            sentiment = "negative"
+        else:
+            sentiment = "neutral"
+        return self._intent(action="unknown", topic=text[:50], sentiment=sentiment)
+
+    def close(self):
+        pass
+
+
 def _is_local(address) -> bool:
     if not isinstance(address, tuple):
         return True  # Unix sockets
@@ -105,6 +132,9 @@ def isolated_environment(tmp_path, monkeypatch, request):
         from memory.semantic_index import SemanticIndex
         monkeypatch.setattr(SemanticIndex, "_embed", fake_embed)
         monkeypatch.setattr(SemanticIndex, "_load_model", lambda self: None)
+
+        import interface.core
+        monkeypatch.setattr(interface.core, "Ear", FakeEar)
 
         original_connect = socket.socket.connect
         original_connect_ex = socket.socket.connect_ex

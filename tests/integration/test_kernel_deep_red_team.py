@@ -6,6 +6,7 @@ thread safety, large-scale performance, and edge cases.
 import sys, os, threading, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+import pytest
 from kernel.facts import Fact, Source
 from kernel.engine import InferenceEngine
 
@@ -78,6 +79,7 @@ def test_thread_safety_heavy_load():
     assert len(errors) == 0
 
 
+@pytest.mark.slow
 def test_large_scale_1000_facts():
     engine = InferenceEngine()
     start = time.time()

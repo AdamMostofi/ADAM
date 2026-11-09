@@ -5,6 +5,7 @@ Verifies the kernel produces correct results on complex reasoning chains.
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+import pytest
 from kernel.facts import Fact, Source
 from kernel.engine import InferenceEngine
 
@@ -87,6 +88,7 @@ def test_query_by_object():
     assert len(engine.query(object="mammal")) == 2
 
 
+@pytest.mark.slow
 def test_deep_chain_100_hops():
     engine = InferenceEngine()
     facts = [Fact(f"n{i}", "implies", f"n{i+1}") for i in range(100)]

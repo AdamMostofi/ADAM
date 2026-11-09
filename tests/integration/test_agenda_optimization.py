@@ -6,6 +6,7 @@ Result: PASS
 import sys, os, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+import pytest
 from kernel.facts import Fact, Source
 from kernel.engine import InferenceEngine
 
@@ -48,6 +49,7 @@ def test_agenda_no_duplicate_facts():
     assert len(a_is_b) == 1
 
 
+@pytest.mark.slow
 def test_agenda_performance_100_facts():
     """Tests 100-fact chain completes quickly. Result: PASS."""
     engine = InferenceEngine()
