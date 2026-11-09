@@ -20,3 +20,4 @@ adam_save/
 venv/
 .venv/
 .env
+backups/
