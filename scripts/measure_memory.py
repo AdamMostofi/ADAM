@@ -46,7 +46,7 @@ def mark(name, **extra):
     steps.append({{"step": name, **tree.as_dict(), **extra}})
 
 mark("python_started")
-import numpy, networkx, lancedb, flask
+import numpy, networkx, flask
 mark("libraries_imported")
 from interface.core import ADAMCore
 mark("adam_imported")
@@ -82,11 +82,14 @@ ISOLATED = {
         "obj = TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2')\n"
         "list(obj.embed(['socrates is man']))"
     ),
-    "lancedb_only": (
-        "import lancedb, tempfile\n"
-        "db = lancedb.connect(tempfile.mkdtemp())\n"
-        "t = db.create_table('t', data=[{'id': 'a', 'vector': [0.0] * 384}])\n"
-        "t.search([0.0] * 384).limit(1).to_list()"
+    "vector_index_only": (
+        "import os, tempfile\n"
+        "from memory.semantic_index import SemanticIndex\n"
+        "from kernel.facts import Fact\n"
+        "idx = SemanticIndex(os.path.join(tempfile.mkdtemp(), 'v.db'))\n"
+        "idx._embed = lambda text: [1.0] + [0.0] * 383\n"
+        "[idx.store(i, Fact(f'a{i}', 'is', 'b')) for i in range(1000)]\n"
+        "idx.search('a1', 3)"
     ),
 }
 

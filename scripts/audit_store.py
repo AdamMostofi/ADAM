@@ -92,7 +92,10 @@ def audit_sqlite(path: str, store: str) -> list[dict]:
 
 
 def audit_lance(path: str, store: str) -> list[dict]:
-    import lancedb  # imported here so SQLite-only audits work without it
+    try:
+        import lancedb  # only needed for the old LanceDB store
+    except ImportError:
+        return [{"store": store, "check": "note", "value": "lancedb not installed; old Lance store not read"}]
 
     out = []
     table_dir = os.path.join(path, "facts.lance")
