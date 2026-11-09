@@ -16,7 +16,7 @@ from interface.core import ADAMCore
 def _default_core() -> ADAMCore:
     return ADAMCore(
         db_path=os.environ.get("ADAM_DB", "adam_memory.db"),
-        lance_path=os.environ.get("ADAM_LANCE", "adam_vectors.lance"),
+        lance_path=os.environ.get("ADAM_VECTORS") or os.environ.get("ADAM_LANCE") or "adam_vectors.db",
     )
 
 
@@ -26,7 +26,7 @@ def get_core() -> ADAMCore:
 
 
 def create_app(core: ADAMCore | None = None) -> Flask:
-    """Build the web app around `core`, or a core from ADAM_DB / ADAM_LANCE."""
+    """Build the web app around `core`, or a core from ADAM_DB / ADAM_VECTORS (ADAM_LANCE still accepted)."""
     app = Flask(__name__)
     app.extensions["adam_core"] = core if core is not None else _default_core()
 

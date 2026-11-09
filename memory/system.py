@@ -31,7 +31,7 @@ class MemorySystem:
     def __init__(
         self,
         db_path: str = "adam_memory.db",
-        lance_path: str = "adam_vectors.lance",
+        lance_path: str = "adam_vectors.db",
         embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
     ):
         self.exact = ExactStore(db_path)
@@ -103,13 +103,8 @@ class MemorySystem:
         with self.lock:
             os.makedirs(path, exist_ok=True)
             shutil.copy(self.exact.db_path, os.path.join(path, "memory.db"))
-            if include_vectors:
-                lance_src = self.semantic.db_path
-                lance_dst = os.path.join(path, "vectors.lance")
-                if os.path.exists(lance_src):
-                    if os.path.exists(lance_dst):
-                        shutil.rmtree(lance_dst)
-                    shutil.copytree(lance_src, lance_dst)
+            if include_vectors and os.path.isfile(self.semantic.db_path):
+                shutil.copy(self.semantic.db_path, os.path.join(path, "vectors.db"))
             graph_data = {"nodes": list(self.graph.get_all_nodes()), "edges": [(u, v, d) for u, v, d in self.graph.get_all_edges()]}
             with open(os.path.join(path, "graph.json"), "w") as f:
                 json.dump(graph_data, f)
@@ -119,7 +114,7 @@ class MemorySystem:
         import os
         db_path = os.path.join(path, "memory.db")
         if lance_path is None:
-            lance_path = os.path.join(path, "vectors.lance")
+            lance_path = os.path.join(path, "vectors.db")
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"Database file not found: {db_path}")
         system = cls(db_path=db_path, lance_path=lance_path)
@@ -129,6 +124,11 @@ class MemorySystem:
         for fact in system.exact.get_all():
             system.graph.add_fact(fact)
         return system
+
+    def rebuild_index(self) -> int:
+        """Recreate the semantic index from the fact store. Returns the number of vectors."""
+        with self.lock:
+            return self.semantic.rebuild(self.exact.get_all_with_ids())
 
     def close(self) -> None:
         self.exact.close()

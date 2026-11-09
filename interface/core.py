@@ -14,7 +14,7 @@ from interface.mouth import Mouth
 
 
 class ADAMCore:
-    def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.lance", mouth=None, ear=None):
+    def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.db", mouth=None, ear=None):
         self.memory = MemorySystem(db_path, lance_path)
         self.learning = LearningEngine(memory_system=self.memory)
         self.eq = EQEngine(db_path)

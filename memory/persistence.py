@@ -24,7 +24,7 @@ def save(system: MemorySystem, path: str) -> None:
         json.dump(graph_data, f)
 
 
-def load(path: str, lance_path: str = "adam_vectors.lance") -> MemorySystem:
+def load(path: str, lance_path: str = "adam_vectors.db") -> MemorySystem:
     db_path = os.path.join(path, "memory.db")
     system = MemorySystem(db_path=db_path, lance_path=lance_path)
     graph_path = os.path.join(path, "graph.json")

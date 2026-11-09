@@ -109,6 +109,13 @@ class ExactStore:
             ).fetchall()
         return [Fact(r[0], r[1], r[2], r[3], Source(r[4]), r[5]) for r in rows]
 
+    def get_all_with_ids(self) -> list[tuple[int, Fact]]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                "SELECT id, subject, predicate, object, confidence, source, timestamp FROM facts ORDER BY id"
+            ).fetchall()
+        return [(r[0], Fact(r[1], r[2], r[3], r[4], Source(r[5]), r[6])) for r in rows]
+
     def get_user_facts(self) -> list[Fact]:
         with sqlite3.connect(self.db_path) as conn:
             rows = conn.execute(

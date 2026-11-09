@@ -11,8 +11,8 @@ import hashlib
 import os
 from pathlib import Path
 
-PRODUCTION_STORES = ("adam_memory.db", "adam_vectors.lance", "adam_save", "skills")
-STORE_ENV_VARS = ("ADAM_DB", "ADAM_LANCE")
+PRODUCTION_STORES = ("adam_memory.db", "adam_vectors.db", "adam_vectors.lance", "adam_save", "skills")
+STORE_ENV_VARS = ("ADAM_DB", "ADAM_VECTORS", "ADAM_LANCE")
 HASH_LIMIT = 1 << 20
 
 

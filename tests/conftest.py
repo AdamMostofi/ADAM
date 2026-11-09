@@ -125,7 +125,8 @@ def _is_local(address) -> bool:
 def isolated_environment(tmp_path, monkeypatch, request):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("ADAM_DB", str(tmp_path / "adam_memory.db"))
-    monkeypatch.setenv("ADAM_LANCE", str(tmp_path / "adam_vectors.lance"))
+    monkeypatch.setenv("ADAM_VECTORS", str(tmp_path / "adam_vectors.db"))
+    monkeypatch.setenv("ADAM_LANCE", str(tmp_path / "adam_vectors.db"))
     monkeypatch.setenv("HF_HUB_OFFLINE", "1")
 
     if "real_model" not in request.keywords:
