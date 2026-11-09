@@ -3,7 +3,14 @@ import sys, os, tempfile, json, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from interface.core import ADAMCore
-from interface.web.app import app
+import pytest
+from interface.web.app import create_app
+
+
+@pytest.fixture
+def app(tmp_path):
+    core = ADAMCore(db_path=str(tmp_path / "web.db"), lance_path=str(tmp_path / "web.lance"))
+    return create_app(core)
 
 
 def test_core_chat():
@@ -74,13 +81,13 @@ def test_core_save_load():
         assert os.path.exists(save_path)
 
 
-def test_flask_index():
+def test_flask_index(app):
     with app.test_client() as client:
         res = client.get("/")
         assert res.status_code == 200
 
 
-def test_flask_chat():
+def test_flask_chat(app):
     with app.test_client() as client:
         res = client.post("/api/chat", json={"message": "hello"})
         assert res.status_code == 200
@@ -88,38 +95,38 @@ def test_flask_chat():
         assert "response" in data
 
 
-def test_flask_chat_simple():
+def test_flask_chat_simple(app):
     with app.test_client() as client:
         res = client.post("/api/chat", json={"message": "hello", "mode": "simple"})
         assert res.status_code == 200
 
 
-def test_flask_chat_no_message():
+def test_flask_chat_no_message(app):
     with app.test_client() as client:
         res = client.post("/api/chat", json={})
         assert res.status_code == 400
 
 
-def test_flask_facts_get():
+def test_flask_facts_get(app):
     with app.test_client() as client:
         res = client.get("/api/facts")
         assert res.status_code == 200
         assert isinstance(res.get_json(), list)
 
 
-def test_flask_facts_post():
+def test_flask_facts_post(app):
     with app.test_client() as client:
         res = client.post("/api/facts", json={"subject": "bird", "predicate": "can", "object": "fly"})
         assert res.status_code == 200
 
 
-def test_flask_facts_post_invalid():
+def test_flask_facts_post_invalid(app):
     with app.test_client() as client:
         res = client.post("/api/facts", json={"subject": "bird"})
         assert res.status_code == 400
 
 
-def test_flask_graph():
+def test_flask_graph(app):
     with app.test_client() as client:
         res = client.get("/api/graph")
         assert res.status_code == 200
@@ -128,14 +135,14 @@ def test_flask_graph():
         assert "edges" in data
 
 
-def test_flask_skills():
+def test_flask_skills(app):
     with app.test_client() as client:
         res = client.get("/api/skills")
         assert res.status_code == 200
         assert isinstance(res.get_json(), list)
 
 
-def test_flask_stats():
+def test_flask_stats(app):
     with app.test_client() as client:
         res = client.get("/api/stats")
         assert res.status_code == 200
@@ -144,26 +151,57 @@ def test_flask_stats():
         assert "skills" in data
 
 
-def test_flask_save():
+def test_flask_save(app):
     with app.test_client() as client:
         res = client.post("/api/save", json={})
         assert res.status_code == 200
 
 
-def test_flask_static():
+def test_flask_static(app):
     with app.test_client() as client:
         res = client.get("/static/css/tokens.css")
         assert res.status_code == 200
 
 
-def test_flask_static_js():
+def test_flask_static_js(app):
     with app.test_client() as client:
         res = client.get("/static/js/app.js")
         assert res.status_code == 200
 
 
-def test_flask_index_has_new_shell():
+def test_flask_index_has_new_shell(app):
     with app.test_client() as client:
         res = client.get("/")
         assert res.status_code == 200
         assert b"Primarch Adam" in res.data
+
+
+def test_import_creates_no_store(tmp_path):
+    """Importing the web module must not build a core or touch any store."""
+    import subprocess
+    repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    env = {**os.environ, "PYTHONPATH": repo, "PYTHONDONTWRITEBYTECODE": "1"}
+    env.pop("ADAM_DB", None)
+    env.pop("ADAM_LANCE", None)
+    subprocess.run([sys.executable, "-c", "import interface.web.app"], cwd=tmp_path, env=env, check=True)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_two_apps_do_not_share_facts(tmp_path):
+    first = create_app(ADAMCore(db_path=str(tmp_path / "a.db"), lance_path=str(tmp_path / "a.lance")))
+    second = create_app(ADAMCore(db_path=str(tmp_path / "b.db"), lance_path=str(tmp_path / "b.lance")))
+    with first.test_client() as client:
+        assert client.post("/api/facts", json={"subject": "cat", "predicate": "is", "object": "animal"}).status_code == 200
+    with second.test_client() as client:
+        assert client.get("/api/facts").get_json() == []
+    with first.test_client() as client:
+        assert len(client.get("/api/facts").get_json()) == 1
+
+
+def test_create_app_default_core_uses_env_paths(tmp_path, monkeypatch):
+    monkeypatch.setenv("ADAM_DB", str(tmp_path / "env.db"))
+    monkeypatch.setenv("ADAM_LANCE", str(tmp_path / "env.lance"))
+    app = create_app()
+    with app.test_client() as client:
+        client.post("/api/facts", json={"subject": "dog", "predicate": "is", "object": "animal"})
+    assert (tmp_path / "env.db").exists()
