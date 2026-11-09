@@ -2,7 +2,7 @@
 
 **Status:** Current. This is the one definition of ADAM's memory budget; other documents point here.
 **Decided:** 2026-11-09 by the owner (Option A in [#33](https://github.com/AdamMostofi/ADAM/issues/33)).
-**Last measured:** 2026-11-09 ([raw report](../measurements/2026-11-09-memory.json)).
+**Last measured:** 2026-11-09, after Stage 0.5 ([raw report](../measurements/2026-11-09-memory-after-stage-0.5.json)). **Status: within budget**: startup 127.0 MB, chat 334.1 MB.
 
 ## The definition
 
@@ -35,7 +35,31 @@ The script runs every measurement in a fresh process with temporary stores, so p
 
 It needs the real models, so it isn't part of CI. Run it after any change that adds or swaps a component.
 
-## Measurements, 2026-11-09
+## Current measurements, after Stage 0.5
+
+Locked environment, Python 3.11.15, 200 facts ingested. The embedding model is MiniLM int8 run directly with onnxruntime; the vector index is numpy in SQLite ([decision](./vector-index.md)).
+
+| Step | Total RSS (MB) | Total PSS (MB) | Notes |
+|---|---|---|---|
+| Python started | 16.5 | 10.9 | |
+| Libraries imported (numpy, networkx, flask) | 59.8 | 53.1 | |
+| ADAM modules imported | 66.6 | 59.9 | |
+| **`startup`** | **127.0** | 120.0 | Core built, Ear (Needle) loaded |
+| First facts stored | 195.5 | 188.5 | Embedding model loaded |
+| **`chat`** | **334.1** | 321.7 | Python 205.1 + `llama-server` 128.9 |
+| `ingest` (200 facts) | 335.9 | 323.5 | |
+| `peak` | 335.9 | | |
+
+**Result: within budget, with 66 MB of headroom in `chat`.**
+
+| Component, loaded alone | Process RSS (MB) |
+|---|---|
+| Embedding: MiniLM int8 (onnxruntime) | 117.4 |
+| Vector index: numpy in SQLite, 1,000 facts | 39.2 |
+| Ear: Needle | 101.2 |
+| Mouth: `llama-server` | 128.9 (separate process) |
+
+## Earlier measurements, Stage 0.4 (before the index change)
 
 Locked environment (`uv.lock`, Python 3.11.15), WSL2 on the development laptop, 200 facts ingested.
 
@@ -67,13 +91,13 @@ Totals overlap, because components share numpy and other libraries, so these don
 
 | Component | Cost | Recommendation | Where it's settled |
 |---|---|---|---|
-| Embedding model (fastembed + MiniLM) | ≈200 MB | **Replace or shrink.** Benchmark model2vec (≈30 MB on disk) against MiniLM and bge-small | Stage 0.5 ([#32](https://github.com/AdamMostofi/ADAM/issues/32)) |
-| Vector store (LanceDB + pyarrow) | ≈145–180 MB | **Replace if the benchmark allows:** `sqlite-vec` or a numpy index inside SQLite. It also caused the 1.4 GB disk growth | Stage 0.5 ([#32](https://github.com/AdamMostofi/ADAM/issues/32)) |
+| Embedding model | Was ≈200 MB, now ≈100 MB | **Done:** MiniLM int8 run directly with onnxruntime, at the same quality | Stage 0.5 ([decision](./vector-index.md)) |
+| Vector store | Was ≈145–180 MB, now ≈23 MB | **Done:** numpy index inside SQLite; also fixed the 1.4 GB disk growth | Stage 0.5 ([decision](./vector-index.md)) |
 | Mouth (`llama-server`) | ≈130 MB | **Keep, started only when needed** (it already is). Stage 4.3 limits it to small talk | Stage 4.3 ([#34](https://github.com/AdamMostofi/ADAM/issues/34)) |
 | Ear (Needle) | ≈50–85 MB | **Make optional; decide at 4.3.** It affects no answer today, contacts Hugging Face at startup, and its vendor stopped hosting the native library (see below) | Stage 4.3 ([#34](https://github.com/AdamMostofi/ADAM/issues/34)) |
 | Flask | small | Keep; only the web console imports it | |
 
-**Projection:** replacing the embedding model and vector store in Stage 0.5 would bring `chat` to roughly 250–300 MB, within budget. Stage 0.6 re-measures after the reset.
+**After Stage 0.5:** `chat` is 334.1 MB, within budget. Stage 0.6 re-measures after the reset.
 
 ## Known issue: the Ear's native library (found 2026-11-09)
 
