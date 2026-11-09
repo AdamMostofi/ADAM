@@ -127,3 +127,19 @@ def test_server_candidates_default_to_home(monkeypatch):
     from interface.mouth import _server_candidates
     monkeypatch.delenv("ADAM_LLAMA_DIR", raising=False)
     assert _server_candidates()[0] == os.path.expanduser("~/llama.cpp/build/bin/llama-server")
+
+
+def test_ear_falls_back_when_needle_cannot_load(monkeypatch):
+    import needle
+
+    class BrokenNeedle:
+        def __init__(self):
+            raise OSError("native library download failed (404)")
+
+    monkeypatch.setattr(needle, "Needle", BrokenNeedle)
+    ear = Ear()
+    assert not ear.available
+    assert "404" in ear.unavailable_reason
+    assert ear.listen("this is great").sentiment == "positive"
+    assert ear.listen("this is awful").sentiment == "negative"
+    ear.close()
