@@ -1,0 +1,144 @@
+{
+ "time": "2026-11-09T13:23:23",
+ "python": "3.11.15",
+ "gold_questions": 32,
+ "facts": 1000,
+ "models": [
+  {
+   "model": "minilm",
+   "dim": 384,
+   "recall_at_1": 0.812,
+   "recall_at_3": 0.969,
+   "mrr": 0.896,
+   "load_seconds": 0.47,
+   "embed_ms_per_fact": 0.87,
+   "rss_mb": 308.7,
+   "rss_above_python_mb": 275.7,
+   "misses": [
+    "creature that lives in water and on land and croaks"
+   ]
+  },
+  {
+   "model": "bge-small",
+   "dim": 384,
+   "recall_at_1": 0.781,
+   "recall_at_3": 0.938,
+   "mrr": 0.853,
+   "load_seconds": 0.37,
+   "embed_ms_per_fact": 1.85,
+   "rss_mb": 358.8,
+   "rss_above_python_mb": 325.9,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night"
+   ]
+  },
+  {
+   "model": "potion-8m",
+   "dim": 256,
+   "recall_at_1": 0.781,
+   "recall_at_3": 0.844,
+   "mrr": 0.824,
+   "load_seconds": 0.55,
+   "embed_ms_per_fact": 0.01,
+   "rss_mb": 117.9,
+   "rss_above_python_mb": 84.8,
+   "misses": [
+    "large bird of prey with sharp eyesight",
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "eight-legged creature that spins webs",
+    "sea creature with eight arms"
+   ]
+  }
+ ],
+ "stores": [
+  {
+   "store": "lance_per_fact",
+   "n": 1000,
+   "dim": 384,
+   "write_seconds": 3.69,
+   "query_ms": 49.17,
+   "disk_mb": 43.36,
+   "files": 3001,
+   "rss_mb": 480.8,
+   "rss_above_python_mb": 447.1,
+   "top1_found": 32,
+   "version_files": 1001
+  },
+  {
+   "store": "lance_optimized",
+   "n": 1000,
+   "dim": 384,
+   "write_seconds": 3.68,
+   "query_ms": 5.05,
+   "disk_mb": 1.56,
+   "files": 4,
+   "rss_mb": 289.2,
+   "rss_above_python_mb": 255.6,
+   "top1_found": 32,
+   "version_files": 2
+  },
+  {
+   "store": "sqlite_vec",
+   "n": 1000,
+   "dim": 384,
+   "write_seconds": 0.05,
+   "query_ms": 0.3,
+   "disk_mb": 1.63,
+   "files": 1,
+   "rss_mb": 44.4,
+   "rss_above_python_mb": 10.7,
+   "top1_found": 32
+  },
+  {
+   "store": "numpy_sqlite",
+   "n": 1000,
+   "dim": 384,
+   "write_seconds": 0.03,
+   "query_ms": 0.04,
+   "disk_mb": 2.06,
+   "files": 1,
+   "rss_mb": 46.9,
+   "rss_above_python_mb": 13.2,
+   "top1_found": 32
+  },
+  {
+   "store": "lance_optimized",
+   "n": 10000,
+   "dim": 384,
+   "write_seconds": 24.74,
+   "query_ms": 10.21,
+   "disk_mb": 15.46,
+   "files": 4,
+   "rss_mb": 1106.1,
+   "rss_above_python_mb": 1072.4,
+   "top1_found": 32,
+   "version_files": 2
+  },
+  {
+   "store": "sqlite_vec",
+   "n": 10000,
+   "dim": 384,
+   "write_seconds": 0.43,
+   "query_ms": 3.8,
+   "disk_mb": 16.0,
+   "files": 1,
+   "rss_mb": 69.1,
+   "rss_above_python_mb": 35.4,
+   "top1_found": 32
+  },
+  {
+   "store": "numpy_sqlite",
+   "n": 10000,
+   "dim": 384,
+   "write_seconds": 0.21,
+   "query_ms": 0.54,
+   "disk_mb": 20.53,
+   "files": 1,
+   "rss_mb": 89.0,
+   "rss_above_python_mb": 55.4,
+   "top1_found": 32
+  }
+ ]
+}
