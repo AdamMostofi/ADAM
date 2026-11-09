@@ -1,0 +1,49 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    env:
+      HF_HUB_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Clean install from the lockfile
+        run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
+
+      - name: No machine-specific paths in runtime code
+        run: |
+          if grep -rn "/home/adam" --include="*.py" --include="*.sh" kernel memory learning interface install.sh usb-run.sh; then
+            echo "Found a machine-specific path"; exit 1
+          fi
+
+      - name: Importing the web app creates no store
+        run: |
+          uv run python -c "import interface.web.app"
+          test ! -e adam_memory.db && test ! -e adam_vectors.lance
+
+      - name: Fast tests
+        run: uv run pytest -m "not slow" -q
+
+      - name: Slow tests
+        run: uv run pytest -m slow -q
+
+      - name: No models were downloaded
+        run: |
+          for path in ~/.cache/cactus-needle ~/.cache/huggingface /tmp/fastembed_cache; do
+            if [ -e "$path" ]; then echo "Model cache appeared: $path"; exit 1; fi
+          done
