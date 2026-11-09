@@ -1,0 +1,205 @@
+{
+ "time": "2026-11-09T13:44:52",
+ "python": "3.11.15",
+ "gold_questions": 89,
+ "facts": 1000,
+ "models": [
+  {
+   "model": "minilm",
+   "dim": 384,
+   "recall_at_1": 0.775,
+   "recall_at_3": 0.933,
+   "mrr": 0.861,
+   "load_seconds": 0.55,
+   "embed_ms_per_fact": 0.88,
+   "rss_mb": 311.8,
+   "rss_above_python_mb": 278.8,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "fastest animal on land",
+    "tallest animal with a very long neck",
+    "largest bird that cannot fly",
+    "tiny bird that hangs in the air sipping nectar"
+   ]
+  },
+  {
+   "model": "minilm-onnx-noarena",
+   "dim": 384,
+   "recall_at_1": 0.775,
+   "recall_at_3": 0.933,
+   "mrr": 0.861,
+   "load_seconds": 0.17,
+   "embed_ms_per_fact": 0.88,
+   "rss_mb": 200.7,
+   "rss_above_python_mb": 167.5,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "fastest animal on land",
+    "tallest animal with a very long neck",
+    "largest bird that cannot fly",
+    "tiny bird that hangs in the air sipping nectar"
+   ]
+  },
+  {
+   "model": "minilm-int8",
+   "dim": 384,
+   "recall_at_1": 0.787,
+   "recall_at_3": 0.944,
+   "mrr": 0.862,
+   "load_seconds": 0.21,
+   "embed_ms_per_fact": 0.39,
+   "rss_mb": 147.2,
+   "rss_above_python_mb": 114.1,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "fastest animal on land",
+    "tallest animal with a very long neck",
+    "largest bird that cannot fly"
+   ]
+  },
+  {
+   "model": "arctic-xs",
+   "dim": 384,
+   "recall_at_1": 0.685,
+   "recall_at_3": 0.843,
+   "mrr": 0.777,
+   "load_seconds": 0.43,
+   "embed_ms_per_fact": 0.9,
+   "rss_mb": 309.5,
+   "rss_above_python_mb": 276.4,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "eight-legged creature that spins webs",
+    "sea creature with eight arms",
+    "hardest gemstone made of one element",
+    "tallest animal with a very long neck",
+    "humped animal that survives in sandy dry lands",
+    "tiny bird that hangs in the air sipping nectar",
+    "rodent that blocks rivers with logs",
+    "vast hot sandy region in north africa",
+    "scrambling information so others cannot read it",
+    "man who introduced movable type in europe",
+    "scientist who explained why apples fall",
+    "physicist behind e equals m c squared",
+    "colourful pet that can mimic speech"
+   ]
+  },
+  {
+   "model": "bge-small",
+   "dim": 384,
+   "recall_at_1": 0.787,
+   "recall_at_3": 0.91,
+   "mrr": 0.853,
+   "load_seconds": 0.45,
+   "embed_ms_per_fact": 1.89,
+   "rss_mb": 354.7,
+   "rss_above_python_mb": 321.6,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "sea creature with eight arms",
+    "fastest animal on land",
+    "tallest animal with a very long neck",
+    "largest bird that cannot fly",
+    "stinging transparent sea animal without a brain",
+    "curly-brace text used to exchange structured information"
+   ]
+  },
+  {
+   "model": "potion-8m",
+   "dim": 256,
+   "recall_at_1": 0.652,
+   "recall_at_3": 0.843,
+   "mrr": 0.757,
+   "load_seconds": 0.32,
+   "embed_ms_per_fact": 0.01,
+   "rss_mb": 116.4,
+   "rss_above_python_mb": 83.4,
+   "misses": [
+    "large bird of prey with sharp eyesight",
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "eight-legged creature that spins webs",
+    "sea creature with eight arms",
+    "fastest animal on land",
+    "tallest animal with a very long neck",
+    "australian animal that hops and carries its baby in a pouch",
+    "largest bird that cannot fly",
+    "tiny bird that hangs in the air sipping nectar",
+    "stinging transparent sea animal without a brain",
+    "subatomic particle orbiting the nucleus",
+    "scientist who discovered polonium and radium",
+    "man who introduced movable type in europe"
+   ]
+  },
+  {
+   "model": "potion-32m",
+   "dim": 512,
+   "recall_at_1": 0.708,
+   "recall_at_3": 0.865,
+   "mrr": 0.795,
+   "load_seconds": 0.39,
+   "embed_ms_per_fact": 0.01,
+   "rss_mb": 232.8,
+   "rss_above_python_mb": 199.6,
+   "misses": [
+    "large bird of prey with sharp eyesight",
+    "creature that lives in water and on land and croaks",
+    "flying animal that uses echolocation at night",
+    "eight-legged creature that spins webs",
+    "sea creature with eight arms",
+    "australian animal that hops and carries its baby in a pouch",
+    "humped animal that survives in sandy dry lands",
+    "tiny bird that hangs in the air sipping nectar",
+    "stinging transparent sea animal without a brain",
+    "subatomic particle orbiting the nucleus",
+    "curly-brace text used to exchange structured information",
+    "man who introduced movable type in europe"
+   ]
+  },
+  {
+   "model": "potion-retrieval-32m",
+   "dim": 512,
+   "recall_at_1": 0.719,
+   "recall_at_3": 0.921,
+   "mrr": 0.826,
+   "load_seconds": 0.38,
+   "embed_ms_per_fact": 0.01,
+   "rss_mb": 232.7,
+   "rss_above_python_mb": 199.6,
+   "misses": [
+    "large bird of prey with sharp eyesight",
+    "creature that lives in water and on land and croaks",
+    "sea creature with eight arms",
+    "our planet travels around a star",
+    "tiny bird that hangs in the air sipping nectar",
+    "highest peak on the planet",
+    "largest body of salt water on earth"
+   ]
+  },
+  {
+   "model": "static-mrl",
+   "dim": 1024,
+   "recall_at_1": 0.697,
+   "recall_at_3": 0.921,
+   "mrr": 0.815,
+   "load_seconds": 0.32,
+   "embed_ms_per_fact": 0.02,
+   "rss_mb": 195.8,
+   "rss_above_python_mb": 162.7,
+   "misses": [
+    "creature that lives in water and on land and croaks",
+    "our planet travels around a star",
+    "humped animal that survives in sandy dry lands",
+    "tiny bird that hangs in the air sipping nectar",
+    "largest body of salt water on earth",
+    "version control for software projects",
+    "curly-brace text used to exchange structured information"
+   ]
+  }
+ ],
+ "stores": []
+}

@@ -1,9 +1,13 @@
 """Benchmark embedding models and vector stores for ADAM's semantic index (Stage 0.5, #32).
 
-Usage:
-    FASTEMBED_CACHE_PATH=~/.cache/fastembed python scripts/bench_index.py --out report.json
+Usage (research packages that ADAM itself no longer installs):
+    uv pip install --python .venv/bin/python fastembed model2vec sqlite-vec safetensors lancedb
+    FASTEMBED_CACHE_PATH=~/.cache/fastembed .venv/bin/python scripts/bench_index.py --out report.json
+    uv sync --locked --extra dev    # back to the locked environment afterwards
 
-Models are scored on a fixed gold set: 32 questions phrased with almost no
+Results and the decision: docs/design/vector-index.md.
+
+Models are scored on a fixed gold set: 89 questions phrased with almost no
 words in common with their answer, each looked up among 1,000 facts.
 Stores are measured on the same 1,000 facts written one at a time (as ADAM
 writes them), and on 10,000 synthetic vectors for scale. Every measurement
@@ -24,8 +28,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 MODELS = {
     "minilm": ("fastembed", "sentence-transformers/all-MiniLM-L6-v2"),
+    "minilm-onnx-noarena": ("onnx", "fastembed:Qdrant--all-MiniLM-L6-v2-onnx"),
+    "minilm-int8": ("onnx", "Xenova/all-MiniLM-L6-v2:onnx/model_quantized.onnx"),
+    "arctic-xs": ("fastembed", "snowflake/snowflake-arctic-embed-xs"),
     "bge-small": ("fastembed", "BAAI/bge-small-en-v1.5"),
     "potion-8m": ("model2vec", "minishlab/potion-base-8M"),
+    "potion-32m": ("model2vec", "minishlab/potion-base-32M"),
+    "potion-retrieval-32m": ("model2vec", "minishlab/potion-retrieval-32M"),
+    "static-mrl": ("static", "sentence-transformers/static-retrieval-mrl-en-v1"),
 }
 STORES = ("lance_per_fact", "lance_optimized", "sqlite_vec", "numpy_sqlite")
 
@@ -49,6 +59,25 @@ FACTS = [
     ("shakespeare", "wrote", "hamlet"), ("newton", "discovered", "gravity"), ("einstein", "developed", "relativity"),
     ("tiger", "is", "mammal"), ("parrot", "is", "bird"), ("trout", "is", "fish"),
     ("lizard", "is", "reptile"), ("ant", "is", "insect"),
+    ("cheetah", "is", "mammal"), ("giraffe", "is", "mammal"), ("kangaroo", "is", "marsupial"),
+    ("koala", "eats", "eucalyptus"), ("camel", "lives_in", "desert"), ("panda", "eats", "bamboo"),
+    ("polar_bear", "lives_in", "arctic"), ("ostrich", "is", "bird"), ("hummingbird", "hovers_near", "flowers"),
+    ("jellyfish", "is", "cnidarian"), ("butterfly", "develops_from", "caterpillar"), ("mosquito", "spreads", "malaria"),
+    ("wolf", "hunts_in", "packs"), ("beaver", "builds", "dams"),
+    ("amazon", "is", "river"), ("sahara", "is", "desert"), ("everest", "is", "mountain"), ("pacific", "is", "ocean"),
+    ("nile", "flows_through", "egypt"), ("berlin", "capital_of", "germany"), ("madrid", "capital_of", "spain"),
+    ("rome", "capital_of", "italy"), ("beijing", "capital_of", "china"), ("moscow", "capital_of", "russia"),
+    ("delhi", "capital_of", "india"),
+    ("electron", "has", "negative charge"), ("dna", "carries", "genetic information"),
+    ("light", "travels_at", "300000 km per second"), ("vaccine", "trains", "immune system"),
+    ("antibiotic", "kills", "bacteria"), ("insulin", "regulates", "blood sugar"),
+    ("thermometer", "measures", "temperature"), ("barometer", "measures", "air pressure"),
+    ("telescope", "observes", "stars"), ("microscope", "magnifies", "cells"),
+    ("git", "tracks", "code changes"), ("compiler", "translates", "source code"), ("router", "forwards", "packets"),
+    ("encryption", "protects", "data"), ("firewall", "blocks", "traffic"), ("json", "is", "data format"),
+    ("wine", "made_from", "grapes"), ("tofu", "made_from", "soybeans"), ("chocolate", "made_from", "cocoa"),
+    ("mozart", "composed", "symphonies"), ("picasso", "painted", "guernica"), ("darwin", "proposed", "evolution"),
+    ("curie", "studied", "radioactivity"), ("gutenberg", "invented", "printing press"), ("armstrong", "walked_on", "moon"),
 ]
 GOLD = [
     ("a sea predator that breathes with gills", "shark is fish"),
@@ -83,6 +112,63 @@ GOLD = [
     ("stimulant in a morning drink", "coffee contains caffeine"),
     ("dairy product from curdled milk", "cheese made_from milk"),
     ("staple grain eaten across asia", "rice is grain"),
+    ("fastest animal on land", "cheetah is mammal"),
+    ("tallest animal with a very long neck", "giraffe is mammal"),
+    ("australian animal that hops and carries its baby in a pouch", "kangaroo is marsupial"),
+    ("what the sleepy australian tree-dweller feeds on", "koala eats eucalyptus"),
+    ("humped animal that survives in sandy dry lands", "camel lives_in desert"),
+    ("diet of the black and white chinese bear", "panda eats bamboo"),
+    ("white bear of the frozen north", "polar_bear lives_in arctic"),
+    ("largest bird that cannot fly", "ostrich is bird"),
+    ("tiny bird that hangs in the air sipping nectar", "hummingbird hovers_near flowers"),
+    ("stinging transparent sea animal without a brain", "jellyfish is cnidarian"),
+    ("insect that emerges from a chrysalis", "butterfly develops_from caterpillar"),
+    ("biting insect that transmits a tropical fever", "mosquito spreads malaria"),
+    ("wild relative of the dog that hunts in groups", "wolf hunts_in packs"),
+    ("rodent that blocks rivers with logs", "beaver builds dams"),
+    ("huge waterway flowing through the brazilian rainforest", "amazon is river"),
+    ("vast hot sandy region in north africa", "sahara is desert"),
+    ("highest peak on the planet", "everest is mountain"),
+    ("largest body of salt water on earth", "pacific is ocean"),
+    ("river running past the pyramids", "nile flows_through egypt"),
+    ("seat of the german government", "berlin capital_of germany"),
+    ("main city of the spanish kingdom", "madrid capital_of spain"),
+    ("italian city where the government sits", "rome capital_of italy"),
+    ("chinese seat of government", "beijing capital_of china"),
+    ("russian government city", "moscow capital_of russia"),
+    ("where the indian parliament sits", "delhi capital_of india"),
+    ("subatomic particle orbiting the nucleus", "electron has negative charge"),
+    ("molecule that stores hereditary instructions", "dna carries genetic information"),
+    ("how fast photons move", "light travels_at 300000 km per second"),
+    ("injection that teaches the body to fight a disease", "vaccine trains immune system"),
+    ("medicine for germ infections", "antibiotic kills bacteria"),
+    ("hormone missing in diabetes", "insulin regulates blood sugar"),
+    ("tool that tells how hot or cold it is", "thermometer measures temperature"),
+    ("instrument for weather forecasting from atmospheric readings", "barometer measures air pressure"),
+    ("device astronomers point at the night sky", "telescope observes stars"),
+    ("lab tool to see very small living things", "microscope magnifies cells"),
+    ("version control for software projects", "git tracks code changes"),
+    ("program that turns human-written code into machine instructions", "compiler translates source code"),
+    ("network box directing internet traffic", "router forwards packets"),
+    ("scrambling information so others cannot read it", "encryption protects data"),
+    ("security barrier against unwanted network connections", "firewall blocks traffic"),
+    ("curly-brace text used to exchange structured information", "json is data format"),
+    ("alcoholic drink from fermented vineyard fruit", "wine made_from grapes"),
+    ("bean curd", "tofu made_from soybeans"),
+    ("sweet brown treat from cacao pods", "chocolate made_from cocoa"),
+    ("austrian child prodigy of classical music", "mozart composed symphonies"),
+    ("famous war canvas by a spanish cubist", "picasso painted guernica"),
+    ("naturalist who explained natural selection", "darwin proposed evolution"),
+    ("scientist who discovered polonium and radium", "curie studied radioactivity"),
+    ("man who introduced movable type in europe", "gutenberg invented printing press"),
+    ("first person to step onto the lunar surface", "armstrong walked_on moon"),
+    ("bowed wooden instrument held under the chin", "violin is string_instrument"),
+    ("instrument you hit with sticks", "drum is percussion_instrument"),
+    ("author of the play about the prince of denmark", "shakespeare wrote hamlet"),
+    ("scientist who explained why apples fall", "newton discovered gravity"),
+    ("physicist behind e equals m c squared", "einstein developed relativity"),
+    ("striped big cat of asia", "tiger is mammal"),
+    ("colourful pet that can mimic speech", "parrot is bird"),
 ]
 TOTAL_FACTS = 1000
 
@@ -102,14 +188,7 @@ def worker_model(name: str) -> dict:
     base = mp.tree_memory().total_rss_mb
     kind, model_id = MODELS[name]
     t = time.time()
-    if kind == "fastembed":
-        from fastembed import TextEmbedding
-        model = TextEmbedding(model_name=model_id)
-        encode = lambda xs: np.array(list(model.embed(xs)), dtype=np.float32)
-    else:
-        from model2vec import StaticModel
-        model = StaticModel.from_pretrained(model_id)
-        encode = lambda xs: np.asarray(model.encode(xs), dtype=np.float32)
+    encode, encode_query = load_encoder(kind, model_id)
     load_s = time.time() - t
 
     texts = corpus()
@@ -117,7 +196,7 @@ def worker_model(name: str) -> dict:
     doc = encode(texts)
     embed_ms = (time.time() - t) / len(texts) * 1000
     doc /= np.linalg.norm(doc, axis=1, keepdims=True)
-    queries = encode([q for q, _ in GOLD])
+    queries = encode_query([q for q, _ in GOLD])
     queries /= np.linalg.norm(queries, axis=1, keepdims=True)
     index = {text: i for i, text in enumerate(texts)}
     ranks = []
@@ -134,6 +213,72 @@ def worker_model(name: str) -> dict:
         "rss_mb": round(rss, 1), "rss_above_python_mb": round(rss - base, 1),
         "misses": [GOLD[i][0] for i, r in enumerate(ranks) if r > 3],
     }
+
+
+def load_encoder(kind: str, model_id: str):
+    """Return (encode_documents, encode_queries) functions producing float32 arrays."""
+    import glob
+    import numpy as np
+    if kind == "fastembed":
+        from fastembed import TextEmbedding
+        cache = os.environ.get("FASTEMBED_CACHE_PATH") or os.path.expanduser("~/.cache/fastembed")
+        model = TextEmbedding(model_name=model_id, cache_dir=cache)
+        docs = lambda xs: np.array(list(model.embed(xs)), dtype=np.float32)
+        queries = lambda xs: np.array(list(model.query_embed(xs)), dtype=np.float32)
+        return docs, queries
+    if kind == "model2vec":
+        from model2vec import StaticModel
+        model = StaticModel.from_pretrained(model_id)
+        fn = lambda xs: np.asarray(model.encode(xs), dtype=np.float32)
+        return fn, fn
+    if kind == "static":
+        from huggingface_hub import hf_hub_download
+        from safetensors.numpy import load_file
+        from tokenizers import Tokenizer
+        weights = load_file(hf_hub_download(model_id, "0_StaticEmbedding/model.safetensors"))
+        table = next(iter(weights.values())).astype(np.float32)
+        tok = Tokenizer.from_file(hf_hub_download(model_id, "0_StaticEmbedding/tokenizer.json"))
+
+        def fn(xs):
+            out = []
+            for x in xs:
+                ids = tok.encode(x, add_special_tokens=False).ids or [0]
+                out.append(table[ids].mean(axis=0))
+            return np.array(out, dtype=np.float32)
+        return fn, fn
+    # kind == "onnx": run the model directly, with the onnxruntime memory arena off
+    import onnxruntime as ort
+    from tokenizers import Tokenizer
+    if model_id.startswith("fastembed:"):
+        folder = model_id.split(":", 1)[1]
+        cache = os.environ.get("FASTEMBED_CACHE_PATH") or os.path.expanduser("~/.cache/fastembed")
+        model_path = glob.glob(f"{cache}/models--{folder}/snapshots/*/model.onnx")[0]
+        tok_path = os.path.join(os.path.dirname(model_path), "tokenizer.json")
+    else:
+        from huggingface_hub import hf_hub_download
+        repo, file = model_id.split(":", 1)
+        model_path = hf_hub_download(repo, file)
+        tok_path = hf_hub_download(repo, "tokenizer.json")
+    options = ort.SessionOptions()
+    options.enable_cpu_mem_arena = False
+    session = ort.InferenceSession(model_path, options, providers=["CPUExecutionProvider"])
+    wanted = {i.name for i in session.get_inputs()}
+    tok = Tokenizer.from_file(tok_path)
+    tok.enable_truncation(max_length=256)
+    tok.enable_padding(pad_id=0, pad_token="[PAD]")
+
+    def fn(xs):
+        out = []
+        for start in range(0, len(xs), 64):
+            enc = tok.encode_batch(xs[start:start + 64])
+            ids = np.array([e.ids for e in enc], dtype=np.int64)
+            mask = np.array([e.attention_mask for e in enc], dtype=np.int64)
+            feeds = {"input_ids": ids, "attention_mask": mask, "token_type_ids": np.zeros_like(ids)}
+            hidden = session.run(None, {k: v for k, v in feeds.items() if k in wanted})[0]
+            summed = (hidden * mask[..., None]).sum(axis=1)
+            out.append(summed / np.clip(mask.sum(axis=1, keepdims=True), 1, None))
+        return np.vstack(out).astype(np.float32)
+    return fn, fn
 
 
 def dir_bytes(path: str) -> tuple[int, int]:
@@ -240,6 +385,7 @@ def main() -> int:
     parser.add_argument("--dim", type=int, default=384)
     parser.add_argument("--out")
     parser.add_argument("--scale", type=int, default=10000, help="vector count for the scale run")
+    parser.add_argument("--models-only", action="store_true", help="skip the store measurements")
     args = parser.parse_args()
     sys.path.insert(0, HERE)
 
@@ -258,7 +404,7 @@ def main() -> int:
         print(f"model {name:<10} dim {result['dim']:>3}  recall@1 {result['recall_at_1']:.3f}  "
               f"recall@3 {result['recall_at_3']:.3f}  MRR {result['mrr']:.3f}  "
               f"RSS +{result['rss_above_python_mb']} MB  embed {result['embed_ms_per_fact']} ms/fact", flush=True)
-    for n in (1000, args.scale):
+    for n in (() if args.models_only else (1000, args.scale)):
         for store in STORES:
             if store == "lance_per_fact" and n > 1000:
                 continue  # quadratic version growth makes this impractical; the 1,000 run shows it
