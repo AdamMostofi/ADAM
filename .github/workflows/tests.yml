@@ -14,13 +14,13 @@ jobs:
     env:
       HF_HUB_OFFLINE: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Clean install from the lockfile
         run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
