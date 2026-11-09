@@ -1,10 +1,5 @@
-networkx>=3.0
-numpy>=1.24.0
-lancedb>=0.3.0
-fastembed>=0.4.0
-flask>=3.0.0
-rich>=13.0.0
-pydantic>=2.0.0
-cactus-needle>=3.2.0
-pytest>=7.0.0
-hypothesis>=6.0.0
+# Dependencies live in pyproject.toml; exact versions are pinned in uv.lock.
+# Run from the repository root:
+#   uv sync --locked --extra dev        (exact versions from the lockfile)
+#   pip install -r requirements.txt     (same packages, latest compatible versions)
+-e .[dev]

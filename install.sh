@@ -13,7 +13,11 @@ LLAMA_DIR="${ADAM_LLAMA_DIR:-$HOME/llama.cpp}"
 LLAMA_BIN="$LLAMA_DIR/build/bin/llama-server"
 
 echo "[1/5] Installing Python dependencies..."
-pip install -r "$ADAM_DIR/requirements.txt"
+if command -v uv >/dev/null 2>&1; then
+    (cd "$ADAM_DIR" && uv sync --locked --extra dev)
+else
+    pip install -e "$ADAM_DIR[dev]"
+fi
 python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')" 2>/dev/null || echo "  fastembed model will download on first use"
 
 echo "[2/5] Setting up llama.cpp..."
@@ -41,7 +45,7 @@ else
     echo "  TinyChat15M.gguf already present"
 fi
 
-echo "[4/5] Running tests..."
+echo "[4/5] Running tests (isolated: temporary stores, no network, production guard)..."
 cd "$ADAM_DIR"
 python -m pytest tests/ -q
 
