@@ -7,9 +7,11 @@ import sys, os, tempfile, threading, time, json, shutil
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from kernel.facts import Fact, Source
+import pytest
 from memory.system import MemorySystem
 
 
+@pytest.mark.real_model
 def test_semantic_search_finds_related_facts():
     with tempfile.TemporaryDirectory() as tmpdir:
         memory = MemorySystem(db_path=os.path.join(tmpdir, "test.db"))
