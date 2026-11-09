@@ -32,10 +32,13 @@ _SMALL_TALK = {
     "goodbye": "Goodbye.",
 }
 
-_DEFAULT_SERVER_CANDIDATES = [
-    "/home/adam/llama.cpp/build/bin/llama-server",
-    "llama-server",
-]
+_DEFAULT_LLAMA_DIR = "~/llama.cpp"
+
+
+def _server_candidates() -> list[str]:
+    """llama-server locations, in order: ADAM_LLAMA_DIR build (as install.sh uses), then PATH."""
+    llama_dir = os.path.expanduser(os.environ.get("ADAM_LLAMA_DIR", _DEFAULT_LLAMA_DIR))
+    return [os.path.join(llama_dir, "build", "bin", "llama-server"), "llama-server"]
 
 
 class Mouth:
@@ -57,7 +60,7 @@ class Mouth:
             atexit.register(self.close)
 
     def _find_server(self) -> str:
-        for candidate in _DEFAULT_SERVER_CANDIDATES:
+        for candidate in _server_candidates():
             if candidate == "llama-server" or os.path.exists(candidate):
                 return candidate
         return "llama-server"
