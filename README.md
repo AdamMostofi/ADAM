@@ -53,7 +53,7 @@ affect. The Mouth renders the answer.*
 - **Ear** — Needle 2 extracts action, topic, sentiment, and urgency.
 - **Kernel** — 15 Layer 1 rules plus contradiction detection, with membership (`instance_of`) separate from subclassing (`subclass_of`)
   ([docs/design/kernel-rules.md](docs/design/kernel-rules.md)), predicate-indexed forward inference,
-  goal-directed proof, `?variable` pattern queries, and staged truth revision.
+  goal-directed proof, `?variable` pattern queries, and structured derivation records.
 - **Memory** — SQLite for verbatim facts and proofs, LanceDB for semantic
   recall, NetworkX for relationships, and ECAN-style attention for ranking.
 - **Learning** — proof patterns become skills, skills become Layer 2 rules, and
@@ -116,7 +116,7 @@ curl -s http://localhost:7860/api/chat \
 *A fact is written to all three stores; recall starts exact, falls back to
 semantic, then re-ranks by attention.*
 
-- **Exact** — SQLite stores every fact verbatim, with proof chains and indexes
+- **Exact** — SQLite stores every fact verbatim, with derivation records and indexes
   on subject, predicate, object, source, and confidence.
 - **Semantic** — LanceDB plus `fastembed` (ONNX) provides the semantic fallback
   when exact text search returns nothing.

@@ -1,5 +1,21 @@
 # Changelog
 
+## Stage 1.4 — Keep the Chain (#30)
+
+- **Derivation records.** Proofs are `Derivation` records naming the rule,
+  its version, every premise and the confidence. Proof text is rendered from
+  them.
+- **Store schema 2.** A `derivations` table holds the records. Derived facts
+  are stored with their derivations, and everything they rest on, in one
+  transaction. A derived fact without a derivation is refused.
+- **Walk-back.** `engine.explain()`, `ExactStore.trace()`,
+  `MemorySystem.explain()` and `/api/facts/<id>/trace` walk any fact back to
+  its inputs.
+- **Learning from records.** `LearningEngine.learn_from_belief()` builds
+  patterns with real premises.
+- **Confidence defined.** The exposed value is the best support, and
+  evidence counts distinct derivations.
+
 ## Stage 1.3 — Name the Bonds (#29)
 
 - New predicates: `instance_of`, `not_instance_of` and `subclass_of`.

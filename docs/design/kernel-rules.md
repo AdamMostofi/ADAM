@@ -141,9 +141,6 @@ These are recorded as strict `xfail` tests in
   engine and stores the classified fact. The original `is` row stays in the
   memory store, so a restart brings it back, alongside the classified one.
   Reconciling restored state is Stage 1.6.
-- **Stage 1.4 (#30):** proofs are text, not structured records. Each one
-  names every premise (since Stage 1.2), but it doesn't record per-step
-  confidence, and nothing persists it.
 - **Stage 1.5 (#31):** exceptions such as the penguin case aren't resolved.
 
 ## Tests
@@ -151,10 +148,77 @@ These are recorded as strict `xfail` tests in
 | Test file | What it checks |
 |---|---|
 | `tests/unit/test_rule_soundness.py` | Exhaustive truth tables for every propositional rule, and a typed model (individuals and classes) for every class rule, under both readings of an ambiguous `is`. |
+| `tests/integration/test_derivations.py` | Derivation records in the engine and the store. Every stored derived fact walks back to its inputs (generated fact sets), repeats add nothing, multi-word terms round-trip, the schema 1 migration works, and failed writes store nothing. |
 | `tests/unit/test_class_rules.py` | `instance_of`, `subclass_of`, inheritance, exclusion, the ambiguous-`is` rules, and `classify()`. |
 | `tests/unit/test_kernel_edge_cases.py` | Every registered rule fires through the engine; confidence stays in [0, 1]; unusual terms, self-reference, cycles and contradictions are handled. |
 | `tests/integration/test_prove_agreement.py` | Generated fact sets, compared against a naive reference closure. `prove()` is sound and complete for what the rules derive, and `infer()` is sound. |
 | `tests/integration/test_known_kernel_gaps.py` | Gaps owned by later stages. |
+
+## Proofs (Stage 1.4, #30)
+
+DR4.1: the record is the truth, and English is a projection. Every derivation
+is a `Derivation` record (`kernel/facts.py`) with these fields:
+- **`rule`:** the rule name, for example `inheritance_implies` or
+  `skill:mortality`;
+- **`rule_version`:** `KERNEL_RULES_VERSION` for Layer 1, or the compile
+  time of a learned skill;
+- **`premises`:** the premise keys, in the order the rule took them;
+- **`confidence`:** what this derivation gives, using the best confidence of
+  each premise.
+
+In memory:
+- **Records per belief.** `Belief.proofs` lists a belief's records, up to 16.
+  Two derivations are the same when they use the same rule and the same
+  premise set, so repeating one adds no record and no evidence; it only keeps
+  the higher confidence.
+- **Text is rendered.** `Belief.proof_chain` and `engine.get_trace()` render
+  text from the records.
+- **Derived means `DEDUCED`.** Every conclusion's source is `DEDUCED`, even
+  when a learned skill made it. The rule name records which rule did.
+- **Walk-back.** `engine.explain(s, p, o)` walks a belief back to the given
+  facts it rests on, premises first, and `render_explanation()` turns that
+  into text. The walk is well-founded: a step is used only once some
+  derivation of it has every premise explained, so cycles such as
+  `a equals b` and `b equals a` can't trap it.
+
+In the store (schema 2):
+- **The `derivations` table.** Each row holds the conclusion ID, the rule
+  and its version, the ordered premise IDs, the premise set, the confidence
+  and a timestamp. It is unique on (conclusion, rule, premise set).
+- **One transaction.** `MemorySystem.store_beliefs()` stores beliefs, their
+  derivations and everything they rest on together. Chat uses it through
+  `store_inferred()`.
+- **No derived fact without a derivation.** A derived fact can't be stored
+  without at least one derivation (`UnderivedFactError`), and a derived
+  premise must be stored with its own derivations.
+- **Walk-back.** `ExactStore.trace(id)` and `MemorySystem.explain(id)` walk a
+  stored fact back to its inputs, using the same well-founded walk. The web
+  API offers it as `/api/facts/<id>/trace`, and `/api/facts` now includes
+  IDs.
+- **Migration.** A schema 1 store migrates in place. Its rows are kept, and
+  any derived rows without derivations are listed by `underived()` and by
+  `scripts/audit_store.py`, never deleted. The old `proof_chain` column is
+  no longer written.
+
+Learning:
+- `LearningEngine.learn_from_belief()` builds patterns from the records,
+  with their real premises. Multi-word terms like `new york` round-trip
+  exactly.
+- The old text path, `learn_from_proof()`, is kept for compatibility. It
+  still only knows conclusions, because text can't say where a multi-word
+  term ends.
+
+**Confidence exposed by every API:** a belief's best support, meaning its
+most confident derivation or its highest given value. `evidence` counts
+distinct derivations separately. This supersedes the PLN revision plan in
+`docs/HYPERON_ANALYSIS.md`. Different derivations of one conclusion usually
+share premises, so revising them together counts the same evidence twice,
+and the result depended on arrival order (Stage 1.2).
+
+**Cost:** keeping up to 16 records per belief makes `infer()` about 10–18%
+slower than Stage 1.3 on derivation-heavy cases. That is ten interleaved
+runs each: `subclass_of` chain of 80, +16%; equality web of 15, +11% to
++17%. Proposition chains and taxonomies are unchanged.
 
 ## The engine (Stage 1.2, #28)
 

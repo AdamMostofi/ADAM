@@ -198,7 +198,13 @@ So ADAM systematically under-reports confidence when evidence converges.
   and rewards independent confirmation.
 - Contradiction handling is graded rather than a boolean flag.
 
-**Status: ADOPTED, staged.** Do **not** change the rule formulas —
+**Status: superseded (Stage 1.4, #30).** A belief's confidence is its best
+support, and `evidence` counts distinct derivations. Revising derivations
+together was dropped, because they usually share premises (double counting),
+and the result depended on arrival order. See docs/design/kernel-rules.md
+(Proofs). The original plan follows.
+
+**Original status: ADOPTED, staged.** Do **not** change the rule formulas —
 `tests/integration/test_engine_confidence.py` pins `0.9 × 0.9 = 0.81` and
 that contract is fine for single-proof chains. Instead:
 
