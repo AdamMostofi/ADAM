@@ -1,0 +1,213 @@
+{
+ "budget_mb": 400.0,
+ "enforced_states": [
+  "startup",
+  "chat"
+ ],
+ "states_total_rss_mb": {
+  "startup": 127.1,
+  "chat": 331.6,
+  "ingest": 335.4,
+  "peak": 335.4
+ },
+ "lifecycle": [
+  {
+   "step": "python_started",
+   "total_rss_mb": 16.6,
+   "total_pss_mb": 11.0,
+   "main_rss_mb": 16.6,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 16.6,
+     "pss_mb": 11.0,
+     "hwm_mb": 16.6
+    }
+   ]
+  },
+  {
+   "step": "libraries_imported",
+   "total_rss_mb": 59.7,
+   "total_pss_mb": 53.1,
+   "main_rss_mb": 59.7,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 59.7,
+     "pss_mb": 53.1,
+     "hwm_mb": 59.7
+    }
+   ]
+  },
+  {
+   "step": "adam_imported",
+   "total_rss_mb": 66.6,
+   "total_pss_mb": 60.0,
+   "main_rss_mb": 66.6,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 66.6,
+     "pss_mb": 60.0,
+     "hwm_mb": 66.6
+    }
+   ]
+  },
+  {
+   "step": "startup",
+   "total_rss_mb": 127.1,
+   "total_pss_mb": 120.1,
+   "main_rss_mb": 127.1,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 127.1,
+     "pss_mb": 120.1,
+     "hwm_mb": 155.3
+    }
+   ],
+   "seconds": 0.89
+  },
+  {
+   "step": "first_facts_stored",
+   "total_rss_mb": 195.2,
+   "total_pss_mb": 188.1,
+   "main_rss_mb": 195.2,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 195.2,
+     "pss_mb": 188.1,
+     "hwm_mb": 195.2
+    }
+   ],
+   "seconds": 0.09
+  },
+  {
+   "step": "chat",
+   "total_rss_mb": 331.6,
+   "total_pss_mb": 319.2,
+   "main_rss_mb": 202.7,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 202.7,
+     "pss_mb": 195.3,
+     "hwm_mb": 202.7
+    },
+    {
+     "pid": 10371,
+     "name": "llama-server",
+     "rss_mb": 128.9,
+     "pss_mb": 123.9,
+     "hwm_mb": 128.9
+    }
+   ],
+   "seconds": 2.65,
+   "turns": 3,
+   "first_reply": "do you think it is a good idea to watch it all day?"
+  },
+  {
+   "step": "ingest",
+   "total_rss_mb": 335.4,
+   "total_pss_mb": 323.0,
+   "main_rss_mb": 206.5,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 206.5,
+     "pss_mb": 199.1,
+     "hwm_mb": 206.5
+    },
+    {
+     "pid": 10371,
+     "name": "llama-server",
+     "rss_mb": 128.9,
+     "pss_mb": 123.9,
+     "hwm_mb": 128.9
+    }
+   ],
+   "seconds": 0.4,
+   "facts": 200
+  },
+  {
+   "step": "after_ingest_idle",
+   "total_rss_mb": 335.4,
+   "total_pss_mb": 323.0,
+   "main_rss_mb": 206.5,
+   "processes": [
+    {
+     "pid": 10326,
+     "name": "python",
+     "rss_mb": 206.5,
+     "pss_mb": 199.1,
+     "hwm_mb": 206.5
+    },
+    {
+     "pid": 10371,
+     "name": "llama-server",
+     "rss_mb": 128.9,
+     "pss_mb": 123.9,
+     "hwm_mb": 128.9
+    }
+   ]
+  }
+ ],
+ "isolated": {
+  "ear_only": {
+   "baseline_mb": 16.6,
+   "total_rss_mb": 101.2,
+   "total_pss_mb": 95.0,
+   "main_rss_mb": 101.2,
+   "processes": [
+    {
+     "pid": 10398,
+     "name": "python",
+     "rss_mb": 101.2,
+     "pss_mb": 95.0,
+     "hwm_mb": 125.0
+    }
+   ]
+  },
+  "embedding_only": {
+   "baseline_mb": 16.5,
+   "total_rss_mb": 117.5,
+   "total_pss_mb": 110.8,
+   "main_rss_mb": 117.5,
+   "processes": [
+    {
+     "pid": 10412,
+     "name": "python",
+     "rss_mb": 117.5,
+     "pss_mb": 110.8,
+     "hwm_mb": 117.5
+    }
+   ]
+  },
+  "vector_index_only": {
+   "baseline_mb": 16.6,
+   "total_rss_mb": 39.2,
+   "total_pss_mb": 32.6,
+   "main_rss_mb": 39.2,
+   "processes": [
+    {
+     "pid": 10442,
+     "name": "python",
+     "rss_mb": 39.2,
+     "pss_mb": 32.6,
+     "hwm_mb": 39.2
+    }
+   ]
+  }
+ },
+ "python": "3.11.15",
+ "time": "2026-11-11T10:52:22",
+ "violations": []
+}

@@ -2,7 +2,7 @@
 
 **Status:** Current. This is the one definition of ADAM's memory budget; other documents point here.
 **Decided:** 2026-11-09 by the owner (Option A in [#33](https://github.com/AdamMostofi/ADAM/issues/33)).
-**Last measured:** 2026-11-09, after Stage 0.5 ([raw report](../measurements/2026-11-09-memory-after-stage-0.5.json)). **Status: within budget**: startup 127.0 MB, chat 334.1 MB.
+**Last measured:** 2026-11-11, after the Stage 0.6 reset ([raw report](../measurements/2026-11-11-memory-after-reset.json)). **Status: within budget**: startup 127.1 MB, chat 331.6 MB. The measurement uses temporary stores, so the reset itself doesn't change these figures; they confirm the baseline on the final Phase 0 code.
 
 ## The definition
 
