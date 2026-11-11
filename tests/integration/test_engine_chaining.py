@@ -42,15 +42,15 @@ def test_transitivity_plus_modus_ponens():
 
 
 def test_subtype_plus_universal():
-    """Tests subtype + universal: bird all_are flies + tweety is penguin + penguin is bird => tweety is flies. Result: PASS."""
+    """Subclass + universal: bird all_are flies + penguin subclass_of bird + tweety instance_of penguin => tweety instance_of flies."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
-        Fact("penguin", "is", "bird"),
-        Fact("tweety", "is", "penguin"),
+        Fact("penguin", "subclass_of", "bird"),
+        Fact("tweety", "instance_of", "penguin"),
     ])
     engine.infer()
-    r = [b for b in engine.query(subject="tweety") if b.fact.predicate == "is" and b.fact.object == "flies"]
+    r = [b for b in engine.query(subject="tweety") if b.fact.predicate == "instance_of" and b.fact.object == "flies"]
     assert len(r) > 0
 
 
@@ -126,13 +126,22 @@ def test_de_morgan_in_engine():
 
 
 def test_combined_is_subtype_universal():
-    """Tests combined is_transitivity + subtype_transitivity + universal_instantiation: tweety->penguin->bird + bird all_are flies => tweety is flies. Result: PASS."""
+    """Membership through a hierarchy: tweety instance_of penguin, penguin subclass_of bird, bird all_are flies => tweety instance_of flies (Stage 1.3)."""
     engine = InferenceEngine()
     engine.add_facts([
-        Fact("tweety", "is", "penguin"),
-        Fact("penguin", "is", "bird"),
+        Fact("tweety", "instance_of", "penguin"),
+        Fact("penguin", "subclass_of", "bird"),
         Fact("bird", "all_are", "flies"),
     ])
     engine.infer()
-    r = [b for b in engine.query(subject="tweety") if b.fact.predicate == "is" and b.fact.object == "flies"]
+    r = [b for b in engine.query(subject="tweety") if b.fact.predicate == "instance_of" and b.fact.object == "flies"]
     assert len(r) > 0
+
+
+def test_ambiguous_is_chain_does_not_combine():
+    """Stage 1.3 (#29): "tweety is penguin" + "penguin is bird" could be rex/dog/species; nothing follows."""
+    engine = InferenceEngine()
+    engine.add_facts([Fact("tweety", "is", "penguin"), Fact("penguin", "is", "bird"), Fact("bird", "all_are", "flies")])
+    engine.infer()
+    assert not engine.query("tweety", "is", "bird")
+    assert engine.query("penguin", "is", "flies")  # sound under either reading of "penguin is bird"

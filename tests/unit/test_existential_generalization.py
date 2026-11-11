@@ -13,7 +13,7 @@ from kernel.foundations import existential_generalization
 def test_normal():
     """Tests basic existential generalization: socrates is mortal => exists is mortal. Result: PASS."""
     r = existential_generalization(Fact("socrates", "is", "mortal"))
-    assert r and r.subject == "exists" and r.predicate == "is" and r.object == "mortal"
+    assert r and r.subject == "exists" and r.predicate == "instance_of" and r.object == "mortal"
 
 
 def test_wrong_predicate():

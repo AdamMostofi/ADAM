@@ -23,6 +23,9 @@ export const api = {
   facts: (q) => request(`/api/facts${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   addFact: (subject, predicate, object) =>
     request("/api/facts", { method: "POST", body: JSON.stringify({ subject, predicate, object }) }),
+  ambiguous: () => request("/api/ambiguous"),
+  classify: (subject, predicate, object, as) =>
+    request("/api/classify", { method: "POST", body: JSON.stringify({ subject, predicate, object, as }) }),
   graph: () => request("/api/graph"),
   skills: () => request("/api/skills"),
   stats: () => request("/api/stats"),

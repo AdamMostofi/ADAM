@@ -24,7 +24,7 @@ RuleResult = Fact | list[Fact] | None
 RuleFn = Callable[..., RuleResult]
 
 # Predicates a fact about an equal term can carry; equality substitution pairs with each.
-SUBSTITUTABLE = ("is", "not_is", "implies", "all_are", "or", "equals")
+SUBSTITUTABLE = ("is", "not_is", "instance_of", "not_instance_of", "subclass_of", "implies", "or", "equals")
 
 
 @dataclass(frozen=True)
@@ -44,18 +44,31 @@ class Rule:
 
 
 BUILTIN_RULES: tuple[Rule, ...] = (
+    # propositions
     Rule("modus_ponens", "implies", "is", foundations.modus_ponens),
     Rule("modus_ponens_negated", "implies", "not_is", foundations.modus_ponens),
-    Rule("transitivity", "implies", "implies", foundations.transitivity),
     Rule("modus_tollens", "implies", "not_is", foundations.modus_tollens),
     Rule("modus_tollens_negated", "implies", "is", foundations.modus_tollens),
-    Rule("existential_generalization", "is", None, foundations.existential_generalization),
-    Rule("subtype_transitivity", "is", "implies", foundations.subtype_transitivity),
-    Rule("is_transitivity", "is", "is", foundations.is_transitivity),
-    Rule("universal_instantiation", "all_are", "is", foundations.universal_instantiation),
-    Rule("universal_generalization", "is", None, foundations.universal_generalization),
+    Rule("transitivity", "implies", "implies", foundations.transitivity),
+    # classes (Stage 1.3, #29): "implies" between classes also means subset
+    Rule("subclass_transitivity", "subclass_of", "subclass_of", foundations.subclass_transitivity),
+    Rule("subclass_transitivity_implies", "subclass_of", "implies", foundations.subclass_transitivity),
+    Rule("subclass_transitivity_after_implies", "implies", "subclass_of", foundations.subclass_transitivity),
+    Rule("inheritance", "subclass_of", "instance_of", foundations.inheritance),
+    Rule("inheritance_ambiguous", "subclass_of", "is", foundations.inheritance),
+    Rule("inheritance_implies", "implies", "instance_of", foundations.inheritance),
+    Rule("inheritance_implies_ambiguous", "implies", "is", foundations.inheritance),
+    Rule("exclusion", "subclass_of", "not_instance_of", foundations.exclusion),
+    Rule("exclusion_ambiguous", "subclass_of", "not_is", foundations.exclusion),
+    Rule("exclusion_implies", "implies", "not_instance_of", foundations.exclusion),
+    Rule("exclusion_implies_ambiguous", "implies", "not_is", foundations.exclusion),
+    Rule("existential_generalization", "instance_of", None, foundations.existential_generalization),
+    Rule("existential_generalization_ambiguous", "is", None, foundations.existential_generalization),
+    Rule("universal_generalization", "instance_of", None, foundations.universal_generalization),
+    # equality
     *(Rule(f"equality_substitution_{p}", "equals", p, foundations.equality_substitution) for p in SUBSTITUTABLE),
     Rule("equality_symmetry", "equals", None, foundations.equality_symmetry),
+    # connectives
     Rule("disjunctive_syllogism_not_is", "or", "not_is", foundations.disjunctive_syllogism),
     Rule("disjunctive_syllogism_is", "or", "is", foundations.disjunctive_syllogism),
     Rule("de_morgan_and", "not_and", None, foundations.de_morgan_and),

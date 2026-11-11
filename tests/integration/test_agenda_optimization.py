@@ -29,11 +29,11 @@ def test_agenda_correctness_complex():
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies"),
-        Fact("penguin", "is", "bird"),
-        Fact("tweety", "is", "penguin"),
+        Fact("penguin", "subclass_of", "bird"),
+        Fact("tweety", "instance_of", "penguin"),
     ])
     engine.infer()
-    assert len(engine.query(subject="tweety", predicate="is", object="flies")) > 0
+    assert len(engine.query(subject="tweety", predicate="instance_of", object="flies")) > 0
 
 
 def test_agenda_no_duplicate_facts():
@@ -88,7 +88,7 @@ def test_agenda_trace_identical():
     engine.infer()
     trace = engine.get_trace()
     assert len(trace) > 0
-    assert any("[modus_ponens]" in t for t in trace)
+    assert any(t.startswith("[inheritance") for t in trace)  # the class form of modus ponens (Stage 1.3)
 
 
 def test_agenda_retract_with_index():

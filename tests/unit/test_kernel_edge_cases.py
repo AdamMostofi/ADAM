@@ -14,7 +14,7 @@ from kernel.foundations import (
     negate_term,
     split_term,
 )
-from kernel.rules import BUILTIN_RULES
+from kernel.rules import BUILTIN_RULES, SUBSTITUTABLE
 
 
 def triple(f):
@@ -46,16 +46,25 @@ def test_literal_triples_are_canonical():
 
 # ------------------------------------------------------------- every rule fires
 FIRING_EXAMPLES = {
-    "modus_ponens": [Fact("x", "is", "p"), Fact("p", "implies", "q")],
-    "modus_ponens_negated": [Fact("a", "not_is", TRUE), Fact("not:a", "implies", "b")],
-    "transitivity": [Fact("p", "implies", "q"), Fact("q", "implies", "r")],
-    "modus_tollens": [Fact("p", "implies", "q"), Fact("x", "not_is", "q")],
+    "modus_ponens": [Fact("p", "implies", "q"), Fact("p", "is", TRUE)],
+    "modus_ponens_negated": [Fact("not:a", "implies", "b"), Fact("a", "not_is", TRUE)],
+    "modus_tollens": [Fact("p", "implies", "q"), Fact("q", "not_is", TRUE)],
     "modus_tollens_negated": [Fact("a", "implies", "not:b"), Fact("b", "is", TRUE)],
-    "existential_generalization": [Fact("x", "is", "p")],
-    "subtype_transitivity": [Fact("x", "is", "p"), Fact("p", "implies", "q")],
-    "is_transitivity": [Fact("x", "is", "p"), Fact("p", "is", "q")],
-    "universal_instantiation": [Fact("p", "all_are", "q"), Fact("x", "is", "p")],
-    "universal_generalization": [Fact("arbitrary_p", "is", "q")],
+    "transitivity": [Fact("p", "implies", "q"), Fact("q", "implies", "r")],
+    "subclass_transitivity": [Fact("p", "subclass_of", "q"), Fact("q", "subclass_of", "r")],
+    "subclass_transitivity_implies": [Fact("p", "subclass_of", "q"), Fact("q", "implies", "r")],
+    "subclass_transitivity_after_implies": [Fact("p", "implies", "q"), Fact("q", "subclass_of", "r")],
+    "inheritance": [Fact("p", "subclass_of", "q"), Fact("x", "instance_of", "p")],
+    "inheritance_ambiguous": [Fact("p", "subclass_of", "q"), Fact("x", "is", "p")],
+    "inheritance_implies": [Fact("p", "implies", "q"), Fact("x", "instance_of", "p")],
+    "inheritance_implies_ambiguous": [Fact("p", "implies", "q"), Fact("x", "is", "p")],
+    "exclusion": [Fact("p", "subclass_of", "q"), Fact("x", "not_instance_of", "q")],
+    "exclusion_ambiguous": [Fact("p", "subclass_of", "q"), Fact("x", "not_is", "q")],
+    "exclusion_implies": [Fact("p", "implies", "q"), Fact("x", "not_instance_of", "q")],
+    "exclusion_implies_ambiguous": [Fact("p", "implies", "q"), Fact("x", "not_is", "q")],
+    "existential_generalization": [Fact("x", "instance_of", "p")],
+    "existential_generalization_ambiguous": [Fact("x", "is", "p")],
+    "universal_generalization": [Fact("arbitrary_p", "instance_of", "q")],
     "equality_symmetry": [Fact("a", "equals", "b")],
     "disjunctive_syllogism_not_is": [Fact("a", "or", "b"), Fact("a", "not_is", TRUE)],
     "disjunctive_syllogism_is": [Fact("not:a", "or", "b"), Fact("a", "is", TRUE)],
@@ -64,7 +73,7 @@ FIRING_EXAMPLES = {
     "double_negation": [Fact("a", "not_not", TRUE)],
     "conditional_proof": [Fact("c1", "assumes", "rain"), Fact("c1", "derives", "wet")],
 }
-for _p in ("is", "not_is", "implies", "all_are", "or", "equals"):
+for _p in SUBSTITUTABLE:
     FIRING_EXAMPLES[f"equality_substitution_{_p}"] = [Fact("a", "equals", "b"), Fact("a", _p, "c")]
 
 
@@ -101,7 +110,7 @@ WEIRD_TERMS = ["a b", "  spaced  ", "ünïcödé", "日本", "x" * 500, "?x", "t
 
 def test_rules_never_crash_on_odd_terms():
     facts = [Fact(s, p, o) for s, o in itertools.product(WEIRD_TERMS[:6], repeat=2)
-             for p in ("is", "not_is", "implies", "or", "equals", "all_are")]
+             for p in ("is", "not_is", "instance_of", "not_instance_of", "subclass_of", "implies", "or", "equals")]
     by_predicate = {}
     for f in facts:
         by_predicate.setdefault(f.predicate, []).append(f)
@@ -125,8 +134,8 @@ def test_self_referential_facts_produce_no_trivial_beliefs():
     engine.add_facts([Fact("a", "is", "a"), Fact("a", "implies", "a"), Fact("a", "equals", "a"),
                       Fact("a", "or", "a"), Fact("a", "all_are", "a"), Fact("a", "not_not", "a")])
     engine.infer()
-    trivial = [k for k in engine.beliefs if k[0] == k[2] and k[1] in ("is", "implies", "all_are", "equals")]
-    assert set(trivial) == {("a", "is", "a"), ("a", "implies", "a"), ("a", "all_are", "a"), ("a", "equals", "a")}  # only the given ones
+    trivial = [k for k in engine.beliefs if k[0] == k[2] and k[1] in ("is", "implies", "subclass_of", "equals")]
+    assert set(trivial) == {("a", "is", "a"), ("a", "implies", "a"), ("a", "subclass_of", "a"), ("a", "equals", "a")}  # only the given ones (all_are is written subclass_of)
 
 
 def test_cycles_terminate_and_stay_small():

@@ -205,3 +205,18 @@ def test_create_app_default_core_uses_env_paths(tmp_path, monkeypatch):
     with app.test_client() as client:
         client.post("/api/facts", json={"subject": "dog", "predicate": "is", "object": "animal"})
     assert (tmp_path / "env.db").exists()
+
+
+def test_flask_reports_and_classifies_an_ambiguous_is(app):
+    """Stage 1.3 (#29): an ambiguous "is" is flagged, listed, and can be classified."""
+    with app.test_client() as client:
+        res = client.post("/api/facts", json={"subject": "rex", "predicate": "is", "object": "dog"})
+        assert res.get_json()["ambiguous"] is True
+        res = client.post("/api/facts", json={"subject": "dog", "predicate": "subclass_of", "object": "mammal"})
+        assert res.get_json()["ambiguous"] is False
+        assert client.get("/api/ambiguous").get_json() == [{"subject": "rex", "predicate": "is", "object": "dog"}]
+        res = client.post("/api/classify", json={"subject": "rex", "predicate": "is", "object": "dog", "as": "instance_of"})
+        assert res.get_json() == {"subject": "rex", "predicate": "instance_of", "object": "dog"}
+        assert client.get("/api/ambiguous").get_json() == []
+        res = client.post("/api/classify", json={"subject": "rex", "predicate": "is", "object": "dog", "as": "bogus"})
+        assert res.status_code == 400

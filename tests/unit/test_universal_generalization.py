@@ -1,4 +1,4 @@
-"""Universal generalization: an arbitrary member of T is X gives "T all_are X".
+"""Universal generalization: an arbitrary member of T being an X gives "T subclass_of X" ("T all_are X" before Stage 1.3).
 
 Stage 1.1 (#27) fixes: the rule was registered on "all_are" but needs an "is"
 fact, so it never fired in the engine; and it produced the meaningless
@@ -17,23 +17,23 @@ def triple(f):
 
 
 def test_arbitrary_member_generalizes_to_its_class():
-    assert triple(universal_generalization(Fact("arbitrary_man", "is", "mortal"))) == ("man", "all_are", "mortal")
+    assert triple(universal_generalization(Fact("arbitrary_man", "instance_of", "mortal"))) == ("man", "subclass_of", "mortal")
 
 
 def test_fires_through_the_engine_and_then_instantiates():
     engine = InferenceEngine()
     engine.add_facts([Fact("arbitrary_man", "is", "mortal"), Fact("socrates", "is", "man")])
     engine.infer()
-    assert engine.query("man", "all_are", "mortal")
+    assert engine.query("man", "subclass_of", "mortal")
     assert engine.query("socrates", "is", "mortal")
 
 
 def test_non_arbitrary_subject_gives_nothing():
-    assert universal_generalization(Fact("socrates", "is", "mortal")) is None
+    assert universal_generalization(Fact("socrates", "instance_of", "mortal")) is None
 
 
 def test_bare_prefix_gives_nothing():
-    assert universal_generalization(Fact("arbitrary_", "is", "mortal")) is None
+    assert universal_generalization(Fact("arbitrary_", "instance_of", "mortal")) is None
 
 
 def test_propositions_give_nothing():
@@ -45,5 +45,5 @@ def test_wrong_predicate():
 
 
 def test_confidence_decay():
-    r = universal_generalization(Fact("arbitrary_man", "is", "mortal", confidence=0.9))
+    r = universal_generalization(Fact("arbitrary_man", "instance_of", "mortal", confidence=0.9))
     assert r and r.confidence < 0.9

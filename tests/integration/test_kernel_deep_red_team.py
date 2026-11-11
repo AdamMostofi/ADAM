@@ -44,10 +44,10 @@ def test_all_16_rules_together():
     engine = InferenceEngine()
     engine.add_facts([
         Fact("bird", "all_are", "flies", source=Source.USER),
-        Fact("penguin", "is", "bird", source=Source.USER),
-        Fact("tweety", "is", "penguin", source=Source.USER),
+        Fact("penguin", "subclass_of", "bird", source=Source.USER),
+        Fact("tweety", "instance_of", "penguin", source=Source.USER),
         Fact("op", "equals", "operation", source=Source.USER),
-        Fact("operation", "is", "process", source=Source.USER),
+        Fact("operation", "instance_of", "process", source=Source.USER),
         Fact("sunny", "or", "rainy", source=Source.USER),
         Fact("sunny", "not_is", "sunny", source=Source.USER),
         Fact("rainy", "implies", "wet", source=Source.USER),
@@ -55,9 +55,9 @@ def test_all_16_rules_together():
         Fact("alive", "implies", "breathing", source=Source.USER),
     ])
     engine.infer()
-    assert len(engine.query(subject="tweety", predicate="is", object="bird")) > 0
-    assert len(engine.query(subject="tweety", predicate="is", object="flies")) > 0
-    assert len(engine.query(subject="op", predicate="is", object="process")) > 0
+    assert len(engine.query(subject="tweety", predicate="instance_of", object="bird")) > 0
+    assert len(engine.query(subject="tweety", predicate="instance_of", object="flies")) > 0
+    assert len(engine.query(subject="op", predicate="instance_of", object="process")) > 0
     assert len(engine.query(object="wet")) > 0
     assert len(engine.query(object="breathing")) > 0
 

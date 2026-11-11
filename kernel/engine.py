@@ -41,7 +41,9 @@ from dataclasses import replace
 
 from kernel.contradictions import ContradictionResolver
 from kernel.facts import Belief, Fact, Source
-from kernel.foundations import EXISTS, TRUE, canonical_fact, contradiction_detection, split_term
+from kernel.foundations import (
+    EXISTS, TRUE, canonical_fact, contradiction_detection, is_ambiguous, split_term,
+)
 from kernel.rules import BUILTIN_RULES, Rule
 from kernel.truth import TruthValue
 
@@ -59,7 +61,11 @@ MAX_DERIVATIONS = 16
 # (on a 1,000-step chain, "n0 is n1000" in about 3,000 iterations rather than
 # after the ~500,000 implications between the steps). A saturated run is the
 # same whatever this order is.
-LATER = frozenset({"implies"})
+LATER = frozenset({"implies", "subclass_of"})
+# Positive predicate -> its negation, for contradiction detection.
+OPPOSITE = {"is": "not_is", "instance_of": "not_instance_of"}
+OPPOSITE.update({negative: positive for positive, negative in list(OPPOSITE.items())})
+CLASSIFICATIONS = {"is": ("instance_of", "subclass_of"), "not_is": ("not_instance_of",)}
 
 
 def key_of(fact: Fact) -> Key:
@@ -198,7 +204,7 @@ class InferenceEngine:
             self._fire(rule, fact, k, as_trigger=True)
         for rule in self.rules_by_partner.get(fact.predicate, ()):
             self._fire(rule, fact, k, as_trigger=False)
-        if fact.predicate in ("is", "not_is"):
+        if fact.predicate in OPPOSITE:
             self._flag_contradictions(fact)
 
     def _candidates(self, predicate: str, fact: Fact, shared_term: bool) -> list[Key]:
@@ -265,15 +271,44 @@ class InferenceEngine:
             self._enqueue(key_of(belief.fact))
 
     def _flag_contradictions(self, fact: Fact) -> None:
-        if fact.predicate not in ("is", "not_is"):
+        opposite = OPPOSITE.get(fact.predicate)
+        if opposite is None:
             return
-        opposite = "not_is" if fact.predicate == "is" else "is"
         other_k = (fact.subject, opposite, fact.object)
         if other_k in self.beliefs:
             k = key_of(fact)
-            pair = (k, other_k) if fact.predicate == "is" else (other_k, k)
+            pair = (k, other_k) if fact.predicate in ("is", "instance_of") else (other_k, k)
             self._admit("contradiction_detection",
                         contradiction_detection(self.beliefs[pair[0]].fact, self.beliefs[pair[1]].fact), pair)
+
+    # ----------------------------------------------------- ambiguous "is"
+    def ambiguous(self) -> list[Fact]:
+        """Given facts whose "is" could mean instance_of or subclass_of (DR3.2: never guessed).
+
+        They still take part in the inferences that are sound under both
+        readings. Use classify() once the meaning is known.
+        """
+        with self.lock:
+            return [b.fact for b in self.beliefs.values() if b.given and is_ambiguous(b.fact)]
+
+    def classify(self, fact: Fact, predicate: str) -> Fact:
+        """Replace an ambiguous "is" / "not_is" fact with its intended predicate and return the new fact.
+
+        "is" becomes "instance_of" or "subclass_of"; "not_is" becomes "not_instance_of".
+        """
+        with self.lock:
+            fact = canonical_fact(fact)
+            allowed = CLASSIFICATIONS.get(fact.predicate, ()) if is_ambiguous(fact) else ()
+            if predicate not in allowed:
+                raise ValueError(f"{fact} can't be classified as {predicate!r}; allowed: {allowed}")
+            belief = self.beliefs.get(key_of(fact))
+            if belief is None or not belief.given:
+                raise KeyError(f"{fact} is not a given fact")
+            classified = replace(belief.fact, predicate=predicate, confidence=belief.given_confidence)
+            self.retract(fact)
+            self.add_fact(classified)
+            self.infer()
+            return classified
 
     # ------------------------------------------------------------- queries
     def query(

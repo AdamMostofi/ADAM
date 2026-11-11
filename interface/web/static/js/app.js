@@ -239,10 +239,14 @@ async function submitFact() {
     return;
   }
   try {
-    await api.addFact(s, p, o);
+    const result = await api.addFact(s, p, o);
     $("#fact-subject").value = $("#fact-predicate").value = $("#fact-object").value = "";
     closeFactDrawer();
-    toast("Fact inscribed.", "success");
+    if (result && result.ambiguous) {
+      toast(`"${s} ${p} ${o}" is ambiguous: use instance_of (a member) or subclass_of (a kind of).`, "info");
+    } else {
+      toast("Fact inscribed.", "success");
+    }
     invalidate("vaults", "cognition", "rites");
     refreshIfActive("vaults");
     refreshTelemetry();

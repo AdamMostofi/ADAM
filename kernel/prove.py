@@ -96,11 +96,12 @@ def prove(engine, subject: str, predicate: str, object: str, max_depth: int = 6)
                 out = rule.apply(*args)
                 for r in (out if isinstance(out, list) else [out] if out else []):
                     new.append((r, rule.name, args))
-        for f in by_predicate.get("is", []) + by_predicate.get("not_is", []):
-            for g in by_predicate.get("not_is", []):
-                c = contradiction_detection(f, g)
-                if c:
-                    new.append((c, "contradiction_detection", (f, g)))
+        for positive, negative in (("is", "not_is"), ("instance_of", "not_instance_of")):
+            for f in by_predicate.get(positive, []):
+                for g in by_predicate.get(negative, []):
+                    c = contradiction_detection(f, g)
+                    if c:
+                        new.append((c, "contradiction_detection", (f, g)))
         added = False
         for fact, rule_name, args in new:
             k = _key(fact)

@@ -91,6 +91,21 @@ class ADAMCore:
         self.engine.add_fact(fact)
         return self.memory.store(fact)
 
+    def ambiguous_facts(self) -> list[dict]:
+        """Given facts whose "is" could mean instance_of or subclass_of (Stage 1.3, #29)."""
+        return [{"subject": f.subject, "predicate": f.predicate, "object": f.object}
+                for f in self.engine.ambiguous()]
+
+    def classify_fact(self, subject: str, predicate: str, obj: str, meaning: str) -> dict:
+        """Resolve an ambiguous fact to instance_of / subclass_of / not_instance_of.
+
+        The engine replaces it; the classified fact is stored too. The original
+        row stays in the store until Stage 1.6 (#36) reconciles restored state.
+        """
+        classified = self.engine.classify(Fact(subject, predicate, obj), meaning)
+        self.memory.store(classified)
+        return {"subject": classified.subject, "predicate": classified.predicate, "object": classified.object}
+
     def query_knowledge(self, query: str) -> list[dict]:
         results = self.memory.search(query)
         return [

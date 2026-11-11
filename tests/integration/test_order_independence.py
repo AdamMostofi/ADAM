@@ -86,10 +86,11 @@ def test_retract_gives_the_state_without_the_fact(facts, data):
 
 def test_issue_cases_derive_their_conclusion_one_at_a_time():
     cases = [
-        ([Fact("fire", "implies", "hot"), Fact("x", "is", "fire")], ("x", "is", "hot")),
-        ([Fact("bird", "all_are", "flier"), Fact("tweety", "is", "bird")], ("tweety", "is", "flier")),
-        ([Fact("a", "is", "b"), Fact("b", "is", "c")], ("a", "is", "c")),
-        ([Fact("b", "is", "c"), Fact("a", "is", "b")], ("a", "is", "c")),
+        ([Fact("fire", "implies", "hot"), Fact("x", "instance_of", "fire")], ("x", "instance_of", "hot")),
+        ([Fact("bird", "all_are", "flier"), Fact("tweety", "instance_of", "bird")], ("tweety", "instance_of", "flier")),
+        # Written with "is" in #28; since Stage 1.3 two ambiguous "is" facts don't chain.
+        ([Fact("a", "subclass_of", "b"), Fact("b", "subclass_of", "c")], ("a", "subclass_of", "c")),
+        ([Fact("b", "subclass_of", "c"), Fact("a", "instance_of", "b")], ("a", "instance_of", "c")),
     ]
     for facts, goal in cases:
         assert in_chunks(facts, [1, 1]).query(*goal), goal

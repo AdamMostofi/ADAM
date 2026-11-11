@@ -11,6 +11,8 @@ import os
 from flask import Flask, current_app, jsonify, render_template, request, send_from_directory
 
 from interface.core import ADAMCore
+from kernel.facts import Fact
+from kernel.foundations import is_ambiguous
 
 
 def _default_core() -> ADAMCore:
@@ -73,7 +75,23 @@ def create_app(core: ADAMCore | None = None) -> Flask:
         if not data or not all(k in data for k in ("subject", "predicate", "object")):
             return jsonify({"error": "subject, predicate, object required"}), 400
         fact_id = get_core().add_fact(data["subject"], data["predicate"], data["object"])
-        return jsonify({"id": fact_id})
+        ambiguous = is_ambiguous(Fact(data["subject"], data["predicate"], data["object"]))
+        return jsonify({"id": fact_id, "ambiguous": ambiguous})
+
+    @app.route("/api/ambiguous", methods=["GET"])
+    def ambiguous():
+        return jsonify(get_core().ambiguous_facts())
+
+    @app.route("/api/classify", methods=["POST"])
+    def classify():
+        data = request.get_json()
+        if not data or not all(k in data for k in ("subject", "predicate", "object", "as")):
+            return jsonify({"error": "subject, predicate, object, as required"}), 400
+        try:
+            fact = get_core().classify_fact(data["subject"], data["predicate"], data["object"], data["as"])
+        except (ValueError, KeyError) as err:
+            return jsonify({"error": str(err)}), 400
+        return jsonify(fact)
 
     @app.route("/api/save", methods=["POST"])
     def save():

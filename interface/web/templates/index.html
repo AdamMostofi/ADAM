@@ -169,7 +169,14 @@
             </div>
             <div class="fact-drawer-fields">
               <input id="fact-subject" class="ghost-input" type="text" placeholder="Subject" aria-label="Subject">
-              <input id="fact-predicate" class="ghost-input" type="text" placeholder="Predicate" aria-label="Predicate">
+              <input id="fact-predicate" class="ghost-input" type="text" placeholder="Predicate" aria-label="Predicate" list="fact-predicates">
+              <datalist id="fact-predicates">
+                <option value="instance_of">a member of a class: rex instance_of dog</option>
+                <option value="subclass_of">a kind of: dog subclass_of mammal</option>
+                <option value="not_instance_of">not a member</option>
+                <option value="implies">if one holds, so does the other</option>
+                <option value="equals">the same thing</option>
+              </datalist>
               <input id="fact-object" class="ghost-input" type="text" placeholder="Object" aria-label="Object">
               <button id="fact-submit" class="gold-btn" type="button">Inscribe</button>
             </div>

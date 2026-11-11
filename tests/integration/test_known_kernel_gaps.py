@@ -9,7 +9,6 @@ import pytest
 from kernel.engine import InferenceEngine
 from kernel.facts import Fact
 
-STAGE_1_3 = pytest.mark.xfail(strict=True, reason="Stage 1.3 (#29): 'is' mixes membership and subclass")
 STAGE_1_4 = pytest.mark.xfail(strict=True, reason="Stage 1.4 (#30): proofs record only one premise")
 STAGE_1_5 = pytest.mark.xfail(strict=True, reason="Stage 1.5 (#31): no exceptions or recorded contradictions")
 
@@ -25,11 +24,6 @@ def run(*batches):
 
 
 
-
-@STAGE_1_3
-def test_membership_does_not_chain_through_a_class_of_classes():
-    engine = run([Fact("rex", "is", "dog"), Fact("dog", "is", "species")])
-    assert not engine.query("rex", "is", "species")
 
 
 def test_proof_names_every_premise():

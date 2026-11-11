@@ -21,7 +21,7 @@ from kernel.facts import Fact
 from kernel.foundations import EXISTS, TRUE, canonical_fact, contradiction_detection
 from kernel.rules import BUILTIN_RULES
 
-PROVABLE_PREDICATES = ("is", "not_is", "implies", "all_are", "or", "equals")
+PROVABLE_PREDICATES = ("is", "not_is", "instance_of", "not_instance_of", "subclass_of", "implies", "or", "equals")
 CLASS_TERMS = ["a", "b", "c"]
 PROP_TERMS = CLASS_TERMS + ["not:a", "not:b", "not:not:a"]  # non-canonical on purpose
 
@@ -47,8 +47,8 @@ def reference_closure(facts: list[Fact]) -> set[tuple[str, str, str]]:
                     r = canonical_fact(r)
                     if key(r) not in known:
                         new[key(r)] = r
-        for f in by_predicate.get("is", []) + by_predicate.get("not_is", []):
-            for g in by_predicate.get("is", []) + by_predicate.get("not_is", []):
+        for positive, negative in (("is", "not_is"), ("instance_of", "not_instance_of")):
+            for f, g in ((f, g) for f in by_predicate.get(positive, []) for g in by_predicate.get(negative, [])):
                 c = contradiction_detection(f, g)
                 if c and key(c) not in known:
                     new[key(c)] = c
@@ -58,9 +58,11 @@ def reference_closure(facts: list[Fact]) -> set[tuple[str, str, str]]:
 
 
 fact_strategy = st.one_of(
-    st.builds(Fact, st.sampled_from(CLASS_TERMS), st.sampled_from(["is", "not_is"]), st.sampled_from(CLASS_TERMS)),
+    st.builds(Fact, st.sampled_from(CLASS_TERMS),
+              st.sampled_from(["is", "not_is", "instance_of", "not_instance_of"]), st.sampled_from(CLASS_TERMS)),
     st.builds(Fact, st.sampled_from(PROP_TERMS), st.sampled_from(["is", "not_is"]), st.just(TRUE)),
-    st.builds(Fact, st.sampled_from(CLASS_TERMS), st.sampled_from(["implies", "all_are", "equals"]), st.sampled_from(CLASS_TERMS)),
+    st.builds(Fact, st.sampled_from(CLASS_TERMS),
+              st.sampled_from(["implies", "all_are", "subclass_of", "equals"]), st.sampled_from(CLASS_TERMS)),
     st.builds(Fact, st.sampled_from(PROP_TERMS), st.sampled_from(["implies", "or", "not_and", "not_or"]), st.sampled_from(PROP_TERMS)),
     st.builds(Fact, st.sampled_from(PROP_TERMS), st.just("not_not"), st.sampled_from(CLASS_TERMS + [TRUE])),
     st.builds(Fact, st.sampled_from(["arbitrary_a", "arbitrary_b"]), st.just("is"), st.sampled_from(CLASS_TERMS)),
@@ -82,6 +84,8 @@ def candidate_goals(closure):
             for p in PROVABLE_PREDICATES:
                 if o == TRUE and (p not in ("is", "not_is") or s.startswith("not:")):
                     continue  # only canonical propositional goals
+                if s.startswith("arbitrary_") and p in ("is", "not_is") and o != TRUE:
+                    continue  # canonical form is instance_of / not_instance_of
                 yield (s, p, o)
 
 

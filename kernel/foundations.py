@@ -9,9 +9,18 @@ How facts are read
 Facts are triples (subject, predicate, object). Two kinds of statement share
 the same predicates:
 
-* Class statements: "x is C" means x belongs to class C. "P implies Q" and
-  "P all_are Q" mean every member of P is a member of Q. "x not_is C" means x
-  does not belong to C.
+* Class statements (Stage 1.3, #29): "x instance_of C" means x is a member
+  of class C; "C subclass_of D" means every member of C is a member of D.
+  "x not_instance_of C" means x is not a member. Properties are classes:
+  "socrates instance_of mortal". "P all_are Q" is written "P subclass_of Q".
+  "P implies Q" between classes also means every P is a Q.
+
+* Ambiguous "is": "x is C" with C other than TRUE could mean either
+  instance_of or subclass_of ("rex is dog", "dog is mammal"). It is not
+  guessed. Such facts are kept, listed for review (InferenceEngine.ambiguous)
+  and used only by rules that are sound under both readings: "x is C" with
+  "C subclass_of D" gives "x is D" either way. Chaining two "is" facts is not
+  sound ("rex is dog" + "dog is species"), so no rule does it.
 
 * Propositions: the reserved object TRUE turns a term into a statement that
   holds or fails. "rain is true" means rain holds; "rain not_is true" means it
@@ -26,9 +35,8 @@ the same predicates:
 Reserved terms: "true", "exists", the "not:" prefix, and the "arbitrary_"
 prefix (an arbitrary member of a class, used by universal generalization).
 
-Distinguishing membership from subclassing ("rex is dog" vs "dog is
-mammal") is Stage 1.3; until then "is" covers both, which makes
-is_transitivity and subtype_transitivity valid only for the subclass reading.
+Every named class is assumed to be non-empty, so "x is C" (either reading)
+means something is a C.
 """
 
 from __future__ import annotations
@@ -78,6 +86,18 @@ def literal_triple(term: str) -> tuple[str, str, str]:
     return (base, "not_is" if negated else "is", TRUE)
 
 
+# Predicates that are another name for a canonical one.
+ALIASES = {"all_are": "subclass_of"}
+MEMBERSHIP = ("instance_of", "is")            # "is" here only when ambiguous
+NON_MEMBERSHIP = ("not_instance_of", "not_is")
+SUBSET = ("subclass_of", "implies")           # "implies" between classes means subset
+
+
+def is_ambiguous(fact: Fact) -> bool:
+    """"x is C" / "x not_is C" with C not TRUE: membership or subclass, not yet known."""
+    return fact.predicate in ("is", "not_is") and fact.object != TRUE
+
+
 def canonical_fact(fact: Fact) -> Fact:
     """The same statement in canonical form, so every rule recognises it.
 
@@ -85,9 +105,14 @@ def canonical_fact(fact: Fact) -> Fact:
     negation into the predicate: "not:rain is true" becomes "rain not_is true",
     and "not:rain not_is true" becomes "rain is true".
     """
-    if not fact.subject.startswith(NOT_PREFIX) and not fact.object.startswith(NOT_PREFIX):
-        return fact  # fast path: nothing to cancel or move
+    if (not fact.subject.startswith(NOT_PREFIX) and not fact.object.startswith(NOT_PREFIX)
+            and fact.predicate not in ALIASES and not fact.subject.startswith(ARBITRARY_PREFIX)):
+        return fact  # fast path: nothing to cancel, move or rename
     subject, obj, predicate = canonical_term(fact.subject), canonical_term(fact.object), fact.predicate
+    predicate = ALIASES.get(predicate, predicate)
+    if subject.startswith(ARBITRARY_PREFIX) and obj != TRUE and predicate in ("is", "not_is"):
+        # "arbitrary_man" names an individual, so its "is" can only mean membership.
+        predicate = "instance_of" if predicate == "is" else "not_instance_of"
     if obj == TRUE and predicate in ("is", "not_is"):
         base, negated = split_term(subject)
         flipped = negated != (predicate == "not_is")
@@ -120,7 +145,7 @@ def says_true(fact: Fact, term: str) -> bool:
 
 # Facts relating a term to itself under these predicates are always true and
 # carry no information, so no rule derives them.
-TRIVIAL_WHEN_REFLEXIVE = frozenset({"is", "implies", "all_are", "equals"})
+TRIVIAL_WHEN_REFLEXIVE = frozenset({"is", "implies", "subclass_of", "equals"})
 
 
 def _deduced(subject: str, predicate: str, obj: str, confidence: float) -> Fact | None:
@@ -131,49 +156,33 @@ def _deduced(subject: str, predicate: str, obj: str, confidence: float) -> Fact 
 
 # ------------------------------------------------------------ implication
 def modus_ponens(p_implies_q: Fact, p: Fact) -> Fact | None:
-    """P -> Q with P gives Q.
+    """P -> Q with P gives Q, for propositions.
 
-    Class form: "x is P" and "P implies Q" give "x is Q".
-    Proposition form: a fact saying P holds and "P implies Q" give the fact
-    saying Q holds; P and Q may be negated terms ("not:p").
+    A fact saying P holds and "P implies Q" give the fact saying Q holds; P
+    and Q may be negated terms ("not:p"). The class form is `inheritance`.
     """
-    if p_implies_q.predicate != "implies" or p.predicate not in ("is", "not_is"):
+    if p_implies_q.predicate != "implies" or p.predicate not in ("is", "not_is") or p.object != TRUE:
         return None
-    if p.object != TRUE and p.object != p_implies_q.subject:
-        return None  # cheap filter: neither form can match
     if is_reserved(p_implies_q.subject) or is_reserved(p_implies_q.object):
         return None
-    confidence = p_implies_q.confidence * p.confidence
-    if p.object == TRUE:
-        if says_true(p, p_implies_q.subject):
-            return literal_true(p_implies_q.object, confidence)
-        return None
-    if p.predicate == "is" and p.object == p_implies_q.subject and p_implies_q.object != TRUE:
-        return _deduced(p.subject, "is", p_implies_q.object, confidence)
+    if says_true(p, p_implies_q.subject):
+        return literal_true(p_implies_q.object, p_implies_q.confidence * p.confidence)
     return None
 
 
 def modus_tollens(p_implies_q: Fact, not_q: Fact) -> Fact | None:
-    """P -> Q with not-Q gives not-P.
+    """P -> Q with not-Q gives not-P, for propositions.
 
-    Class form: "x not_is Q" and "P implies Q" give "x not_is P".
-    Proposition form: a fact saying Q fails and "P implies Q" give the fact
-    saying P fails; P and Q may be negated terms.
-    The 0.9 factor marks reasoning backwards from a failure.
+    A fact saying Q fails and "P implies Q" give the fact saying P fails; P
+    and Q may be negated terms. The class form is `exclusion`. The 0.9 factor
+    marks reasoning backwards from a failure.
     """
-    if p_implies_q.predicate != "implies" or not_q.predicate not in ("is", "not_is"):
+    if p_implies_q.predicate != "implies" or not_q.predicate not in ("is", "not_is") or not_q.object != TRUE:
         return None
-    if not_q.object != TRUE and not_q.object != p_implies_q.object:
-        return None  # cheap filter: neither form can match
     if is_reserved(p_implies_q.subject) or is_reserved(p_implies_q.object):
         return None
-    confidence = p_implies_q.confidence * not_q.confidence * 0.9
-    if not_q.object == TRUE:
-        if says_false(not_q, p_implies_q.object):
-            return literal_false(p_implies_q.subject, confidence)
-        return None
-    if not_q.predicate == "not_is" and not_q.object == p_implies_q.object:
-        return _deduced(not_q.subject, "not_is", p_implies_q.subject, confidence)
+    if says_false(not_q, p_implies_q.object):
+        return literal_false(p_implies_q.subject, p_implies_q.confidence * not_q.confidence * 0.9)
     return None
 
 
@@ -190,73 +199,92 @@ def transitivity(p_implies_q: Fact, q_implies_r: Fact) -> Fact | None:
     return None
 
 
-def subtype_transitivity(x_is_y: Fact, y_implies_z: Fact) -> Fact | None:
-    """X is Y and Y implies Z give X implies Z (X read as a subclass of Y)."""
-    if (
-        x_is_y.predicate == "is"
-        and y_implies_z.predicate == "implies"
-        and not is_reserved(x_is_y.subject)
-        and x_is_y.object != TRUE
-        and y_implies_z.object != TRUE
-        and x_is_y.object == y_implies_z.subject
-        and x_is_y.subject != y_implies_z.object
-    ):
-        return _deduced(x_is_y.subject, "implies", y_implies_z.object, x_is_y.confidence * y_implies_z.confidence)
-    return None
+# ----------------------------------------------------------- classes
+def _class_terms(*terms: str) -> bool:
+    return all(term != TRUE and not is_reserved(term) for term in terms)
 
 
-# ----------------------------------------------------------- class membership
-def is_transitivity(x_is_y: Fact, y_is_z: Fact) -> Fact | None:
-    """X is Y and Y is Z give X is Z (valid when "is" means subclass; see Stage 1.3)."""
-    if (
-        x_is_y.predicate == "is"
-        and y_is_z.predicate == "is"
-        and x_is_y.object != TRUE
-        and y_is_z.object != TRUE
-        and x_is_y.object == y_is_z.subject
-        and x_is_y.subject != y_is_z.object
-    ):
-        return _deduced(x_is_y.subject, "is", y_is_z.object, x_is_y.confidence * y_is_z.confidence)
-    return None
+def subclass_transitivity(a_sub_b: Fact, b_sub_c: Fact) -> Fact | None:
+    """A subclass_of B and B subclass_of C give A subclass_of C.
 
-
-def universal_instantiation(all_x_are_y: Fact, a_is_x: Fact) -> Fact | None:
-    """All X are Y and a is X give a is Y."""
-    if (
-        all_x_are_y.predicate == "all_are"
-        and a_is_x.predicate == "is"
-        and a_is_x.object != TRUE
-        and all_x_are_y.object != TRUE
-        and a_is_x.object == all_x_are_y.subject
-    ):
-        return _deduced(a_is_x.subject, "is", all_x_are_y.object, all_x_are_y.confidence * a_is_x.confidence)
-    return None
-
-
-def existential_generalization(a_is_x: Fact) -> Fact | None:
-    """a is X gives "exists is X": something is an X.
-
-    Not applied to propositions ("p is true") or to facts already about "exists".
+    "implies" between classes also means subset, so either premise may use it;
+    at least one must be subclass_of (two "implies" are `transitivity`).
     """
-    if a_is_x.predicate == "is" and a_is_x.object != TRUE and a_is_x.subject != EXISTS:
-        return _deduced(EXISTS, "is", a_is_x.object, a_is_x.confidence)
+    if (
+        a_sub_b.predicate in SUBSET
+        and b_sub_c.predicate in SUBSET
+        and "subclass_of" in (a_sub_b.predicate, b_sub_c.predicate)
+        and a_sub_b.object == b_sub_c.subject
+        and _class_terms(a_sub_b.subject, a_sub_b.object, b_sub_c.object)
+    ):
+        return _deduced(a_sub_b.subject, "subclass_of", b_sub_c.object, a_sub_b.confidence * b_sub_c.confidence)
     return None
 
 
-def universal_generalization(arbitrary_is_x: Fact) -> Fact | None:
-    """An arbitrary member of T is X gives "T all_are X".
+def inheritance(c_sub_d: Fact, x_in_c: Fact) -> Fact | None:
+    """x instance_of C and C subclass_of D give x instance_of D.
 
-    "arbitrary_man is mortal" gives "man all_are mortal". Only sound when the
-    arbitrary member really is arbitrary: nothing else may be asserted about it.
+    Also with "C implies D", and with an ambiguous "x is C": whether x is a
+    member or a subclass of C, it is then a member or subclass of D, so the
+    result keeps the same predicate.
     """
-    if arbitrary_is_x.predicate != "is" or arbitrary_is_x.object == TRUE:
+    if (
+        c_sub_d.predicate in SUBSET
+        and x_in_c.predicate in MEMBERSHIP
+        and x_in_c.object == c_sub_d.subject
+        and _class_terms(x_in_c.object, c_sub_d.object)
+        and (x_in_c.subject == EXISTS or not is_reserved(x_in_c.subject))
+    ):
+        return _deduced(x_in_c.subject, x_in_c.predicate, c_sub_d.object, c_sub_d.confidence * x_in_c.confidence)
+    return None
+
+
+def exclusion(c_sub_d: Fact, x_not_in_d: Fact) -> Fact | None:
+    """x not_instance_of D and C subclass_of D give x not_instance_of C.
+
+    Also with "C implies D", and with an ambiguous "x not_is D" (not a member,
+    or not a subclass: either way not one of C). The 0.9 factor marks
+    reasoning backwards from a failure.
+    """
+    if (
+        c_sub_d.predicate in SUBSET
+        and x_not_in_d.predicate in NON_MEMBERSHIP
+        and x_not_in_d.object == c_sub_d.object
+        and _class_terms(c_sub_d.subject, c_sub_d.object)
+        and not is_reserved(x_not_in_d.subject)
+    ):
+        return _deduced(x_not_in_d.subject, x_not_in_d.predicate, c_sub_d.subject,
+                        c_sub_d.confidence * x_not_in_d.confidence * 0.9)
+    return None
+
+
+def existential_generalization(a_in_x: Fact) -> Fact | None:
+    """a instance_of X (or an ambiguous "a is X") gives "exists instance_of X".
+
+    For the subclass reading this relies on classes being non-empty. Not
+    applied to propositions or to facts already about "exists".
+    """
+    if (a_in_x.predicate in MEMBERSHIP and a_in_x.subject != EXISTS
+            and _class_terms(a_in_x.object) and not is_reserved(a_in_x.subject)):
+        return _deduced(EXISTS, "instance_of", a_in_x.object, a_in_x.confidence)
+    return None
+
+
+def universal_generalization(arbitrary_in_x: Fact) -> Fact | None:
+    """An arbitrary member of T being an X gives "T subclass_of X".
+
+    "arbitrary_man instance_of mortal" gives "man subclass_of mortal". Only
+    sound when the arbitrary member really is arbitrary: nothing else may be
+    asserted about it.
+    """
+    if arbitrary_in_x.predicate != "instance_of" or not _class_terms(arbitrary_in_x.object):
         return None
-    if not arbitrary_is_x.subject.startswith(ARBITRARY_PREFIX):
+    if not arbitrary_in_x.subject.startswith(ARBITRARY_PREFIX):
         return None
-    kind = arbitrary_is_x.subject[len(ARBITRARY_PREFIX):]
-    if not kind or kind == arbitrary_is_x.object:
+    kind = arbitrary_in_x.subject[len(ARBITRARY_PREFIX):]
+    if not kind or kind == arbitrary_in_x.object:
         return None
-    return _deduced(kind, "all_are", arbitrary_is_x.object, arbitrary_is_x.confidence * 0.9)
+    return _deduced(kind, "subclass_of", arbitrary_in_x.object, arbitrary_in_x.confidence * 0.9)
 
 
 # -------------------------------------------------------------- equality
@@ -346,7 +374,7 @@ def de_morgan_or(not_a_or_b: Fact) -> list[Fact]:
 
 
 def double_negation(not_not_p: Fact) -> Fact | None:
-    """not(not(S is O)) gives S is O; for a proposition ("p not_not true") it gives the fact saying p holds."""
+    """not(not(S is O)) gives S is O (still ambiguous); for "p not_not true" it gives the fact saying p holds."""
     if not_not_p.predicate != "not_not" or is_reserved(not_not_p.subject):
         return None
     if not_not_p.object == TRUE:
@@ -374,11 +402,11 @@ def conditional_proof(assumes: Fact, derives: Fact) -> Fact | None:
 
 # --------------------------------------------------------- contradictions
 def contradiction_detection(p: Fact, not_p: Fact) -> Fact | None:
-    """S is O together with S not_is O is flagged, never used to derive anything else."""
+    """S is O with S not_is O (or instance_of with not_instance_of) is flagged, never used to derive anything else."""
     if (
         p.subject == not_p.subject
         and p.object == not_p.object
-        and {p.predicate, not_p.predicate} == {"is", "not_is"}
+        and {p.predicate, not_p.predicate} in ({"is", "not_is"}, {"instance_of", "not_instance_of"})
     ):
         return _deduced(p.subject, "contradiction", p.object, 1.0)
     return None

@@ -7,10 +7,12 @@ the conclusion in every model:
 
 * Propositions: atoms a, b, c and their negated terms, under all 8 truth
   assignments.
-* Classes, subclass reading: terms p, q, r as non-empty subsets of {1, 2},
-  under all 27 models. ("is" then means subset; see Stage 1.3 for membership.)
-* Classes, membership reading: individuals x, y and classes P, Q, R, for the
-  rules that stay sound under it.
+* Classes (Stage 1.3, #29): individuals x, y as elements of {1, 2} and
+  classes p, q, r as non-empty subsets of it, under all 108 models.
+  instance_of is membership, subclass_of and implies are subset, and an
+  ambiguous "is" means membership for an individual and subset for a class.
+  Rules can't tell the two readings of "is" apart, so passing means they are
+  sound under both.
 """
 from __future__ import annotations
 
@@ -53,9 +55,9 @@ def applications(rules, facts):
 # ------------------------------------------------------------------ propositions
 ATOMS = ("a", "b", "c")
 TERMS = ATOMS + ("not:a", "not:b", "not:not:a")
-PROP_RULES = [r for r in BUILTIN_RULES if r.name not in {
-    "existential_generalization", "universal_generalization", "conditional_proof",
-    "is_transitivity", "subtype_transitivity", "universal_instantiation"}]
+CLASS_ONLY = ("subclass_transitivity", "inheritance", "exclusion", "existential_generalization",
+              "universal_generalization", "conditional_proof")
+PROP_RULES = [r for r in BUILTIN_RULES if not r.name.startswith(CLASS_ONLY)]
 
 
 def prop_facts():
@@ -114,106 +116,83 @@ def test_the_old_de_morgan_and_would_have_failed_this_check():
     assert holds(premise) and not all(holds(c) for c in old_conclusions)
 
 
-# ---------------------------------------------------- classes: subclass reading
+# ------------------------------------------------------------------ classes
+INDIVIDUALS = ("x", "y")
 CLASSES = ("p", "q", "r")
 NONEMPTY_SUBSETS = [frozenset(s) for s in ({1}, {2}, {1, 2})]
-SET_MODELS = [dict(zip(CLASSES, sets)) for sets in itertools.product(NONEMPTY_SUBSETS, repeat=len(CLASSES))]
+CLASS_MODELS = [
+    {**dict(zip(INDIVIDUALS, elements)), **dict(zip(CLASSES, sets))}
+    for elements in itertools.product((1, 2), repeat=len(INDIVIDUALS))
+    for sets in itertools.product(NONEMPTY_SUBSETS, repeat=len(CLASSES))
+]
 CLASS_RULES = [r for r in BUILTIN_RULES if r.name not in {"universal_generalization", "conditional_proof"}]
 
 
 def class_facts():
+    """Every well-typed class fact over the vocabulary."""
     facts = []
-    for x, y in itertools.product(CLASSES, repeat=2):
-        for predicate in ("is", "not_is", "implies", "all_are", "equals"):
-            facts.append(Fact(x, predicate, y))
+    for i, c in itertools.product(INDIVIDUALS, CLASSES):
+        facts += [Fact(i, p, c) for p in ("instance_of", "not_instance_of", "is", "not_is")]
+    for c, d in itertools.product(CLASSES, repeat=2):
+        facts += [Fact(c, p, d) for p in ("subclass_of", "implies", "is", "not_is", "equals")]
+    facts += [Fact(i, "equals", j) for i, j in itertools.product(INDIVIDUALS, repeat=2)]
     return facts
 
 
-def set_holds(f, model):
+def class_holds(f, model):
     s, p, o = f.subject, f.predicate, f.object
-    if s == EXISTS and p == "is":
+    if s == EXISTS and p == "instance_of":
         return bool(model[o])
     a, b = model[s], model[o]
-    if p in ("is", "implies", "all_are"):
-        return a <= b
-    if p == "not_is":
-        return not a <= b
+    individual = s in INDIVIDUALS
     if p == "equals":
         return a == b
+    if p in ("instance_of", "not_instance_of"):
+        assert individual, f"ill-typed: {f}"
+        return (a in b) == (p == "instance_of")
+    if p in ("subclass_of", "implies"):
+        return a <= b
+    if p in ("is", "not_is"):
+        holds = (a in b) if individual else (a <= b)
+        return holds == (p == "is")
     raise AssertionError(f"no class meaning for {f}")
 
 
-def test_every_class_rule_is_sound_under_the_subclass_reading():
+def test_every_class_rule_is_sound_under_both_readings_of_is():
     checked, failures = 0, []
     for rule, premises, conclusion in applications(CLASS_RULES, class_facts()):
         checked += 1
-        satisfying = [m for m in SET_MODELS if all(set_holds(p, m) for p in premises)]
+        satisfying = [m for m in CLASS_MODELS if all(class_holds(p, m) for p in premises)]
         if conclusion.predicate == "contradiction":
             if satisfying:
                 failures.append((rule.name, premises, "flagged a satisfiable pair"))
             continue
         for model in satisfying:
-            if not set_holds(conclusion, model):
+            if not class_holds(conclusion, model):
                 failures.append((rule.name, [str(p) for p in premises], str(conclusion)))
                 break
-    assert checked > 200, f"too few applications checked ({checked})"
+    assert checked > 500, f"too few applications checked ({checked})"
     assert not failures, failures[:5]
 
 
-# -------------------------------------------------- classes: membership reading
-INDIVIDUALS = ("x", "y")
-MEMBERSHIP_RULES = [r for r in BUILTIN_RULES if r.name in {
-    "modus_ponens", "modus_tollens", "universal_instantiation", "transitivity", "existential_generalization"}]
-
-
-def membership_facts():
-    facts = [Fact(i, p, c) for i in INDIVIDUALS for c in CLASSES for p in ("is", "not_is")]
-    facts += [Fact(c, p, d) for c, d in itertools.product(CLASSES, repeat=2) for p in ("implies", "all_are")]
-    return facts
-
-
-def membership_holds(f, classes):
-    s, p, o = f.subject, f.predicate, f.object
-    if s == EXISTS:
-        return bool(classes[o])
-    if p in ("implies", "all_are"):
-        return classes[s] <= classes[o]
-    if p == "is":
-        return s in classes[o]
-    if p == "not_is":
-        return s not in classes[o]
-    raise AssertionError(f"no membership meaning for {f}")
-
-
-def test_rules_that_stay_sound_when_is_means_membership():
-    universe = set(INDIVIDUALS)
-    subsets = [frozenset(c) for n in range(len(universe) + 1) for c in itertools.combinations(sorted(universe), n)]
-    models = [dict(zip(CLASSES, sets)) for sets in itertools.product(subsets, repeat=len(CLASSES))]
-    failures = []
-    for rule, premises, conclusion in applications(MEMBERSHIP_RULES, membership_facts()):
-        if conclusion.predicate == "contradiction":
-            continue
-        for model in models:
-            if all(membership_holds(p, model) for p in premises) and not membership_holds(conclusion, model):
-                failures.append((rule.name, [str(p) for p in premises], str(conclusion)))
-                break
-    assert not failures, failures[:5]
-
-
-@pytest.mark.parametrize("rule_name", ["is_transitivity"])
-@pytest.mark.xfail(strict=True, reason="Stage 1.3 (#29): 'is' mixes membership and subclass")
-def test_membership_reading_breaks_is_transitivity(rule_name):
-    rule = next(r for r in BUILTIN_RULES if r.name == rule_name)
-    conclusion = rule.apply(Fact("rex", "is", "dog"), Fact("dog", "is", "species"))
-    assert conclusion is None, "rex is a dog and dog is a species, but rex is not a species"
+def test_no_rule_chains_membership_through_a_class_of_classes():
+    """rex is a dog and dog is a species, but rex is not a species."""
+    for premises in ([Fact("rex", "instance_of", "dog"), Fact("dog", "instance_of", "species")],
+                     [Fact("rex", "is", "dog"), Fact("dog", "is", "species")]):
+        for a, b in itertools.permutations(premises):
+            for rule in BUILTIN_RULES:
+                if rule.partner is None:
+                    continue
+                for out in outputs(rule, (a, b)):
+                    assert (out.subject, out.object) != ("rex", "species"), (rule.name, str(out))
 
 
 # --------------------------------------------------------------- non-truth-functional
 def test_universal_generalization_needs_the_arbitrary_marker():
     rule = next(r for r in BUILTIN_RULES if r.name == "universal_generalization")
-    assert rule.apply(Fact("socrates", "is", "mortal")) is None
-    out = rule.apply(Fact("arbitrary_man", "is", "mortal"))
-    assert triple(out) == ("man", "all_are", "mortal")
+    assert rule.apply(Fact("socrates", "instance_of", "mortal")) is None
+    out = rule.apply(Fact("arbitrary_man", "instance_of", "mortal"))
+    assert triple(out) == ("man", "subclass_of", "mortal")
 
 
 def test_conditional_proof_needs_a_shared_context():
