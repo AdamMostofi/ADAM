@@ -42,7 +42,7 @@ EXPECTATIONS = {
     # A store straight after scripts/reset_store.py (Stage 0.6, #23).
     "fresh": {
         ("sqlite", "fact_rows"): 0,
-        ("sqlite", "user_version"): 1,
+        ("sqlite", "user_version"): 2,
         ("vectors", "rows"): 0,
         ("vectors", "placeholder_rows"): 0,
         ("vectors", "under_10_mb"): True,
@@ -97,6 +97,11 @@ def audit_sqlite(path: str, store: str) -> list[dict]:
                 "SELECT source, COUNT(*) FROM facts GROUP BY source").fetchall())))
             rows.append(("rows_with_proof_chain", conn.execute(
                 "SELECT COUNT(*) FROM facts WHERE proof_chain IS NOT NULL").fetchone()[0]))
+        if "derivations" in tables:
+            rows.append(("derivation_rows", conn.execute("SELECT COUNT(*) FROM derivations").fetchone()[0]))
+            rows.append(("derived_without_derivation", conn.execute(
+                "SELECT COUNT(*) FROM facts WHERE source = 'deduced' "
+                "AND id NOT IN (SELECT conclusion_id FROM derivations)").fetchone()[0]))
         if "eq_state" in tables:
             rows.append(("eq_rows", conn.execute("SELECT COUNT(*) FROM eq_state").fetchone()[0]))
         if "meta" in tables:

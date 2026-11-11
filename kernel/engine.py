@@ -40,11 +40,11 @@ import threading
 from dataclasses import replace
 
 from kernel.contradictions import ContradictionResolver
-from kernel.facts import Belief, Fact, Source
+from kernel.facts import Belief, Derivation, Fact, Source
 from kernel.foundations import (
     EXISTS, TRUE, canonical_fact, contradiction_detection, is_ambiguous, split_term,
 )
-from kernel.rules import BUILTIN_RULES, Rule
+from kernel.rules import BUILTIN_RULES, KERNEL_RULES_VERSION, Rule
 from kernel.truth import TruthValue
 
 log = logging.getLogger(__name__)
@@ -72,10 +72,6 @@ def key_of(fact: Fact) -> Key:
     return (fact.subject, fact.predicate, fact.object)
 
 
-def _proof_text(rule_name: str, premises: tuple[Key, ...], k: Key) -> str:
-    return f"[{rule_name}] {' + '.join(' '.join(p) for p in premises)} -> {' '.join(k)}"
-
-
 def _join_terms(fact: Fact) -> set[str]:
     """Terms a rule can join on: subject and object, without negation, never the reserved words."""
     return {split_term(t)[0] for t in (fact.subject, fact.object)} - set(_UNLINKED)
@@ -84,7 +80,8 @@ def _join_terms(fact: Fact) -> set[str]:
 class InferenceEngine:
     def __init__(self):
         self.beliefs: dict[Key, Belief] = {}
-        self.trace: list[str] = []
+        # (derivation, conclusion) in the order they were found; get_trace() renders them.
+        self.trace: list[tuple[Derivation, Key]] = []
         self.resolver = ContradictionResolver()
         self.lock = threading.RLock()
         self.agenda: collections.deque[Key] = collections.deque()
@@ -95,6 +92,8 @@ class InferenceEngine:
         self._done: set[Key] = set()
         self.rules: list[Rule] = list(BUILTIN_RULES)
         self._builtin = {rule.name for rule in BUILTIN_RULES}
+        self._versions = {rule.name: rule.version for rule in BUILTIN_RULES}
+        self._versions["contradiction_detection"] = KERNEL_RULES_VERSION
         self.rules_by_trigger: dict[str, list[Rule]] = {}
         self.rules_by_partner: dict[str, list[Rule]] = {}
         for rule in self.rules:
@@ -151,6 +150,7 @@ class InferenceEngine:
             if any(existing.name == rule.name for existing in self.rules):
                 return
             self.rules.append(rule)
+            self._versions[rule.name] = rule.version
             self._register(rule)
             for k in list(self.beliefs):
                 if k[1] == rule.trigger:
@@ -244,23 +244,37 @@ class InferenceEngine:
             k = key_of(result)
             if k in premises:
                 continue  # circular: a fact can't support itself
-            derivation = (rule_name, premises)
+            # Same rule and same premise set = same derivation, whatever the order the rule took them in.
+            if len(premises) == 2 and premises[1] < premises[0]:
+                identity = (rule_name, (premises[1], premises[0]))
+            else:
+                identity = (rule_name, premises if len(premises) < 3 else tuple(sorted(premises)))
             belief = self.beliefs.get(k)
+            if belief is not None and identity in belief.derivations:
+                # The same derivation again. Only a higher confidence (a premise rose) changes anything.
+                i = belief.derivations[identity]
+                if result.confidence > belief.proofs[i].confidence + _RAISE_EPSILON:
+                    belief.proofs[i] = replace(belief.proofs[i], confidence=result.confidence)
+                    self._raise(belief, result.confidence)
+                continue
+            record = Derivation(rule_name, premises, result.confidence, self._versions.get(rule_name, "1"))
             if belief is None:
-                result = replace(result, source=Source.DEDUCED) if result.source == Source.USER else result
-                proof = _proof_text(rule_name, premises, k)
-                belief = Belief(fact=result, proof_chain=[proof], given=False, evidence=1)
-                belief.derivations.add(derivation)
+                # Whatever rule made it (Layer 1 or a learned skill), a conclusion is deduced;
+                # the rule name says which.
+                if result.source != Source.DEDUCED:
+                    result = replace(result, source=Source.DEDUCED)
+                belief = Belief(fact=result, given=False, evidence=1)
+                belief.derivations[identity] = 0
+                belief.proofs.append(record)
                 self._store(k, belief)
                 self._added.append(result)
-                self.trace.append(proof)
+                self.trace.append((record, k))
                 continue
-            if len(belief.derivations) < MAX_DERIVATIONS and derivation not in belief.derivations:
-                belief.derivations.add(derivation)
+            if len(belief.derivations) < MAX_DERIVATIONS:
+                belief.derivations[identity] = len(belief.proofs)
+                belief.proofs.append(record)
                 belief.evidence += 1
-                proof = _proof_text(rule_name, premises, k)
-                belief.proof_chain.append(proof)
-                self.trace.append(proof)
+                self.trace.append((record, k))
             self._raise(belief, result.confidence)
 
     def _raise(self, belief: Belief, confidence: float) -> None:
@@ -280,6 +294,64 @@ class InferenceEngine:
             pair = (k, other_k) if fact.predicate in ("is", "instance_of") else (other_k, k)
             self._admit("contradiction_detection",
                         contradiction_detection(self.beliefs[pair[0]].fact, self.beliefs[pair[1]].fact), pair)
+
+    # ------------------------------------------------------- explanations
+    def explain(self, subject: str, predicate: str, object: str) -> list[tuple[Key, Derivation | None]] | None:
+        """Walk a belief back to the given facts it rests on (Stage 1.4, #30).
+
+        Returns (key, derivation) steps, inputs first: a given fact has
+        derivation None, and every derived step's premises appear before it.
+        Returns None if there is no such belief.
+
+        The walk is well-founded: a belief is used only once some derivation
+        of it has every premise already explained, so cycles in the
+        derivation graph (a from b, b from a) can't trap it. Among the
+        derivations available at each round, the most confident is used.
+        """
+        with self.lock:
+            goal = key_of(canonical_fact(Fact(subject, predicate, object)))
+            if goal not in self.beliefs:
+                return None
+            # Everything the goal could rest on.
+            needed, stack = set(), [goal]
+            while stack:
+                k = stack.pop()
+                if k in needed:
+                    continue
+                needed.add(k)
+                belief = self.beliefs[k]
+                if not belief.given:
+                    for d in belief.proofs:
+                        stack.extend(p for p in d.premises if p in self.beliefs)
+            explained: dict[Key, Derivation | None] = {k: None for k in needed if self.beliefs[k].given}
+            order = sorted(explained)
+            while goal not in explained:
+                ready = []
+                for k in sorted(needed - explained.keys()):
+                    usable = [d for d in self.beliefs[k].proofs if all(p in explained for p in d.premises)]
+                    if usable:
+                        ready.append((k, max(usable, key=lambda d: (d.confidence, d.rule))))
+                if not ready:
+                    return None  # unreachable: a stored belief always has a founding derivation
+                for k, d in ready:
+                    explained[k] = d
+                    order.append(k)
+            # Keep only what the goal actually uses.
+            used, stack = set(), [goal]
+            while stack:
+                k = stack.pop()
+                if k not in used:
+                    used.add(k)
+                    if explained[k] is not None:
+                        stack.extend(explained[k].premises)
+            return [(k, explained[k]) for k in order if k in used]
+
+    def render_explanation(self, subject: str, predicate: str, object: str) -> list[str] | None:
+        """explain() as text: "[given] ..." for inputs, "[rule] premises -> conclusion" for steps."""
+        steps = self.explain(subject, predicate, object)
+        if steps is None:
+            return None
+        return [f"[given] {' '.join(k)}" if d is None else d.render(k) for k, d in steps]
 
     # ----------------------------------------------------- ambiguous "is"
     def ambiguous(self) -> list[Fact]:
@@ -351,7 +423,7 @@ class InferenceEngine:
 
     def get_trace(self) -> list[str]:
         with self.lock:
-            return list(self.trace)
+            return [record.render(k) for record, k in self.trace]
 
     def prove(
         self,

@@ -25,7 +25,7 @@ def test_same_fact_stored_ten_times_is_one_row_and_one_vector(tmp_path):
 def test_same_fact_from_a_different_source_is_a_second_row(tmp_path):
     memory = make_memory(tmp_path)
     memory.store(Fact("bird", "can", "fly", source=Source.USER))
-    memory.store(Fact("bird", "can", "fly", source=Source.DEDUCED))
+    memory.store(Fact("bird", "can", "fly", source=Source.INFERRED))  # derived facts need derivations (1.4)
     assert memory.count() == 2
     assert memory.semantic.count() == 2
 

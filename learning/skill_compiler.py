@@ -114,7 +114,7 @@ def skill_to_rule(skill: "Skill") -> Rule | None:
     partner_predicate = premises[1].get("predicate") if len(premises) == 2 else None
     if partner_predicate is not None and partner_predicate.startswith("?"):
         return None
-    return Rule(f"skill:{skill.name}", trigger, partner_predicate, apply)
+    return Rule(f"skill:{skill.name}", trigger, partner_predicate, apply, version=f"compiled-{skill.compiled_at:.0f}")
 
 
 class SkillCompiler:

@@ -50,11 +50,26 @@ def create_app(core: ADAMCore | None = None) -> Flask:
         query = request.args.get("q", "")
         if query:
             return jsonify(get_core().query_knowledge(query))
-        all_facts = get_core().memory.get_all_facts()
         return jsonify([
-            {"subject": f.subject, "predicate": f.predicate, "object": f.object,
+            {"id": fact_id, "subject": f.subject, "predicate": f.predicate, "object": f.object,
              "confidence": f.confidence, "source": f.source.value}
-            for f in all_facts
+            for fact_id, f in get_core().memory.exact.get_all_with_ids()
+        ])
+
+    @app.route("/api/facts/<int:fact_id>/trace", methods=["GET"])
+    def trace(fact_id):
+        """Walk a stored fact back to its inputs (Stage 1.4, #30)."""
+        steps = get_core().memory.explain(fact_id)
+        if steps is None:
+            return jsonify({"error": f"no fact {fact_id}, or it has no derivation"}), 404
+        return jsonify([
+            {"id": s["id"], "subject": s["fact"].subject, "predicate": s["fact"].predicate,
+             "object": s["fact"].object, "source": s["fact"].source.value,
+             "rule": s["derivation"]["rule"] if s["derivation"] else None,
+             "rule_version": s["derivation"]["rule_version"] if s["derivation"] else None,
+             "premise_ids": s["derivation"]["premise_ids"] if s["derivation"] else [],
+             "confidence": s["derivation"]["confidence"] if s["derivation"] else s["fact"].confidence}
+            for s in steps
         ])
 
     @app.route("/api/graph", methods=["GET"])

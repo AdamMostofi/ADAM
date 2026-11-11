@@ -41,9 +41,15 @@ class Rule:
     trigger: str
     partner: str | None
     apply: RuleFn
+    # Recorded with every derivation, so a stored proof says which version of a rule made it.
+    version: str = "1"
 
 
-BUILTIN_RULES: tuple[Rule, ...] = (
+# Layer 1 rules change only through a stage; this names the last one that changed them.
+KERNEL_RULES_VERSION = "stage-1.3"
+
+
+_LAYER_1: tuple[Rule, ...] = (
     # propositions
     Rule("modus_ponens", "implies", "is", foundations.modus_ponens),
     Rule("modus_ponens_negated", "implies", "not_is", foundations.modus_ponens),
@@ -76,3 +82,5 @@ BUILTIN_RULES: tuple[Rule, ...] = (
     Rule("double_negation", "not_not", None, foundations.double_negation),
     Rule("conditional_proof", "assumes", "derives", foundations.conditional_proof),
 )
+BUILTIN_RULES: tuple[Rule, ...] = tuple(
+    Rule(r.name, r.trigger, r.partner, r.apply, KERNEL_RULES_VERSION) for r in _LAYER_1)

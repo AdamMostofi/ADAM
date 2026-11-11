@@ -29,7 +29,18 @@ class LearningEngine:
         self.skills_dir = Path(skills_dir)
 
     def learn_from_proof(self, proof_chain: list[str]) -> list:
+        """Legacy text path; prefer learn_from_belief()."""
         return self.pattern_extractor.analyze(proof_chain)
+
+    def learn_from_belief(self, belief, engine=None) -> list:
+        """Patterns from a belief's derivation records, with every premise (Stage 1.4, #30)."""
+        engine = engine or self.engine
+        patterns = []
+        for proof in belief.proofs:
+            if all(p in engine.beliefs for p in proof.premises):
+                premises = [engine.beliefs[p].fact for p in proof.premises]
+                patterns.append(self.pattern_extractor.analyze_derivation(proof.rule, premises, belief.fact))
+        return patterns
 
     def compile_skill(self, name: str, domain: str, premises: list[Fact], conclusion: Fact, confidence: float):
         skill = self.skill_compiler.compile_skill(name, domain, premises, conclusion, confidence)

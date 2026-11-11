@@ -72,8 +72,7 @@ def test_engine_integration():
             Fact("tweety", "is", "bird", source=Source.USER),
         ])
         system.engine.infer()
-        for belief in system.engine.query():
-            system.store(belief.fact)
+        system.store_beliefs(system.engine, list(system.engine.beliefs))
         assert system.count() > 0
 
 

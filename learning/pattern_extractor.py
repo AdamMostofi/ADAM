@@ -25,8 +25,20 @@ class PatternExtractor:
         self.pending_proofs: list[list[str]] = []
 
     def analyze(self, proof_chain: list[str]) -> list[Pattern]:
+        """Legacy: patterns from proof text. Text can't say where multi-word terms end, so
+        these patterns carry the conclusion only; use analyze_derivation() for full patterns."""
         self.pending_proofs.append(proof_chain)
         return self._extract_patterns()
+
+    def analyze_derivation(self, rule: str, premises: list[Fact], conclusion: Fact) -> Pattern:
+        """A pattern from a structured derivation record (Stage 1.4, #30), with its real premises."""
+        key = "\x1f".join([rule, *(str(p) for p in premises), "->", str(conclusion)])
+        pattern = self.patterns.get(key)
+        if pattern is None:
+            pattern = Pattern(name=f"pattern_{len(self.patterns)}", premises=list(premises), conclusion=conclusion)
+            self.patterns[key] = pattern
+        pattern.usage_count += 1
+        return pattern
 
     def _extract_patterns(self) -> list[Pattern]:
         new_patterns = []

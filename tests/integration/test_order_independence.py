@@ -11,7 +11,7 @@ from __future__ import annotations
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from kernel.engine import InferenceEngine
+from kernel.engine import MAX_DERIVATIONS, InferenceEngine
 from kernel.facts import Fact, Source
 from kernel.foundations import canonical_fact
 from kernel.rules import Rule
@@ -22,7 +22,11 @@ SETTINGS = settings(max_examples=150, deadline=None, suppress_health_check=[Heal
 
 
 def state(engine: InferenceEngine) -> dict:
-    return {k: (round(b.confidence, 9), b.evidence, b.given) for k, b in engine.beliefs.items()}
+    # Since Stage 1.4 the derivations behind each belief must not depend on order either
+    # (below the cap of MAX_DERIVATIONS, where the set is complete).
+    return {k: (round(b.confidence, 9), b.evidence, b.given,
+                frozenset(b.derivations) if len(b.derivations) < MAX_DERIVATIONS else len(b.derivations))
+            for k, b in engine.beliefs.items()}
 
 
 def batch(facts):
@@ -144,7 +148,7 @@ def test_a_single_premise_skill_does_not_crash_the_engine():
 
 
 def test_a_skill_conclusion_is_removed_with_its_premise():
-    """Skill outputs carry Source.LEARNED; they must still go when their premise is retracted."""
+    """A skill's conclusion is derived; it must go when its premise is retracted."""
     engine = InferenceEngine()
     engine.add_rule(mortal_skill([{"subject": "?x", "predicate": "is", "object": "man"}]))
     engine.add_fact(Fact("plato", "is", "man"))

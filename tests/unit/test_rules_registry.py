@@ -36,7 +36,9 @@ def test_learned_skill_runs_as_rule():
     engine.add_facts([Fact("ann", "likes", "bob"), Fact("bob", "likes", "ann")])
     engine.infer()
     hits = engine.query("ann", "friends", "bob")
-    assert hits and hits[0].fact.source == Source.LEARNED
+    # Since Stage 1.4 every conclusion is DEDUCED; the derivation names the skill that made it.
+    assert hits and hits[0].fact.source == Source.DEDUCED
+    assert hits[0].proofs[0].rule == rule.name and hits[0].proofs[0].rule_version == rule.version
     assert abs(hits[0].confidence - 0.9) < 1e-9
 
 

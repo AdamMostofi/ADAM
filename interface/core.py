@@ -40,8 +40,8 @@ class ADAMCore:
             for fact in relevant:
                 self.engine.add_fact(fact)
             inferred = self.engine.infer(max_iterations=CHAT_INFERENCE_BUDGET)
-            for fact in inferred:
-                self.memory.store(fact)
+            # Derived facts are stored with their derivations, in one transaction (Stage 1.4, #30).
+            self.memory.store_inferred(self.engine, inferred)
             memories = self.memory.recall(message, limit=10)
 
         context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)

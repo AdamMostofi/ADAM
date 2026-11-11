@@ -19,8 +19,7 @@ def test_kernel_to_memory_flow():
             Fact("tweety", "is", "bird", source=Source.USER),
         ])
         memory.engine.infer()
-        for belief in memory.engine.query():
-            memory.store(belief.fact)
+        memory.store_beliefs(memory.engine, list(memory.engine.beliefs))
         assert memory.count() > 0
         results = memory.recall("tweety")
         assert len(results) > 0
@@ -52,7 +51,7 @@ def test_learn_then_apply():
         learning.engine.infer()
         for belief in learning.engine.query():
             learning.learn_from_proof(belief.proof_chain)
-            memory.store(belief.fact)
+        memory.store_beliefs(learning.engine, list(learning.engine.beliefs))
         learning.engine.add_facts([
             Fact("fish", "all_are", "swims", source=Source.USER),
             Fact("nemo", "is", "fish", source=Source.USER),
