@@ -24,9 +24,8 @@ def test_no_chain():
 
 
 def test_self_loop():
-    """Tests transitivity with self-loop (a->a + a->a => a->a). Result: PASS."""
-    r = transitivity(Fact("a", "implies", "a"), Fact("a", "implies", "a"))
-    assert r and r.subject == "a" and r.object == "a"
+    """A self-loop gives nothing new: "a implies a" is never derived (Stage 1.1)."""
+    assert transitivity(Fact("a", "implies", "a"), Fact("a", "implies", "a")) is None
 
 
 def test_confidence_multiplicative():

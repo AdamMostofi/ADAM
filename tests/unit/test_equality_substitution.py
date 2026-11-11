@@ -41,9 +41,8 @@ def test_no_match():
 
 
 def test_self_equality():
-    """Tests self-equality: a=a + a is b => a is b. Result: PASS."""
-    results = equality_substitution(Fact("a", "equals", "a"), Fact("a", "is", "b"))
-    assert len(results) > 0
+    """Substituting a term for itself changes nothing, so no fact is produced (Stage 1.1)."""
+    assert equality_substitution(Fact("a", "equals", "a"), Fact("a", "is", "b")) == []
 
 
 def test_returns_list():

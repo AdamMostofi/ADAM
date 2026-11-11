@@ -1,27 +1,32 @@
-"""Unit tests for conditional_proof: If assuming P leads to Q, then P->Q.
+"""Conditional proof: assuming P and deriving Q in the same context gives P implies Q.
 
-Purpose: Verify implication construction from derivations.
-Result: PASS
+Stage 1.1 (#27) fix: the rule used to pair any assumption with any derivation,
+so "moon assumes x" and "tax derives banana" gave "moon implies banana".
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from kernel.facts import Fact, Source
+from kernel.facts import Fact
 from kernel.foundations import conditional_proof
 
 
-def test_normal():
-    """Tests basic conditional proof: p assumes p + q derives q => p implies q. Result: PASS."""
-    r = conditional_proof(Fact("p", "assumes", "p"), Fact("q", "derives", "q"))
-    assert r and r.subject == "p" and r.predicate == "implies" and r.object == "q"
+def test_same_context_gives_implication():
+    r = conditional_proof(Fact("c1", "assumes", "rain"), Fact("c1", "derives", "wet"))
+    assert (r.subject, r.predicate, r.object) == ("rain", "implies", "wet")
+
+
+def test_unrelated_contexts_give_nothing():
+    assert conditional_proof(Fact("moon", "assumes", "x"), Fact("tax", "derives", "banana")) is None
+
+
+def test_deriving_the_assumption_itself_gives_nothing():
+    assert conditional_proof(Fact("c1", "assumes", "rain"), Fact("c1", "derives", "rain")) is None
 
 
 def test_wrong_predicates():
-    """Tests that non-matching predicates return None. Result: PASS."""
     assert conditional_proof(Fact("p", "is", "p"), Fact("q", "is", "q")) is None
 
 
 def test_confidence_decay():
-    """Tests that confidence decays with 0.9 penalty factor. Result: PASS."""
-    r = conditional_proof(Fact("p", "assumes", "p", confidence=0.5), Fact("q", "derives", "q", confidence=0.5))
+    r = conditional_proof(Fact("c1", "assumes", "p", confidence=0.5), Fact("c1", "derives", "q", confidence=0.5))
     assert r and r.confidence < 0.25

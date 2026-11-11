@@ -22,9 +22,8 @@ def test_wrong_predicate():
 
 
 def test_self_referential():
-    """Tests double negation with self-referential fact. Result: PASS."""
-    r = double_negation(Fact("a", "not_not", "a"))
-    assert r and r.subject == "a" and r.object == "a"
+    """not(not(a is a)) gives the trivial "a is a", which is never derived (Stage 1.1)."""
+    assert double_negation(Fact("a", "not_not", "a")) is None
 
 
 def test_confidence_preserved():

@@ -1,34 +1,51 @@
-"""Unit tests for disjunctive_syllogism: If A or B and not-A, then B.
+"""Disjunctive syllogism: A or B with not-A gives B (and with not-B gives A).
 
-Purpose: Verify decision-making through elimination.
-Result: PASS
-Fix: Was returning Fact("b", "is", "b") (self-referential "B is B"). Now returns Fact("b", "is", "true").
+Stage 1.1 (#27) fix: the rule used to ignore what was negated, so
+"a or b" with "a not_is blue" gave "b is true".
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from kernel.facts import Fact, Source
+from kernel.facts import Fact
 from kernel.foundations import disjunctive_syllogism
 
 
-def test_normal():
-    """Tests basic disjunctive syllogism: a or b + a not_a => b is true. Result: PASS."""
-    r = disjunctive_syllogism(Fact("a", "or", "b"), Fact("a", "not_is", "a"))
-    assert r and r.subject == "b" and r.predicate == "is" and r.object == "true"
+def triple(f):
+    return (f.subject, f.predicate, f.object)
 
 
-def test_no_match():
-    """Tests that mismatched subjects return None. Result: PASS."""
-    assert disjunctive_syllogism(Fact("a", "or", "b"), Fact("c", "not_is", "c")) is None
+def test_not_a_gives_b():
+    r = disjunctive_syllogism(Fact("sunny", "or", "rainy"), Fact("sunny", "not_is", "true"))
+    assert triple(r) == ("rainy", "is", "true")
 
 
-def test_self_referential():
-    """Tests disjunctive syllogism with self-referential disjunction. Result: PASS."""
-    r = disjunctive_syllogism(Fact("a", "or", "a"), Fact("a", "not_is", "a"))
-    assert r and r.subject == "a" and r.object == "true"
+def test_not_b_gives_a():
+    r = disjunctive_syllogism(Fact("sunny", "or", "rainy"), Fact("rainy", "not_is", "true"))
+    assert triple(r) == ("sunny", "is", "true")
+
+
+def test_negating_something_else_gives_nothing():
+    assert disjunctive_syllogism(Fact("a", "or", "b"), Fact("a", "not_is", "blue")) is None
+
+
+def test_unrelated_negation_gives_nothing():
+    assert disjunctive_syllogism(Fact("a", "or", "b"), Fact("c", "not_is", "true")) is None
+
+
+def test_negated_disjunct_is_ruled_out_by_its_positive_fact():
+    r = disjunctive_syllogism(Fact("not:a", "or", "b"), Fact("a", "is", "true"))
+    assert triple(r) == ("b", "is", "true")
+
+
+def test_concluding_a_negated_disjunct_gives_the_canonical_negation():
+    r = disjunctive_syllogism(Fact("a", "or", "not:b"), Fact("a", "not_is", "true"))
+    assert triple(r) == ("b", "not_is", "true")
+
+
+def test_a_positive_fact_does_not_rule_out_a_positive_disjunct():
+    assert disjunctive_syllogism(Fact("a", "or", "b"), Fact("a", "is", "true")) is None
 
 
 def test_confidence_multiplicative():
-    """Tests that confidence decays multiplicatively. Result: PASS."""
-    r = disjunctive_syllogism(Fact("a", "or", "b", confidence=0.5), Fact("a", "not_is", "a", confidence=0.5))
-    assert r and abs(r.confidence - 0.25) < 0.001
+    r = disjunctive_syllogism(Fact("a", "or", "b", confidence=0.5), Fact("a", "not_is", "true", confidence=0.5))
+    assert abs(r.confidence - 0.25) < 1e-9

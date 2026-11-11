@@ -80,37 +80,49 @@ def test_modus_tollens_in_engine():
 
 
 def test_disjunctive_syllogism_plus_modus_ponens():
-    """Tests disjunctive syllogism + modus ponens: sunny or rainy + not sunny + rainy->wet => wet. Result: PASS."""
+    """sunny or rainy + not sunny + rainy -> wet gives "wet is true".
+
+    Stage 1.1: this test used to pass vacuously (the input fact "rainy implies
+    wet" already has object "wet"), and "not sunny" was written incorrectly.
+    """
     engine = InferenceEngine()
     engine.add_facts([
         Fact("sunny", "or", "rainy"),
-        Fact("sunny", "not_is", "sunny"),
+        Fact("sunny", "not_is", "true"),
         Fact("rainy", "implies", "wet"),
     ])
     engine.infer()
-    assert len(engine.query(object="wet")) > 0
+    assert engine.query("rainy", "is", "true")
+    assert engine.query("wet", "is", "true")
 
 
 def test_double_negation_plus_modus_ponens():
-    """Tests double negation + modus ponens: alive not_not true + alive->breathing => breathing. Result: PASS."""
+    """alive not_not true + alive -> breathing gives "breathing is true" (was vacuous before Stage 1.1)."""
     engine = InferenceEngine()
     engine.add_facts([
         Fact("alive", "not_not", "true"),
         Fact("alive", "implies", "breathing"),
     ])
     engine.infer()
-    assert len(engine.query(object="breathing")) > 0
+    assert engine.query("alive", "is", "true")
+    assert engine.query("breathing", "is", "true")
 
 
 def test_de_morgan_in_engine():
-    """Tests De Morgan in engine: sunny not_and rainy + sunny is true => rainy not_is true. Result: PASS."""
+    """not(sunny and rainy) + sunny gives "rainy not_is true", and nothing false about sunny.
+
+    Stage 1.1: this used to pass only because the unsound de_morgan_and
+    asserted both negations, including the false "sunny not_is true".
+    """
     engine = InferenceEngine()
     engine.add_facts([
         Fact("sunny", "not_and", "rainy"),
         Fact("sunny", "is", "true"),
     ])
     engine.infer()
-    assert len(engine.query(subject="rainy", predicate="not_is")) > 0
+    assert engine.query("rainy", "not_is", "true")
+    assert not engine.query("sunny", "not_is", "true")
+    assert not engine.query(predicate="contradiction")
 
 
 def test_combined_is_subtype_universal():

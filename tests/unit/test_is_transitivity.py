@@ -24,9 +24,8 @@ def test_no_match():
 
 
 def test_self_referential():
-    """Tests is-transitivity with self-referential type. Result: PASS."""
-    r = is_transitivity(Fact("a", "is", "a"), Fact("a", "is", "a"))
-    assert r and r.subject == "a" and r.object == "a"
+    """A reflexive input gives nothing new: "a is a" is never derived (Stage 1.1)."""
+    assert is_transitivity(Fact("a", "is", "a"), Fact("a", "is", "a")) is None
 
 
 def test_chain_through_engine():
