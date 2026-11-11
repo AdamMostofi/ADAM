@@ -51,7 +51,8 @@ python -m interface.web.app             # http://localhost:7860
 affect. The Mouth renders the answer.*
 
 - **Ear** — Needle 2 extracts action, topic, sentiment, and urgency.
-- **Kernel** — 16 immutable Layer 1 rules, predicate-indexed forward inference,
+- **Kernel** — 16 Layer 1 rules plus contradiction detection
+  ([docs/design/kernel-rules.md](docs/design/kernel-rules.md)), predicate-indexed forward inference,
   goal-directed proof, `?variable` pattern queries, and staged truth revision.
 - **Memory** — SQLite for verbatim facts and proofs, LanceDB for semantic
   recall, NetworkX for relationships, and ECAN-style attention for ranking.

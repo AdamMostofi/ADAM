@@ -12,6 +12,13 @@
 
 ## Layer 1: Foundational Logic (Immutable)
 
+This is the original intent. What is implemented, what isn't, and why, is in
+[docs/design/kernel-rules.md](docs/design/kernel-rules.md). In short:
+reflexivity is true but never stored; equality transitivity follows from
+substitution; comparison transitivity and AND are not implemented; negation
+as failure is deliberately left out; and unification serves queries rather
+than inference.
+
 ### A. Propositional Logic
 - AND / OR / NOT — basic combination
 - De Morgan's Laws — NOT over AND/OR
@@ -68,7 +75,7 @@ kernel/
   __init__.py
   facts.py              # Fact, Belief dataclasses
   engine.py             # Predicate-indexed agenda inference engine (O(n), thread-safe)
-  foundations.py        # Layer 1: 16 immutable rules
+  foundations.py        # Layer 1: 16 rules + contradiction detection (docs/design/kernel-rules.md)
   graph.py              # Knowledge graph (MultiDiGraph) - deduced knowledge
   contradictions.py     # Confidence-based conflict resolution
   unification.py        # Pattern matching with occurs check
