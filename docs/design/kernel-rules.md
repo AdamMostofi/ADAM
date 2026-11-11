@@ -102,13 +102,12 @@ These were found after the fixes above. Tests are in
 These are recorded as strict `xfail` tests in
 `tests/integration/test_known_kernel_gaps.py`, so they fail loudly once fixed.
 
-- **Stage 1.2 (#28):** beliefs depend on the order facts arrive in, and two
-  terms can collide on the same belief key.
 - **Stage 1.3 (#29):** `is` mixes membership and subclass, so `rex is dog`
   plus `dog is species` gives `rex is species`. `is_transitivity` and
   `subtype_transitivity` are only valid for the subclass reading.
-- **Stage 1.4 (#30):** a stored belief's proof names only one premise.
-  `prove()` already names all of them.
+- **Stage 1.4 (#30):** proofs are text, not structured records. Each one
+  names every premise (since Stage 1.2), but it doesn't record per-step
+  confidence, and nothing persists it.
 - **Stage 1.5 (#31):** exceptions such as the penguin case aren't resolved.
 
 ## Tests
@@ -120,7 +119,89 @@ These are recorded as strict `xfail` tests in
 | `tests/integration/test_prove_agreement.py` | Generated fact sets, compared against a naive reference closure. `prove()` is sound and complete for what the rules derive, and `infer()` is sound. |
 | `tests/integration/test_known_kernel_gaps.py` | Gaps owned by later stages. |
 
+## The engine (Stage 1.2, #28)
+
+`kernel/engine.py` computes the same beliefs whatever order facts arrive in.
+`tests/integration/test_order_independence.py` checks this with Hypothesis.
+For generated fact sets, it compares a single batch, one fact at a time,
+random permutations, and random chunks with inference in between. It also
+checks that saturated inference equals the reference closure exactly, and
+that retracting a fact gives the same state as never adding it.
+
+- **Semi-naive evaluation.** When a fact leaves the agenda, every binary
+  rule is applied with it in both premise positions, against the facts
+  already processed. Each pair of facts is therefore combined exactly once,
+  when the later of the two is processed. Before this stage, rules fired
+  only when the trigger fact was the newer one, so `fire implies hot`
+  followed by `x is fire` derived nothing.
+- **Term index.** Layer 1 rules only combine facts that share a term, so
+  partners are looked up by `(predicate, term)`. The old engine scanned every
+  fact with the partner predicate, and every `is` and `not_is` fact for
+  contradictions. Layer 2 rules (compiled skills) make no such promise, so
+  they still scan.
+- **Keys.** Beliefs are keyed by the `(subject, predicate, object)` tuple.
+  Before, `new york is city` and `new` / `york is` / `city` collapsed into
+  one belief.
+- **Confidence and evidence.** A belief's confidence is its best support,
+  either a derivation or the highest given value. When it rises, the belief
+  is processed again so its consequences rise too. `evidence` counts
+  distinct derivations, up to 16, plus one if the belief was given.
+  Previously, PLN revision folded in a second derivation only when it
+  arrived in a later `infer()` pass. The same facts in one batch gave a
+  different confidence. The derivations also shared premises, so revision
+  double-counted evidence.
+- **Given facts.** `Belief.given` and `Belief.given_confidence` record what
+  was given, as opposed to derived. `retract()` rebuilds from exactly these
+  facts. Before, it rebuilt from the `Source` tag, so learned skill
+  conclusions survived the retraction of their premises.
+- **`add_rule`.** A new layer 2 rule is applied to the beliefs already
+  known, so a late rule gives the same result as an early one.
+- **Budget.** `infer(max_iterations)` returns once that many agenda entries
+  have been processed. `saturated` and `last_run` (iterations, rule
+  applications, beliefs added) report whether work remains, and the next
+  call continues it. Facts about things are processed before `implies`
+  facts, so a budgeted run reaches conclusions about things first. A chat
+  turn processes at most 2,000 entries (`interface/core.py`).
+
+### Eager or on demand (DR2.2)
+
+Inference stays eager and complete. On-demand `transitivity` (`P implies Q`
++ `Q implies R`) was tested against the reference evaluator and rejected,
+because it loses real conclusions. `a not_not b` + `b implies a` +
+`a implies c` gives `a is c` only through the derived `b implies c`: the
+other route needs `a is a`, which no rule derives. The cost is bounded
+instead:
+- inference is incremental, so a chat turn only pays for the consequences
+  of what it added;
+- the budget stops long runs;
+- the processing order puts conclusions about things first;
+- `prove()` answers single questions without saturating everything.
+
+Saturating long chains is still cubic: a 320-step `is` chain has 51,680
+beliefs and takes about 40 s. Persisting fewer derived facts is a question
+for the memory stages.
+
 ## Performance
+
+Measured on 2026-11-11 with `scripts/bench_kernel.py --compare d4e6d6e`
+(the kernel before Stage 1.1). Each case runs in a fresh process.
+`docs/measurements/2026-11-11-kernel-benchmark.json` has the full report.
+
+| Case | Before 1.1, batch | Before 1.1, one at a time | Now, batch | Now, one at a time |
+|---|---|---|---|---|
+| `is` chain, 40 | 0.105 s, 860 beliefs | 0.002 s, **80 beliefs** | 0.095 s, 860 | 0.085 s, 860 |
+| `is` chain, 80 | 2.28 s, 3,320 | 0.004 s, **160** | 0.63 s, 3,320 | 0.50 s, 3,320 |
+| `is` chain, 160 | 63.3 s, 13,040 | 0.016 s, **320** | 4.95 s, 13,040 | 4.03 s, 13,040 |
+| `implies` chain, 50 | 0.22 s, 1,477 | 0.004 s, **152** | 0.17 s, 1,427 | 0.17 s, 1,427 |
+| taxonomy, 10 × 10 | 0.017 s, 322 | 0.008 s, **221** | 0.029 s, 321 | 0.028 s, 321 |
+| proposition chain, 30 | 0.022 s, 467 | 0.0003 s, **32** | 0.041 s, 496 | 0.040 s, 496 |
+| equality web, 15 | 0.045 s, 273 | 0.032 s, 258 | 0.061 s, 257 | 0.062 s, 257 |
+
+The old engine was fast one fact at a time only because it skipped most
+conclusions (the numbers in bold). #28 recorded 142.71 s for the 160-step
+chain on Windows.
+
+### Stage 1.1 measurements
 
 Measured on 2026-11-11 against master, in milliseconds.
 
@@ -133,6 +214,5 @@ Measured on 2026-11-11 against master, in milliseconds.
 | equality web, 15 terms | 39 | 55 | missed the goal | 12 |
 
 The extra `infer()` time is new work: propositional modus ponens and modus
-tollens, and substitution across six predicates instead of two. Most of the
-remaining cost is the engine comparing each new fact with every fact of its
-partner predicate. Stage 1.2 owns that.
+tollens, and substitution across six predicates instead of two. Stage 1.2
+removed the scan over every fact of the partner predicate (see above).

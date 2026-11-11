@@ -74,7 +74,7 @@ than inference.
 kernel/
   __init__.py
   facts.py              # Fact, Belief dataclasses
-  engine.py             # Predicate-indexed agenda inference engine (O(n), thread-safe)
+  engine.py             # Semi-naive, term-indexed, order-independent inference (thread-safe)
   foundations.py        # Layer 1: 16 rules + contradiction detection (docs/design/kernel-rules.md)
   graph.py              # Knowledge graph (MultiDiGraph) - deduced knowledge
   contradictions.py     # Confidence-based conflict resolution
@@ -94,15 +94,23 @@ kernel/
 
 ## Inference Engine Design
 
-### Predicate-Indexed Agenda System
+### Semi-Naive, Term-Indexed Agenda
 
-The engine uses a work queue (agenda) and predicate indexing for O(n) inference:
+The engine gives the same beliefs whatever order facts arrive in. The
+design, the confidence policy, the budget, and measured timings are in
+[docs/design/kernel-rules.md](docs/design/kernel-rules.md). In short:
 
-1. **Index** — facts stored in sets by predicate type (`index["is"]`, `index["implies"]`, etc.)
-2. **Agenda** — new facts go into a deque. Each fact is processed exactly once.
-3. **Rules check only relevant predicates** — modus_ponens only checks `index["implies"]` × `index["is"]`, not all facts.
-
-This replaces the old O(n³) approach where every fact was checked against every other fact in every iteration.
+1. **Agenda.** New facts go into a queue. When a fact leaves it, every rule
+   is applied with that fact in both premise positions, against the facts
+   already processed, so each pair is combined once.
+2. **Term index.** Layer 1 rules only combine facts that share a term, so
+   partners are found by `(predicate, term)`, not by scanning a whole
+   predicate.
+3. **Cost.** The cost is not O(n). Saturating a chain of n `is` facts
+   creates about n²/2 beliefs, so the work grows roughly as n³. Measured:
+   160 steps take 4.9 s, and 320 steps take about 40 s. Inference is
+   incremental and budgeted, so a chat turn pays only for the consequences
+   of what it added.
 
 ### Thread Safety
 
@@ -175,7 +183,7 @@ Periodically re-test against earlier chunks. Strengthen or weaken connections ba
 5. **Self-model** — kernel maintains model of what it knows and doesn't know; "I don't know" is valid output
 6. **Question generation** — system proactively generates questions about knowledge gaps
 7. **Thread-safe by default** — all mutating operations protected by RLock
-8. **O(n) inference** — predicate-indexed agenda system, no redundant re-scanning
+8. **Order-independent inference.** The same facts give the same beliefs in any order. This is tested, and it is incremental and budgeted (see docs/design/kernel-rules.md).
 
 ---
 

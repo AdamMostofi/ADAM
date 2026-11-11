@@ -1,6 +1,6 @@
 """Integration tests for predicate-indexed agenda optimization.
 
-Purpose: Verify the O(n) agenda system produces identical results to the old O(n^3) approach.
+Purpose: Verify the indexed agenda produces the expected deductions. Timings: docs/design/kernel-rules.md.
 Result: PASS
 """
 import sys, os, time

@@ -1,0 +1,132 @@
+{
+  "python": "3.11.15",
+  "machine": "x86_64",
+  "cases": {
+    "is chain 40": {
+      "current, batch": {
+        "seconds": 0.0952,
+        "beliefs": 860
+      },
+      "current, one at a time": {
+        "seconds": 0.0849,
+        "beliefs": 860
+      },
+      "d4e6d6e, batch": {
+        "seconds": 0.105,
+        "beliefs": 860
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0019,
+        "beliefs": 80
+      }
+    },
+    "is chain 80": {
+      "current, batch": {
+        "seconds": 0.6273,
+        "beliefs": 3320
+      },
+      "current, one at a time": {
+        "seconds": 0.4969,
+        "beliefs": 3320
+      },
+      "d4e6d6e, batch": {
+        "seconds": 2.2807,
+        "beliefs": 3320
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0044,
+        "beliefs": 160
+      }
+    },
+    "is chain 160": {
+      "current, batch": {
+        "seconds": 4.9483,
+        "beliefs": 13040
+      },
+      "current, one at a time": {
+        "seconds": 4.0335,
+        "beliefs": 13040
+      },
+      "d4e6d6e, batch": {
+        "seconds": 63.2704,
+        "beliefs": 13040
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0159,
+        "beliefs": 320
+      }
+    },
+    "implies chain 50": {
+      "current, batch": {
+        "seconds": 0.1739,
+        "beliefs": 1427
+      },
+      "current, one at a time": {
+        "seconds": 0.1657,
+        "beliefs": 1427
+      },
+      "d4e6d6e, batch": {
+        "seconds": 0.2207,
+        "beliefs": 1477
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0037,
+        "beliefs": 152
+      }
+    },
+    "taxonomy 10x10": {
+      "current, batch": {
+        "seconds": 0.0291,
+        "beliefs": 321
+      },
+      "current, one at a time": {
+        "seconds": 0.0279,
+        "beliefs": 321
+      },
+      "d4e6d6e, batch": {
+        "seconds": 0.0169,
+        "beliefs": 322
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0077,
+        "beliefs": 221
+      }
+    },
+    "proposition chain 30": {
+      "current, batch": {
+        "seconds": 0.0411,
+        "beliefs": 496
+      },
+      "current, one at a time": {
+        "seconds": 0.04,
+        "beliefs": 496
+      },
+      "d4e6d6e, batch": {
+        "seconds": 0.0221,
+        "beliefs": 467
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0003,
+        "beliefs": 32
+      }
+    },
+    "equality web 15": {
+      "current, batch": {
+        "seconds": 0.0613,
+        "beliefs": 257
+      },
+      "current, one at a time": {
+        "seconds": 0.0623,
+        "beliefs": 257
+      },
+      "d4e6d6e, batch": {
+        "seconds": 0.0449,
+        "beliefs": 273
+      },
+      "d4e6d6e, one at a time": {
+        "seconds": 0.0319,
+        "beliefs": 258
+      }
+    }
+  }
+}

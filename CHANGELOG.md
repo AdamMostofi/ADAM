@@ -1,10 +1,26 @@
 # Changelog
 
+## Stage 1.2 — Order the Agenda (#28)
+
+- Inference gives the same beliefs whatever order facts arrive in: semi-naive
+  evaluation applies binary rules in both premise positions.
+- Partners are found through a (predicate, term) index instead of a scan.
+- Beliefs are keyed by (subject, predicate, object), so differently split
+  facts no longer collide.
+- Confidence is the best support, and evidence counts distinct derivations.
+  Both are independent of order.
+- `retract()` rebuilds from given facts, and `add_rule()` applies a new rule
+  to existing beliefs.
+- The work budget is reported (`saturated`, `last_run`), and chat turns are
+  budgeted.
+- Measured, not O(n): a 160-step `is` chain takes 4.9 s, down from 63 s
+  (`scripts/bench_kernel.py`, docs/design/kernel-rules.md).
+
 ## V0.2 — Logical Kernel (Complete)
 
 ### Built
 - 16 foundational logic rules in `kernel/foundations.py`
-- Predicate-indexed agenda inference engine in `kernel/engine.py` (O(n) vs O(n^3))
+- Predicate-indexed agenda inference engine in `kernel/engine.py` (the O(n) claim was wrong; see Stage 1.2)
 - Knowledge graph with MultiDiGraph in `kernel/graph.py`
 - Contradiction resolver in `kernel/contradictions.py`
 - Unification with occurs check in `kernel/unification.py`
@@ -22,7 +38,7 @@
 - Conditional Proof
 
 ### Optimizations
-- Replaced O(n^3) brute-force inference with O(n) predicate-indexed agenda
+- Replaced brute-force inference with a predicate-indexed agenda (not O(n); measured numbers in docs/design/kernel-rules.md)
 - Added RLock for thread safety
 - Fixed graph self-loop handling with seen_edges deduplication
 - Confidence propagation changed from min() to multiplicative
