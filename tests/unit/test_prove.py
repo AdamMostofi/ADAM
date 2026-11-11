@@ -8,10 +8,18 @@ from kernel.facts import Fact
 
 def test_prove_through_implication_chain():
     engine = InferenceEngine()
-    engine.add_facts([Fact("a", "implies", "b"), Fact("b", "implies", "c")])
-    proof = engine.prove("a", "is", "c")
+    engine.add_facts([Fact("x", "is", "a"), Fact("a", "implies", "b"), Fact("b", "implies", "c")])
+    proof = engine.prove("x", "is", "c")
     assert proof is not None
-    assert len(engine.beliefs) == 2
+    assert len(engine.beliefs) == 3  # proving does not add beliefs
+
+
+def test_implication_alone_does_not_prove_membership():
+    """Stage 1.1 fix: prove() used an "X is X" axiom, so "a implies c" proved "a is c"."""
+    engine = InferenceEngine()
+    engine.add_facts([Fact("a", "implies", "b"), Fact("b", "implies", "c")])
+    assert engine.prove("a", "is", "c") is None
+    assert engine.prove("rain", "is", "wet") is None
 
 
 def test_prove_implies_transitivity():

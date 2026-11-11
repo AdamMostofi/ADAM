@@ -1,88 +1,132 @@
-"""Goal-directed backward chaining.
+"""Answer one goal by searching only the facts connected to it.
 
-The forward engine (kernel.engine) saturates every consequence of its
-agenda. That is cheap at small scale but it means a query pays for
-deductions it never asked about. This module searches backward from a goal
-instead, the way PLN and NARS answer a question: start at what you want to
-prove, work down to what you already believe.
+The forward engine (kernel.engine) saturates every consequence of everything
+it holds. `prove()` answers a single question instead:
 
-Supported goals:
-    (s, "is", o)       -- direct, modus ponens, is-transitivity, all_are
-    (s, "implies", o)  -- direct, implications transitivity
+1. Find the facts connected to the goal: facts whose terms link to the goal's
+   terms, directly or through other facts. Every Layer 1 rule combines premises
+   that share a term, so a fact outside this group can never help.
+2. Apply the same Layer 1 rules (kernel.rules.BUILTIN_RULES) to that group
+   until nothing new appears or the bounds are reached.
+3. If the goal appears, return its proof: every step with all its premises,
+   in the order they were derived.
 
-`X is X` is treated as axiomatic, so a bare implication is enough to satisfy
-a self-referential goal.
+Because it uses the same rule functions as forward inference, prove() can't
+disagree with it (tests/integration/test_prove_agreement.py checks this).
+It never adds beliefs to the engine.
+
+Bounds: `max_depth` limits how many rule applications deep a conclusion may
+be; STEP_LIMIT caps the total rule applications per call.
 """
 
 from __future__ import annotations
 
-STEP_LIMIT = 2000
+from kernel.facts import Fact
+from kernel.foundations import ARBITRARY_PREFIX, EXISTS, TRUE, contradiction_detection, split_term
+from kernel.rules import BUILTIN_RULES
+
+STEP_LIMIT = 200_000
+_UNLINKED = {TRUE, EXISTS}
+
+
+def _base(term: str) -> str:
+    """Terms that rules treat as related share a base: "not:a" and "a"; "arbitrary_man" and "man"."""
+    base, _ = split_term(term)
+    if base.startswith(ARBITRARY_PREFIX) and len(base) > len(ARBITRARY_PREFIX):
+        base = base[len(ARBITRARY_PREFIX):]
+    return base
+
+
+def _connected(facts: list[Fact], seeds: set[str]) -> list[Fact]:
+    """Facts linked to the seed terms through shared terms (ignoring the reserved "true" and "exists")."""
+    links: dict[str, list[int]] = {}
+    for i, f in enumerate(facts):
+        for term in {_base(f.subject), _base(f.object)} - _UNLINKED:
+            links.setdefault(term, []).append(i)
+    reached_terms, reached_facts = set(), set()
+    frontier = [_base(t) for t in seeds if _base(t) not in _UNLINKED]
+    while frontier:
+        term = frontier.pop()
+        if term in reached_terms:
+            continue
+        reached_terms.add(term)
+        for i in links.get(term, []):
+            if i not in reached_facts:
+                reached_facts.add(i)
+                f = facts[i]
+                frontier.extend({_base(f.subject), _base(f.object)} - _UNLINKED - reached_terms)
+    return [facts[i] for i in sorted(reached_facts)]
+
+
+def _key(f: Fact) -> tuple[str, str, str]:
+    return (f.subject, f.predicate, f.object)
 
 
 def prove(engine, subject: str, predicate: str, object: str, max_depth: int = 6) -> list[str] | None:
-    """Return an ordered proof chain for the goal, or None if unprovable."""
-    state = {"steps": 0}
-    return _prove(engine, subject, predicate, object, max_depth, set(), state)
+    """Return the proof of (subject, predicate, object), or None if it can't be shown within the bounds."""
+    goal = (subject, predicate, object)
+    facts = [b.fact for b in engine.beliefs.values()]
+    if goal in {_key(f) for f in facts}:
+        return [f"[given] {subject} {predicate} {object}"]
 
+    seeds = {subject, object} - _UNLINKED
+    relevant = _connected(facts, seeds) if {_base(s) for s in seeds} - _UNLINKED else facts
+    known: dict[tuple[str, str, str], Fact] = {_key(f): f for f in relevant}
+    depth: dict[tuple[str, str, str], int] = {k: 0 for k in known}
+    how: dict[tuple[str, str, str], tuple[str, tuple]] = {}
+    steps = 0
 
-def _direct(engine, subject: str, predicate: str, object: str) -> bool:
-    return any(
-        b.fact.subject == subject and b.fact.predicate == predicate and b.fact.object == object
-        for b in engine.beliefs.values()
-    )
-
-
-def _prove(engine, s: str, p: str, o: str, depth: int, seen: set, state) -> list[str] | None:
-    if depth <= 0 or state["steps"] >= STEP_LIMIT:
-        return None
-    goal = (s, p, o)
-    if goal in seen:
-        return None
-    state["steps"] += 1
-
-    if _direct(engine, s, p, o):
-        return [f"[given] {s} {p} {o}"]
-
-    if p == "is":
-        if s == o:
-            return [f"[axiom] {s} is {s}"]
-
-        # modus ponens: (s implies m) + prove(m is o)
-        for belief in list(engine.beliefs.values()):
-            f = belief.fact
-            if f.predicate != "implies" or f.subject != s:
+    while goal not in known:
+        by_predicate: dict[str, list[Fact]] = {}
+        for f in known.values():
+            by_predicate.setdefault(f.predicate, []).append(f)
+        new: list[tuple[Fact, str, tuple]] = []
+        for rule in BUILTIN_RULES:
+            firsts = by_predicate.get(rule.trigger, [])
+            combos = [(f,) for f in firsts] if rule.partner is None else \
+                [(f, g) for f in firsts for g in by_predicate.get(rule.partner, [])]
+            for args in combos:
+                steps += 1
+                if steps > STEP_LIMIT:
+                    return None
+                out = rule.apply(*args)
+                for r in (out if isinstance(out, list) else [out] if out else []):
+                    new.append((r, rule.name, args))
+        for f in by_predicate.get("is", []) + by_predicate.get("not_is", []):
+            for g in by_predicate.get("not_is", []):
+                c = contradiction_detection(f, g)
+                if c:
+                    new.append((c, "contradiction_detection", (f, g)))
+        added = False
+        for fact, rule_name, args in new:
+            k = _key(fact)
+            d = 1 + max(depth[_key(a)] for a in args)
+            if k in known or d > max_depth:
                 continue
-            if f.object == o:
-                return [f"[modus_ponens] {s} implies {o} + {s} is {s}"]
-            sub = _prove(engine, f.object, "is", o, depth - 1, seen | {goal}, state)
-            if sub is not None:
-                return [f"[modus_ponens] {s} implies {f.object}"] + sub
+            known[k], depth[k], how[k] = fact, d, (rule_name, args)
+            added = True
+        if not added:
+            return None
+    return _explain(goal, how)
 
-        # is-transitivity: (s is m) + prove(m is o)
-        for belief in list(engine.beliefs.values()):
-            f = belief.fact
-            if f.predicate != "is" or f.subject != s or f.object == s:
-                continue
-            sub = _prove(engine, f.object, "is", o, depth - 1, seen | {goal}, state)
-            if sub is not None:
-                return [f"[is_transitivity] {s} is {f.object}"] + sub
 
-        # universal instantiation: (s is m) + (m all_are o)
-        for belief in list(engine.beliefs.values()):
-            f = belief.fact
-            if f.predicate != "all_are" or f.object != o:
-                continue
-            if _direct(engine, s, "is", f.subject):
-                return [f"[universal_instantiation] {s} is {f.subject} + {f.subject} all_are {o}"]
+def _explain(goal, how) -> list[str]:
+    """Proof steps for `goal`, premises first, each naming every premise."""
+    ordered: list[str] = []
+    done: set = set()
 
-    if p == "implies":
-        # transitivity: (s implies m) + prove(m implies o)
-        for belief in list(engine.beliefs.values()):
-            f = belief.fact
-            if f.predicate != "implies" or f.subject != s or f.object == o:
-                continue
-            sub = _prove(engine, f.object, "implies", o, depth - 1, seen | {goal}, state)
-            if sub is not None:
-                return [f"[transitivity] {s} implies {f.object}"] + sub
+    def visit(k):
+        if k in done:
+            return
+        done.add(k)
+        if k not in how:
+            ordered.append(f"[given] {' '.join(k)}")
+            return
+        rule_name, args = how[k]
+        for a in args:
+            visit(_key(a))
+        premises = " + ".join(str(a) for a in args)
+        ordered.append(f"[{rule_name}] {premises} -> {' '.join(k)}")
 
-    return None
+    visit(goal)
+    return ordered
