@@ -37,19 +37,19 @@ def test_negated_input_feeds_modus_tollens():
     # "not:rain is true" means rain fails; with wet -> rain, wet fails.
     engine = engine_with(("not:rain", "is", TRUE), ("wet", "implies", "rain"))
     engine.infer()
-    assert "wet not_is true" in engine.beliefs
+    assert ("wet", "not_is", "true") in engine.beliefs
 
 
 def test_double_negated_input_feeds_modus_ponens():
     engine = engine_with(("not:not:rain", "is", TRUE), ("rain", "implies", "wet"))
     engine.infer()
-    assert "wet is true" in engine.beliefs
+    assert ("wet", "is", "true") in engine.beliefs
 
 
 def test_negated_input_is_a_contradiction_with_its_positive():
     engine = engine_with(("rain", "is", TRUE), ("not:rain", "is", TRUE))
     engine.infer()
-    assert "rain contradiction true" in engine.beliefs
+    assert ("rain", "contradiction", "true") in engine.beliefs
 
 
 def test_the_same_statement_written_two_ways_is_one_belief():
@@ -75,17 +75,17 @@ def test_retract_keeps_learned_and_inferred_facts():
     ])
     engine.infer()
     engine.retract(Fact("rex", "is", "dog"))
-    assert "tweety is bird" in engine.beliefs
-    assert "bird implies animal" in engine.beliefs
-    assert "tweety is animal" in engine.beliefs
-    assert "rex is dog" not in engine.beliefs
+    assert ("tweety", "is", "bird") in engine.beliefs
+    assert ("bird", "implies", "animal") in engine.beliefs
+    assert ("tweety", "is", "animal") in engine.beliefs
+    assert ("rex", "is", "dog") not in engine.beliefs
 
 
 def test_retract_removes_consequences_of_a_learned_fact():
     engine = engine_with(("tweety", "is", "bird"), ("bird", "implies", "animal"), source=Source.LEARNED)
     engine.infer()
     engine.retract(Fact("bird", "implies", "animal"))
-    assert "tweety is animal" not in engine.beliefs
+    assert ("tweety", "is", "animal") not in engine.beliefs
 
 
 def test_retract_accepts_a_non_canonical_fact():
@@ -105,7 +105,7 @@ def test_infer_reports_when_it_stops_early(caplog):
     assert "stopped after 10 iterations" in caplog.text
     engine.infer()
     assert engine.saturated is True
-    assert "x is c30" in engine.beliefs
+    assert ("x", "is", "c30") in engine.beliefs
 
 
 def test_infer_is_saturated_after_a_normal_run():

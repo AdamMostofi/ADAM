@@ -50,10 +50,18 @@ class Belief:
     proof_chain: list[str] = field(default_factory=list)
     truth: TruthValue | None = None
     evidence: int = 1
+    # True when the fact was given (by the user, memory or learning) rather than only derived.
+    given: bool = True
+    # The highest confidence it was given with (derivations may raise `confidence` above it).
+    given_confidence: float | None = None
+    # Distinct (rule name, premise keys) derivations supporting this belief.
+    derivations: set = field(default_factory=set)
 
     def __post_init__(self):
         if self.truth is None:
             self.truth = TruthValue(self.fact.confidence, 0.5)
+        if self.given and self.given_confidence is None:
+            self.given_confidence = self.fact.confidence
 
     @property
     def confidence(self) -> float:

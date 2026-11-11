@@ -12,6 +12,11 @@ from learning.eq.engine import EQEngine
 from interface.ear import Ear
 from interface.mouth import Mouth
 
+# Agenda entries one chat turn may process (Stage 1.2, #28). Inference is
+# incremental, so a turn only pays for consequences of what it added; work
+# left over stays queued and continues on the next turn.
+CHAT_INFERENCE_BUDGET = 2000
+
 
 class ADAMCore:
     def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.db", mouth=None, ear=None):
@@ -34,7 +39,7 @@ class ADAMCore:
             relevant = self.memory.recall(message, limit=5)
             for fact in relevant:
                 self.engine.add_fact(fact)
-            inferred = self.engine.infer()
+            inferred = self.engine.infer(max_iterations=CHAT_INFERENCE_BUDGET)
             for fact in inferred:
                 self.memory.store(fact)
             memories = self.memory.recall(message, limit=10)

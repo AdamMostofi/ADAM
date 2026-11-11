@@ -93,7 +93,7 @@ def skill_to_rule(skill: "Skill") -> Rule | None:
     if not trigger or trigger.startswith("?"):
         return None
 
-    def apply(fact: Fact, partner: Fact | None) -> Fact | None:
+    def apply(fact: Fact, partner: Fact | None = None) -> Fact | None:
         bindings: dict[str, str] = {}
         if not _match(premises[0], fact, bindings):
             return None

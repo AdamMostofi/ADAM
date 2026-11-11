@@ -125,8 +125,8 @@ def test_self_referential_facts_produce_no_trivial_beliefs():
     engine.add_facts([Fact("a", "is", "a"), Fact("a", "implies", "a"), Fact("a", "equals", "a"),
                       Fact("a", "or", "a"), Fact("a", "all_are", "a"), Fact("a", "not_not", "a")])
     engine.infer()
-    trivial = [k for k in engine.beliefs if k.split()[0] == k.split()[-1] and k.split()[1] in ("is", "implies", "all_are", "equals")]
-    assert set(trivial) == {"a is a", "a implies a", "a all_are a", "a equals a"}  # only the given ones
+    trivial = [k for k in engine.beliefs if k[0] == k[2] and k[1] in ("is", "implies", "all_are", "equals")]
+    assert set(trivial) == {("a", "is", "a"), ("a", "implies", "a"), ("a", "all_are", "a"), ("a", "equals", "a")}  # only the given ones
 
 
 def test_cycles_terminate_and_stay_small():
