@@ -12,10 +12,14 @@ from kernel.engine import InferenceEngine
 from kernel.graph import KnowledgeGraph
 
 
+# Ordinary terms: the reserved words "true" and "exists" are never classes (docs/design/kernel-rules.md).
+TERM = st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))).filter(
+    lambda t: t not in ("true", "exists"))
+
 @given(
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
+    TERM,
+    TERM,
+    TERM,
     st.floats(min_value=0.0, max_value=1.0),
 )
 @settings(max_examples=50)
@@ -32,9 +36,9 @@ def test_confidence_never_exceeds_1(a, b, c, conf):
 
 
 @given(
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
+    TERM,
+    TERM,
+    TERM,
     st.floats(min_value=0.0, max_value=1.0),
 )
 @settings(max_examples=50)
@@ -51,9 +55,9 @@ def test_confidence_never_below_0(a, b, c, conf):
 
 
 @given(
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
+    TERM,
+    TERM,
+    TERM,
 )
 @settings(max_examples=50)
 def test_modus_ponens_always_deduces(a, b, c):
@@ -71,9 +75,9 @@ def test_modus_ponens_always_deduces(a, b, c):
 
 
 @given(
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
+    TERM,
+    TERM,
+    TERM,
 )
 @settings(max_examples=50)
 def test_transitivity_always_chains(a, b, c):
@@ -91,9 +95,9 @@ def test_transitivity_always_chains(a, b, c):
 
 
 @given(
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
+    TERM,
+    TERM,
+    TERM,
 )
 @settings(max_examples=50)
 def test_retract_removes_dependents(a, b, c):
@@ -114,9 +118,9 @@ def test_retract_removes_dependents(a, b, c):
 
 
 @given(
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
-    st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=("L",))),
+    TERM,
+    TERM,
+    TERM,
 )
 @settings(max_examples=50)
 def test_graph_path_exists_after_chain(a, b, c):
