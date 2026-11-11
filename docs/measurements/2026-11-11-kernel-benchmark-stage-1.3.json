@@ -1,0 +1,76 @@
+{
+  "python": "3.11.15",
+  "machine": "x86_64",
+  "cases": {
+    "subclass chain 40": {
+      "current, batch": {
+        "seconds": 0.1869,
+        "beliefs": 820
+      },
+      "current, one at a time": {
+        "seconds": 0.1486,
+        "beliefs": 820
+      }
+    },
+    "subclass chain 80": {
+      "current, batch": {
+        "seconds": 1.3263,
+        "beliefs": 3240
+      },
+      "current, one at a time": {
+        "seconds": 1.1036,
+        "beliefs": 3240
+      }
+    },
+    "subclass chain 160": {
+      "current, batch": {
+        "seconds": 11.5294,
+        "beliefs": 12880
+      },
+      "current, one at a time": {
+        "seconds": 8.6292,
+        "beliefs": 12880
+      }
+    },
+    "implies chain 50": {
+      "current, batch": {
+        "seconds": 0.3146,
+        "beliefs": 1377
+      },
+      "current, one at a time": {
+        "seconds": 0.3218,
+        "beliefs": 1377
+      }
+    },
+    "taxonomy 10x10": {
+      "current, batch": {
+        "seconds": 0.0089,
+        "beliefs": 221
+      },
+      "current, one at a time": {
+        "seconds": 0.0073,
+        "beliefs": 221
+      }
+    },
+    "proposition chain 30": {
+      "current, batch": {
+        "seconds": 0.0869,
+        "beliefs": 496
+      },
+      "current, one at a time": {
+        "seconds": 0.0696,
+        "beliefs": 496
+      }
+    },
+    "equality web 15": {
+      "current, batch": {
+        "seconds": 0.1069,
+        "beliefs": 257
+      },
+      "current, one at a time": {
+        "seconds": 0.1031,
+        "beliefs": 257
+      }
+    }
+  }
+}

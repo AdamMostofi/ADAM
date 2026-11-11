@@ -25,13 +25,13 @@ import io
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CASES = {
-    # The worst case recorded in #28: a chain of "is" facts, saturated.
-    "is chain 40": "[F(f'n{i}', 'is', f'n{i+1}') for i in range(40)]",
-    "is chain 80": "[F(f'n{i}', 'is', f'n{i+1}') for i in range(80)]",
-    "is chain 160": "[F(f'n{i}', 'is', f'n{i+1}') for i in range(160)]",
-    "implies chain 50": "[F('x', 'is', 'c0')] + [F(f'c{i}', 'implies', f'c{i+1}') for i in range(50)]",
-    "taxonomy 10x10": "[F(f'k{i}_{j}', 'is', f'k{i}') for i in range(10) for j in range(10)]"
-                      " + [F(f'k{i}', 'implies', 'animal') for i in range(10)]",
+    # The worst case recorded in #28 was an "is" chain; since Stage 1.3 (#29) that is a subclass_of chain.
+    "subclass chain 40": "[F(f'n{i}', 'subclass_of', f'n{i+1}') for i in range(40)]",
+    "subclass chain 80": "[F(f'n{i}', 'subclass_of', f'n{i+1}') for i in range(80)]",
+    "subclass chain 160": "[F(f'n{i}', 'subclass_of', f'n{i+1}') for i in range(160)]",
+    "implies chain 50": "[F('x', 'instance_of', 'c0')] + [F(f'c{i}', 'implies', f'c{i+1}') for i in range(50)]",
+    "taxonomy 10x10": "[F(f'k{i}_{j}', 'instance_of', f'k{i}') for i in range(10) for j in range(10)]"
+                      " + [F(f'k{i}', 'subclass_of', 'animal') for i in range(10)]",
     "proposition chain 30": "[F('p0', 'is', 'true')] + [F(f'p{i}', 'implies', f'p{i+1}') for i in range(30)]",
     "equality web 15": "[F(f'e{i}', 'equals', f'e{i+1}') for i in range(15)] + [F('e0', 'is', 'red')]",
 }

@@ -43,8 +43,13 @@ than inference.
 - Unification — Does B in fact 1 equal B in fact 2? If yes, link them
 
 ### D. Type Hierarchy
-- Subtype Transitivity — If X is Y and Y->Z, then X->Z
-- Is Transitivity — If X is Y and Y is Z, then X is Z
+Since Stage 1.3 (#29), membership and subclassing are separate predicates.
+The original "Is Transitivity" chained any two "is" facts, so
+"rex is dog" + "dog is species" gave "rex is species".
+- Subclass Transitivity — If A subclass_of B and B subclass_of C, then A subclass_of C
+- Inheritance — If x instance_of C and C subclass_of D, then x instance_of D
+- Exclusion — If x not_instance_of D and C subclass_of D, then x not_instance_of C
+- A plain "x is C" is ambiguous. It is never guessed, and only rules that are sound for both meanings use it.
 
 ### E. Minimal State Logic
 - Negation as Failure — If searched tape and didn't find P, assume not P with low confidence
@@ -75,7 +80,7 @@ kernel/
   __init__.py
   facts.py              # Fact, Belief dataclasses
   engine.py             # Semi-naive, term-indexed, order-independent inference (thread-safe)
-  foundations.py        # Layer 1: 16 rules + contradiction detection (docs/design/kernel-rules.md)
+  foundations.py        # Layer 1: 15 rules + contradiction detection (docs/design/kernel-rules.md)
   graph.py              # Knowledge graph (MultiDiGraph) - deduced knowledge
   contradictions.py     # Confidence-based conflict resolution
   unification.py        # Pattern matching with occurs check

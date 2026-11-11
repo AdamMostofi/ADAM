@@ -1,5 +1,18 @@
 # Changelog
 
+## Stage 1.3 — Name the Bonds (#29)
+
+- New predicates: `instance_of`, `not_instance_of` and `subclass_of`.
+  `all_are` is stored as `subclass_of`, and properties are classes.
+- `is_transitivity`, `subtype_transitivity` and `universal_instantiation`
+  are replaced by `subclass_transitivity`, `inheritance` and `exclusion`.
+  `rex instance_of dog` + `dog instance_of species` no longer gives
+  `rex instance_of species`.
+- A plain `x is C` is ambiguous and never guessed. It is listed by
+  `engine.ambiguous()` and resolved with `engine.classify()`. Until then,
+  only rules that are sound for both meanings use it. The web API flags,
+  lists and classifies such facts.
+
 ## Stage 1.2 — Order the Agenda (#28)
 
 - Inference gives the same beliefs whatever order facts arrive in: semi-naive

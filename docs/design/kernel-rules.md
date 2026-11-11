@@ -6,60 +6,95 @@ input is read, and which test checks it. It was written in Stage 1.1 (#27).
 
 ## How facts are read
 
-Every fact is a triple `subject predicate object`. Two readings share the
-same predicates.
+Every fact is a triple `subject predicate object`.
 
-- **Class reading.** `x is C` means x belongs to class C. `P implies Q` and
-  `P all_are Q` mean every member of P is a member of Q. `x not_is C` means x
-  does not belong to C.
-- **Proposition reading.** The reserved object `true` turns a term into a
-  statement: `rain is true` means rain holds, `rain not_is true` means it
-  fails. Between propositions, `P implies Q` means P → Q.
+- **Classes (Stage 1.3, #29).**
+  - `x instance_of C`: x is a member of class C.
+  - `x not_instance_of C`: x is not a member.
+  - `C subclass_of D`: every member of C is a member of D.
+  - `all_are` is another name for `subclass_of` and is stored as `subclass_of`.
+  - `P implies Q` between classes also means every P is a Q.
+  - Properties are classes, so "socrates is mortal" is
+    `socrates instance_of mortal`.
+- **Propositions.** The reserved object `true` turns a term into a statement:
+  `rain is true` means rain holds, and `rain not_is true` means it fails.
+  Between propositions, `P implies Q` means P → Q.
+- **Ambiguous `is`.** `x is C`, with C anything other than `true`, could mean
+  `instance_of` or `subclass_of`: "rex is dog" against "dog is mammal". The
+  kernel never guesses (DR3.2).
+  - The fact is kept, and `engine.ambiguous()` lists it for review.
+    `engine.classify(fact, "instance_of" | "subclass_of")` resolves it. In
+    the web UI, `/api/facts` flags it, `/api/ambiguous` lists it, and
+    `/api/classify` resolves it.
+  - Until then, only rules that are sound under both readings use it. For
+    example, `x is C` + `C subclass_of D` gives `x is D`, which holds whether
+    x is a member or a subclass of C.
+  - No rule chains two `is` facts, so `rex is dog` + `dog is species` gives
+    nothing. That was the bug Stage 1.3 fixed.
+- Every named class is assumed to be non-empty, so `x is C` under either
+  reading means something is a C.
 
 Terms and reserved words:
 
 | Term | Meaning |
 |---|---|
 | `true` | The object that marks a proposition. It is never a class: no rule treats `x is true` as membership of a class called "true". |
-| `exists` | The subject of existential facts (`exists is dog`). It is never a proposition. |
+| `exists` | The subject of existential facts (`exists instance_of dog`). It is never a proposition. |
 | `not:p` | The negation of proposition p. Prefixes cancel in pairs, so `not:not:p` is `p`. Rules always write the canonical form: `not:p is true` is stored as `p not_is true`. |
-| `arbitrary_T` | An arbitrary member of kind T, used by universal generalization. |
+| `arbitrary_T` | An arbitrary member of kind T, used by universal generalization. It names an individual, so `arbitrary_T is X` is stored as `arbitrary_T instance_of X`. |
 
 No rule derives a fact relating a term to itself with `is`, `implies`,
-`all_are` or `equals`. Such facts are always true and carry no information,
+`subclass_of` or `equals`. Such facts are always true and carry no information,
 and when `prove()` used `X is X` as an axiom, it "proved" `rain is wet` from
 `rain implies wet`.
 
 ## The rules
 
-There are 16 rules plus contradiction detection. Some rules are registered
-more than once, once for each partner predicate they accept, which makes 23
-registrations in total.
+There are 15 rules plus contradiction detection. Some rules are registered
+more than once, once for each pair of predicates they accept, which makes 34
+registrations in total. (The Stage 1.1 and 1.2 versions of this file said
+"16 rules plus contradiction detection", but their table had 15 rules too.)
 
 | Rule | Premises | Conclusion | Confidence |
 |---|---|---|---|
-| `modus_ponens` | `x is P` + `P implies Q`; or P holds + `P implies Q` | `x is Q`; or Q holds | product |
-| `modus_tollens` | `x not_is Q` + `P implies Q`; or Q fails + `P implies Q` | `x not_is P`; or P fails | product × 0.9 |
+| `modus_ponens` | P holds + `P implies Q` | Q holds | product |
+| `modus_tollens` | Q fails + `P implies Q` | P fails | product × 0.9 |
 | `transitivity` | `P implies Q` + `Q implies R` | `P implies R` | product |
-| `subtype_transitivity` | `x is Y` + `Y implies Z` | `x implies Z` (subclass reading) | product |
-| `is_transitivity` | `x is Y` + `Y is Z` | `x is Z` (subclass reading) | product |
-| `universal_instantiation` | `X all_are Y` + `a is X` | `a is Y` | product |
-| `existential_generalization` | `a is X` | `exists is X` | same |
-| `universal_generalization` | `arbitrary_T is X` | `T all_are X` | × 0.9 |
-| `equality_substitution` | `A equals B` + any fact using `is`, `not_is`, `implies`, `all_are`, `or` or `equals` | that fact with A and B swapped, in either position and either direction | product × 0.95 |
+| `subclass_transitivity` | `A subclass_of B` + `B subclass_of C`; either may be `implies` (not both) | `A subclass_of C` | product |
+| `inheritance` | `x instance_of C` (or ambiguous `x is C`) + `C subclass_of D` (or `C implies D`) | `x instance_of D` (or `x is D`) | product |
+| `exclusion` | `x not_instance_of D` (or ambiguous `x not_is D`) + `C subclass_of D` (or `C implies D`) | `x not_instance_of C` (or `x not_is C`) | product × 0.9 |
+| `existential_generalization` | `a instance_of X` (or ambiguous `a is X`) | `exists instance_of X` | same |
+| `universal_generalization` | `arbitrary_T instance_of X` | `T subclass_of X` | × 0.9 |
+| `equality_substitution` | `A equals B` + any fact using `is`, `not_is`, `instance_of`, `not_instance_of`, `subclass_of`, `implies`, `or` or `equals` | that fact with A and B swapped, in either position and either direction | product × 0.95 |
 | `equality_symmetry` | `A equals B` | `B equals A` | same |
 | `disjunctive_syllogism` | `A or B` + A fails (or B fails) | B holds (or A holds) | product |
 | `de_morgan_and` | `A not_and B` | `not:A or not:B` | same |
 | `de_morgan_or` | `A not_or B` | A fails, and B fails | same |
-| `double_negation` | `P not_not true` (or `x not_not C`) | P holds (or `x is C`) | same |
+| `double_negation` | `P not_not true` (or `x not_not C`) | P holds (or ambiguous `x is C`) | same |
 | `conditional_proof` | `ctx assumes P` + `ctx derives Q`, sharing context ctx | `P implies Q` | product × 0.9 |
-| `contradiction_detection` | `x is C` + `x not_is C` | `x contradiction C` (flagged; no rule takes it as a premise) | 1.0 |
+| `contradiction_detection` | `x is C` + `x not_is C`, or `x instance_of C` + `x not_instance_of C` | `x contradiction C` (flagged; no rule takes it as a premise) | 1.0 |
 
 `specificity_resolution` exists in `foundations.py` but isn't registered.
 Stage 1.5 (#31) owns it.
 
 Every propositional rule refuses premises built on the reserved words. For
 example, `exists implies p` licenses nothing, and `true` is never a disjunct.
+
+### Changed in Stage 1.3 (#29)
+
+| Before | After | Why |
+|---|---|---|
+| `is_transitivity`: `x is Y` + `Y is Z` gives `x is Z` | Removed. `subclass_transitivity` chains `subclass_of`. | `rex is dog` + `dog is species` gave `rex is species`. Chaining is only valid for subclass-of. |
+| `subtype_transitivity`: `x is Y` + `Y implies Z` gives `x implies Z` | Replaced by `subclass_transitivity`. | It was only valid when "x is Y" meant subclass. |
+| `universal_instantiation` on `all_are` | Removed. `all_are` is now `subclass_of`, and `inheritance` covers it. | Two rules for one inference would count the same derivation twice as evidence. |
+| The class forms of `modus_ponens` and `modus_tollens` | Moved into `inheritance` and `exclusion`. | Same reason. Both rules are now purely propositional. |
+| `existential_generalization` gave `exists is X` | It gives `exists instance_of X`. | "Something is an X" is membership. |
+
+`tests/unit/test_rule_soundness.py` checks every class rule in a typed
+model: individuals are elements, classes are non-empty sets, and an
+ambiguous `is` means membership for an individual and subset for a class.
+Rules can't tell the two readings apart, so passing means every rule is
+sound under both.
 
 ## What was wrong before Stage 1.1
 
@@ -102,9 +137,10 @@ These were found after the fixes above. Tests are in
 These are recorded as strict `xfail` tests in
 `tests/integration/test_known_kernel_gaps.py`, so they fail loudly once fixed.
 
-- **Stage 1.3 (#29):** `is` mixes membership and subclass, so `rex is dog`
-  plus `dog is species` gives `rex is species`. `is_transitivity` and
-  `subtype_transitivity` are only valid for the subclass reading.
+- **Stage 1.6 (#36):** classifying an ambiguous fact replaces it in the
+  engine and stores the classified fact. The original `is` row stays in the
+  memory store, so a restart brings it back, alongside the classified one.
+  Reconciling restored state is Stage 1.6.
 - **Stage 1.4 (#30):** proofs are text, not structured records. Each one
   names every premise (since Stage 1.2), but it doesn't record per-step
   confidence, and nothing persists it.
@@ -114,7 +150,8 @@ These are recorded as strict `xfail` tests in
 
 | Test file | What it checks |
 |---|---|
-| `tests/unit/test_rule_soundness.py` | Exhaustive truth tables for every propositional rule, a set model for the subclass reading, and a membership model for instantiation rules. |
+| `tests/unit/test_rule_soundness.py` | Exhaustive truth tables for every propositional rule, and a typed model (individuals and classes) for every class rule, under both readings of an ambiguous `is`. |
+| `tests/unit/test_class_rules.py` | `instance_of`, `subclass_of`, inheritance, exclusion, the ambiguous-`is` rules, and `classify()`. |
 | `tests/unit/test_kernel_edge_cases.py` | Every registered rule fires through the engine; confidence stays in [0, 1]; unusual terms, self-reference, cycles and contradictions are handled. |
 | `tests/integration/test_prove_agreement.py` | Generated fact sets, compared against a naive reference closure. `prove()` is sound and complete for what the rules derive, and `infer()` is sound. |
 | `tests/integration/test_known_kernel_gaps.py` | Gaps owned by later stages. |
@@ -182,6 +219,19 @@ beliefs and takes about 40 s. Persisting fewer derived facts is a question
 for the memory stages.
 
 ## Performance
+
+Stage 1.3 kept the costs of Stage 1.2. I measured both kernels side by side,
+five runs each, on the same machine, which was more loaded than for the
+table below:
+- proposition chain, 30: unchanged (0.080 s against 0.079 s);
+- equality web, 15: 18% slower (0.130 s against 0.110 s), because
+  substitution now covers eight predicates instead of six;
+- an 80-step `subclass_of` chain against Stage 1.2's `is` chain: 13% slower
+  (1.25 s against 1.11 s).
+
+The worst case is now a `subclass_of` chain, because an ambiguous `is` chain
+no longer combines. Timings are in
+`docs/measurements/2026-11-11-kernel-benchmark-stage-1.3.json`.
 
 Measured on 2026-11-11 with `scripts/bench_kernel.py --compare d4e6d6e`
 (the kernel before Stage 1.1). Each case runs in a fresh process.
