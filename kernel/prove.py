@@ -22,7 +22,9 @@ be; STEP_LIMIT caps the total rule applications per call.
 from __future__ import annotations
 
 from kernel.facts import Fact
-from kernel.foundations import ARBITRARY_PREFIX, EXISTS, TRUE, contradiction_detection, split_term
+from kernel.foundations import (
+    ARBITRARY_PREFIX, EXISTS, TRUE, canonical_fact, contradiction_detection, split_term,
+)
 from kernel.rules import BUILTIN_RULES
 
 STEP_LIMIT = 200_000
@@ -64,6 +66,8 @@ def _key(f: Fact) -> tuple[str, str, str]:
 
 def prove(engine, subject: str, predicate: str, object: str, max_depth: int = 6) -> list[str] | None:
     """Return the proof of (subject, predicate, object), or None if it can't be shown within the bounds."""
+    goal_fact = canonical_fact(Fact(subject, predicate, object))
+    subject, predicate, object = goal_fact.subject, goal_fact.predicate, goal_fact.object
     goal = (subject, predicate, object)
     facts = [b.fact for b in engine.beliefs.values()]
     if goal in {_key(f) for f in facts}:

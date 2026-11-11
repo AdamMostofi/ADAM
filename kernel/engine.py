@@ -7,12 +7,15 @@ instead of O(n^3). Thread-safe via RLock.
 from __future__ import annotations
 
 import collections
+import logging
 import threading
 
 from kernel.facts import Belief, Fact, Source
 from kernel.contradictions import ContradictionResolver
-from kernel.foundations import contradiction_detection
+from kernel.foundations import canonical_fact, contradiction_detection
 from kernel.rules import BUILTIN_RULES, Rule
+
+log = logging.getLogger(__name__)
 
 
 class InferenceEngine:
@@ -22,6 +25,8 @@ class InferenceEngine:
         self.resolver = ContradictionResolver()
         self.lock = threading.RLock()
         self.agenda: collections.deque[Fact] = collections.deque()
+        # False when the last infer() stopped at max_iterations with work left.
+        self.saturated = True
         self.rules: list[Rule] = list(BUILTIN_RULES)
         self.rules_by_trigger: dict[str, list[Rule]] = {}
         for rule in self.rules:
@@ -43,6 +48,7 @@ class InferenceEngine:
 
     def add_fact(self, fact: Fact) -> None:
         with self.lock:
+            fact = canonical_fact(fact)
             key = str(fact)
             if key not in self.beliefs:
                 self.beliefs[key] = Belief(fact=fact)
@@ -67,12 +73,14 @@ class InferenceEngine:
 
     def retract(self, fact: Fact) -> None:
         with self.lock:
-            key = str(fact)
+            key = str(canonical_fact(fact))
             if key not in self.beliefs:
                 return
+            # Keep every fact that was given rather than derived (user, learned,
+            # inferred by other components); derived beliefs are rebuilt.
             remaining = [
                 b.fact for k, b in self.beliefs.items()
-                if k != key and b.fact.source == Source.USER
+                if k != key and b.fact.source != Source.DEDUCED
             ]
             self.beliefs.clear()
             self.trace.clear()
@@ -91,6 +99,7 @@ class InferenceEngine:
                 fact = self.agenda.popleft()
                 results = self._apply_rules_indexed(fact)
                 for rule_name, result in results:
+                    result = canonical_fact(result)
                     key = str(result)
                     proof = f"[{rule_name}] {fact} -> {result}"
                     if key not in self.beliefs:
@@ -108,6 +117,11 @@ class InferenceEngine:
                         self.trace.append(proof)
                     touched.add(key)
                 iterations += 1
+            self.saturated = not self.agenda
+            if not self.saturated:
+                log.warning(
+                    "infer() stopped after %d iterations with %d facts still queued; "
+                    "call infer() again to continue", iterations, len(self.agenda))
             return all_new_facts
 
     def _apply_rules_indexed(self, fact: Fact) -> list[tuple[str, Fact]]:

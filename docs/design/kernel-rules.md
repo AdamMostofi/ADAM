@@ -75,6 +75,17 @@ example, `exists implies p` licenses nothing, and `true` is never a disjunct.
 | All rules | Reflexive facts (`x is x`) and `true` used as a class leaked into conclusions. | Both are guarded. |
 | `prove()` | It used a separate backward search with a reflexive axiom, so it disagreed with `infer()`. | It now saturates the facts connected to the goal using these same rules (see `kernel/prove.py`). |
 
+### Second red-team pass
+
+These were found after the fixes above. Tests are in
+`tests/unit/test_kernel_red_team_pass2.py`.
+
+| Defect | Fix |
+|---|---|
+| Facts written in a non-canonical form, such as `not:rain is true` or `not:not:rain is true`, were invisible to the propositional rules. `rain is true` plus `not:rain is true` wasn't even flagged as a contradiction. | `canonical_fact()` rewrites every fact when it enters the engine and every rule output, so one statement is always one belief. `prove()` also canonicalizes its goal. |
+| `retract()` rebuilt beliefs only from `Source.USER` facts, so every retract silently dropped all `LEARNED` and `INFERRED` facts. | It keeps every fact that wasn't derived. |
+| `infer()` stopped at `max_iterations` without saying so. A 200-step chain left 7,723 facts queued. | It sets `engine.saturated = False` and logs a warning. Calling `infer()` again continues the work. |
+
 ## Listed in DESIGN.md but not rules
 
 | Item | Status |

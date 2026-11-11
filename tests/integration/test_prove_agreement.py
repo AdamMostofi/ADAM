@@ -18,12 +18,12 @@ from hypothesis import strategies as st
 
 from kernel.engine import InferenceEngine
 from kernel.facts import Fact
-from kernel.foundations import EXISTS, TRUE, contradiction_detection
+from kernel.foundations import EXISTS, TRUE, canonical_fact, contradiction_detection
 from kernel.rules import BUILTIN_RULES
 
 PROVABLE_PREDICATES = ("is", "not_is", "implies", "all_are", "or", "equals")
 CLASS_TERMS = ["a", "b", "c"]
-PROP_TERMS = CLASS_TERMS + ["not:a", "not:b"]
+PROP_TERMS = CLASS_TERMS + ["not:a", "not:b", "not:not:a"]  # non-canonical on purpose
 
 
 def key(f):
@@ -31,7 +31,7 @@ def key(f):
 
 
 def reference_closure(facts: list[Fact]) -> set[tuple[str, str, str]]:
-    known = {key(f): f for f in facts}
+    known = {key(canonical_fact(f)): canonical_fact(f) for f in facts}
     while True:
         by_predicate: dict[str, list[Fact]] = {}
         for f in known.values():
@@ -44,6 +44,7 @@ def reference_closure(facts: list[Fact]) -> set[tuple[str, str, str]]:
             for args in combos:
                 out = rule.apply(*args)
                 for r in (out if isinstance(out, list) else [out] if out else []):
+                    r = canonical_fact(r)
                     if key(r) not in known:
                         new[key(r)] = r
         for f in by_predicate.get("is", []) + by_predicate.get("not_is", []):

@@ -33,6 +33,7 @@ is_transitivity and subtype_transitivity valid only for the subclass reading.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from functools import lru_cache
 
 from kernel.facts import Fact, Source
@@ -75,6 +76,25 @@ def literal_triple(term: str) -> tuple[str, str, str]:
     """The canonical (subject, predicate, object) saying `term` holds."""
     base, negated = split_term(term)
     return (base, "not_is" if negated else "is", TRUE)
+
+
+def canonical_fact(fact: Fact) -> Fact:
+    """The same statement in canonical form, so every rule recognises it.
+
+    Terms lose cancelling "not:" pairs, and a negated proposition moves its
+    negation into the predicate: "not:rain is true" becomes "rain not_is true",
+    and "not:rain not_is true" becomes "rain is true".
+    """
+    if not fact.subject.startswith(NOT_PREFIX) and not fact.object.startswith(NOT_PREFIX):
+        return fact  # fast path: nothing to cancel or move
+    subject, obj, predicate = canonical_term(fact.subject), canonical_term(fact.object), fact.predicate
+    if obj == TRUE and predicate in ("is", "not_is"):
+        base, negated = split_term(subject)
+        flipped = negated != (predicate == "not_is")
+        subject, predicate = base, "not_is" if flipped else "is"
+    if (subject, predicate, obj) == (fact.subject, fact.predicate, fact.object):
+        return fact
+    return replace(fact, subject=subject, predicate=predicate, object=obj)
 
 
 def literal_true(term: str, confidence: float) -> Fact:
