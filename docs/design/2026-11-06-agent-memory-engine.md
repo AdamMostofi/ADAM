@@ -1,6 +1,6 @@
 # Lossless Tree Memory Engine: Design Spec and Test Plan
 
-**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure); the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
+**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure), Stage 2.4 section 7 (file history, code graph, verification); the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
 **Working name:** `agent-memory`, command `amem`. The final name is decision D8.
 **Relationship to ADAM:** A standalone product developed inside the ADAM repo until release. ADAM uses it through one interface ([#46](https://github.com/AdamMostofi/ADAM/issues/46)), and the engine never imports ADAM code.
 
@@ -284,6 +284,9 @@ Agent-declared decisions start as `proposed` unless they came directly from a us
 - Every observed version of every file: path, content hash, archive reference, size, git blob and commit when tracked, and renames.
 - Each version links to the event that produced it and its development path.
 - Uncommitted versions are kept, so work between commits can be recovered.
+- **As built in Stage 2.4:** versions are rows written by the same deterministic structure function, so they
+  are core, append-only and rebuilt by `verify()`. A version whose content equals an *earlier* version of the
+  same path is recorded as a `reverts` edge to it, and proposes a path (the structural signal of 6.2).
 
 ### 7.2 Code dependency graph
 - Imports and references are extracted with tree-sitter, starting with Python and TypeScript.
@@ -294,6 +297,11 @@ Agent-declared decisions start as `proposed` unless they came directly from a us
   - choosing the relevant files for a verification;
   - relevant-file maps in the active context.
 - Languages without a parser fall back to file-level history only, and say so.
+- **As built in Stage 2.4:**
+  - tree-sitter parses Python, TypeScript, TSX and JavaScript imports, cached by content id, so an
+    update re-parses only changed files (one edit to this repository: 1 of 130 files, 0.01 s).
+  - Python imports also depend on every parent package's `__init__.py`, which Python runs on import.
+  - The derived tables (`code_parse`, `code_edges`) are outside the core and can be rebuilt.
 
 ### 7.3 Verification records
 A verification stays historically true forever. Its *current* status is computed.
@@ -313,6 +321,13 @@ A verification stays historically true forever. Its *current* status is computed
 | `occurred_at` | Timestamp |
 
 **Relevant files** come from coverage data when available. Otherwise they come from the test's import closure in the dependency graph. Otherwise the whole tree is used, marked `whole_tree`, so status is conservative.
+
+**As built in Stage 2.4:**
+- **Comparison.** Status compares each relevant file's recorded content id with the current version, and
+  the recorded environment with the current one. That covers interpreter versions, the OS, lockfile
+  hashes, and whether checked environment variables are present (never their values).
+- **Unknown.** Status is `unknown` when there is no environment to compare with, or after a failed
+  reconciliation.
 
 **Current status:**
 
