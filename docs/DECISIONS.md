@@ -62,15 +62,16 @@ Outcomes are as follows:
 | #36 | DS1 | SQLite is the source; memory is rebuilt at startup. | Adopted, and startup is read-only. | [restart.md](design/restart.md) |
 | #36 | — | Persist attention? | Settled: per session, with reasons recorded. | [restart.md](design/restart.md) |
 | #37 | DE.1 | Fix EQ first; question its value later. | Adopted; the review is #77. | [eq-appraisal.md](design/eq-appraisal.md) |
-| #44 | DD2.1 | The README describes what runs. | Settled: "works today" (each with a test) and "planned", with a demonstrable headline. **The owner may revise the headline.** | [README.md](../README.md) |
+| #44 | DD2.1 | The README describes what runs. | Settled: "works today" (each with a test) and "planned", with a demonstrable headline. Headline accepted by the owner, 2026-11-13. | [README.md](../README.md) |
 
 ## Phase 2 — Forge the Memory Engine
 
 | Issue | ID | Decision | Outcome | Details |
 |---|---|---|---|---|
 | #50 | — | Continue with the reconciler and replay design, or change it. | Settled: continue. Detection moves to `git --no-optional-locks status`, and attribution gains three precise rules. | [spike results](design/2026-11-13-reconciler-spike.md) |
-| #51 | D3 | Where the store lives. | **Open, for the owner.** The configurable default is a per-project folder under `AMEM_HOME` or the user data directory. | `packages/agent-memory/src/agent_memory/location.py` |
-| #51 | D4 | Key storage. | **Open, for the owner.** The interim default is a key file outside the store, or `AMEM_PASSPHRASE`. | `packages/agent-memory/src/agent_memory/keys.py` |
+| #51 | D3 | Where the store lives. | **Decided by the owner, 2026-11-13:** inside the project, at `<project>/.agent-memory/`, ignored by git through its own `.gitignore`. `AMEM_HOME` remains an override. Growth is handled by tiered lossless compression of old, unvisited content, which the agent can also compress or restore on demand (Stage 2.7, #76). Implemented in Stage 2.5. | `packages/agent-memory/src/agent_memory/location.py` |
+| #51 | D4 | Key storage. | **Decided by the owner, 2026-11-13:** the user chooses at onboarding between a key file, a passphrase (with a session key cache, #83) and the OS keychain. Until onboarding exists, the key file is the default. | `packages/agent-memory/src/agent_memory/keys.py` |
+| — | D10 | Do the four memory trees (history, files, knowledge, active state) need separate entry points, and does the engine manage what is loaded in the agent's context? | **Open, for the owner.** Proposal in the [four-trees review](design/2026-11-13-four-trees-review.md). | |
 | #51 | — | One data key per project instead of per session. | Settled (engineering): per-session keys would prevent deduplication. | [engine design 5.2](design/2026-11-06-agent-memory-engine.md) |
 
 ## Later phases (not started)

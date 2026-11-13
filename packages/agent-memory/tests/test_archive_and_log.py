@@ -276,10 +276,20 @@ def test_payloads_are_not_readable_on_disk(store):
     assert b"distinctive plaintext" not in raw_bytes(store.path)
 
 
-def test_the_store_location_is_configurable(tmp_path, monkeypatch):
+def test_the_store_lives_inside_the_project_by_default(tmp_path):
+    """D3 (owner, 2026-11-13): the store is part of the project, and git ignores it."""
     project = tmp_path / "my project"
     project.mkdir()
-    assert store_path(project).parent == tmp_path / "data" / "agent-memory"
+    path = store_path(project)
+    assert path == project.resolve() / ".agent-memory"
+    store = Store(path, min_free_bytes=0)
+    assert (path / ".gitignore").read_text().splitlines()[-1] == "*"
+    assert store.project_id == project_id(project)   # not ".agent-memory", which every project would share
+
+
+def test_the_store_location_can_be_overridden(tmp_path, monkeypatch):
+    project = tmp_path / "my project"
+    project.mkdir()
     monkeypatch.setenv("AMEM_HOME", str(tmp_path / "elsewhere"))
     assert store_path(project).parent == tmp_path / "elsewhere"
     assert store_path(project, home=tmp_path / "explicit").parent == tmp_path / "explicit"

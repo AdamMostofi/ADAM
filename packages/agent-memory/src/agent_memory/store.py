@@ -33,10 +33,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_memory import keys, navigate, structure, verification
+from agent_memory import keys, navigate, recovery, structure, verification
 from agent_memory.codegraph import CodeGraph, supported
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
-from agent_memory.location import synced_folder_warnings
+from agent_memory.location import default_project_id, ignore_in_git, synced_folder_warnings
 from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, canonical_json
 from agent_memory.secrets import SecretScanner
 
@@ -60,10 +60,11 @@ class Store:
                  min_free_bytes: int | None = None, key_dir: Path | None = None):
         self.path = Path(path)
         self.path.mkdir(parents=True, exist_ok=True)
+        ignore_in_git(self.path)   # D3: an in-project store is never committed
         self.warnings = synced_folder_warnings(self.path)
         for w in self.warnings:
             warnings.warn(w, stacklevel=2)
-        self.project_id = project_id or self.path.name
+        self.project_id = project_id or default_project_id(self.path)
         self.exclusions = tuple(exclusions)
         self._db = self.path / "memory.db"
         self._init_db()
@@ -72,6 +73,8 @@ class Store:
         self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes, **kwargs)
         self.scanner = SecretScanner(fp_key)
         self.codegraph = CodeGraph(self._connect)   # derived layer (design 7.2)
+        self.checkpoint_every = recovery.CHECKPOINT_EVERY
+        self._drain_spool()
 
     # ------------------------------------------------------------ setup
     def _connect(self) -> sqlite3.Connection:
@@ -116,6 +119,7 @@ class Store:
                     BEGIN SELECT RAISE(ABORT, 'the event log is append-only'); END;
             """)
             structure.create(conn)
+            recovery.create(conn)
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('store_format', ?)", (str(STORE_FORMAT),))
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('created_at', ?)", (_now(),))
@@ -248,13 +252,18 @@ class Store:
             stored = Event(log_position=cur.lastrowid, record_hash=record_hash, **record)
             structure.apply(conn, stored)   # the tree and graph change in the same transaction
             conn.execute("COMMIT")
-            return stored
         except BaseException:
             if conn.in_transaction:
                 conn.execute("ROLLBACK")
             raise
         finally:
             conn.close()
+        if stored.kind == "session_end" or (self.checkpoint_every and stored.log_position % self.checkpoint_every == 0):
+            try:
+                self.checkpoint(reason="session end" if stored.kind == "session_end" else "every N events")
+            except Exception as err:   # a missed checkpoint only slows recovery; never fail the write
+                warnings.warn(f"checkpoint failed: {err}", stacklevel=2)
+        return stored
 
     # ------------------------------------------------------------ reading
     @staticmethod
@@ -313,10 +322,97 @@ class Store:
         finally:
             conn.close()
 
+    # ------------------------------------------------------------ fail-open capture (design 8.4)
+    def _spool_path(self) -> Path:
+        return self.path / "spool.jsonl"
+
+    def safe_append(self, inp: EventInput) -> Event | None:
+        """Append, but never raise: if the engine fails, the agent carries on and the loss is recorded.
+
+        The spool keeps only what is needed to record the gap (kind, session,
+        writer, time, sizes and the error), never content, so it can't leak
+        a secret the scanner would have removed.
+        """
+        try:
+            return self.append(inp)
+        except Exception as err:
+            payload = inp.payload.encode() if isinstance(inp.payload, str) else inp.payload
+            record = {"kind": inp.kind, "session_id": inp.session_id, "writer_id": inp.writer_id,
+                      "agent": inp.agent, "at": _now(), "error": f"{type(err).__name__}: {err}"[:500],
+                      "payload_size": len(payload) if payload is not None else None,
+                      "idempotency_key": inp.idempotency_key}
+            try:
+                with open(self._spool_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps(record) + "\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+            except OSError:
+                pass   # nothing more can be done without failing the agent
+            return None
+
+    def _drain_spool(self) -> None:
+        path = self._spool_path()
+        if not path.exists():
+            return
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for line in lines:
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            self.append(EventInput(kind="capture_gap", session_id=rec["session_id"], writer_id=rec["writer_id"],
+                                   agent=rec.get("agent", "unknown"), completeness="unavailable",
+                                   occurred_at=rec.get("at"),
+                                   summary_fields={"missed_kind": rec["kind"], "size": rec.get("payload_size"),
+                                                   "reason": f"the engine failed: {rec['error']}"}))
+        path.unlink()
+
+    # ------------------------------------------------------------ reconciliation, checkpoints, recovery (design 8)
+    def content_id(self, data: bytes, path: str | None = None) -> str:
+        """The id the archive gives this content (after redaction). Adapters report tool edits with it."""
+        if path and self._excluded(path):
+            return "excluded:" + self.scanner.fingerprint(data)
+        clean, _ = self.scanner.redact(data, "payload")
+        return self.archive.object_id(clean)
+
+    def record_tool_edit(self, session_id: str, writer_id: str, path: str, after: bytes | str,
+                         before: bytes | str | None = None, tool: str = "Edit", intent: bool = False,
+                         agent: str = "unknown", idempotency_key: str | None = None) -> Event:
+        """What an adapter records for an edit tool call: the path and keyed content ids, never content."""
+        after = after.encode() if isinstance(after, str) else after
+        before = before.encode() if isinstance(before, str) else before
+        summary = {"tool": tool, "path": path, "after_object": self.content_id(after, path),
+                   "before_object": self.content_id(before, path) if before is not None else None}
+        if intent:
+            summary["intent"] = "edit"
+        return self.append(EventInput(kind="tool_call", session_id=session_id, writer_id=writer_id, agent=agent,
+                                      summary_fields=summary, idempotency_key=idempotency_key))
+
+    def reconciler(self, project_root, session_id: str, writer_id: str = "reconciler"):
+        from agent_memory.reconcile import Reconciler
+        return Reconciler(self, project_root, session_id, writer_id)
+
+    def checkpoint(self, reason: str = "manual") -> int | None:
+        return recovery.checkpoint(self, reason)
+
+    def recover(self, project_root=None, session_id: str = "engine") -> dict:
+        return recovery.recover(self, self.reconciler(project_root, session_id) if project_root else None)
+
+    def rebuild_derived(self) -> dict:
+        """Regenerate the derived layer (the code graph) from the core."""
+        return self.codegraph.rebuild(self.archive)
+
     # ------------------------------------------------------------ integrity
     def verify(self) -> dict:
-        """Check every writer's hash chain and every archived object. Reports; never repairs."""
+        """Check chains, objects, references, checkpoints, structure and the derived layer. Reports; never repairs."""
         problems: list[dict] = []
+        conn = self._connect()
+        try:
+            check = conn.execute("PRAGMA integrity_check").fetchall()
+        finally:
+            conn.close()
+        if check != [("ok",)]:
+            problems.append({"type": "database_corrupt", "detail": [r[0] for r in check][:20]})
         chains: dict[str, tuple[int, str]] = {}
         referenced: set[str] = set()
         positions = []
@@ -349,6 +445,20 @@ class Store:
             if stored[table] != rebuilt[table]:
                 problems.append({"type": "structure_mismatch", "table": table,
                                  "detail": "doesn't match a rebuild from the event log"})
+        for cp in recovery.checkpoints_report(self):
+            if not cp["valid"]:
+                problems.append({"type": "checkpoint_invalid", **cp})
+        conn = self._connect()
+        try:
+            for event_id, object_id in conn.execute(
+                    "SELECT source_event, object_id FROM file_versions WHERE object_id IS NOT NULL"):
+                if object_id not in referenced:
+                    problems.append({"type": "dangling_reference", "event_id": event_id, "object_id": object_id})
+            for (oid,) in conn.execute("SELECT object_id FROM code_parse"):
+                if not self.archive.path(oid).exists():
+                    problems.append({"type": "derived_problem", "detail": f"code graph parse for missing object {oid}"})
+        finally:
+            conn.close()
         return {"ok": not problems, "events": len(positions), "writers": len(chains),
                 "objects_checked": len(referenced), "problems": problems}
 
@@ -446,11 +556,15 @@ class Store:
         return self.append(EventInput(kind="verification", session_id=session_id, writer_id=writer_id,
                                       payload=output, summary_fields=summary, parent_id=parent_id))
 
-    def verification_status(self, event_id: str, environment: dict | None = None, reconciled: bool = True) -> dict:
+    def verification_status(self, event_id: str, environment: dict | None = None,
+                            reconciled: bool | None = None) -> dict:
         """verified, stale or unknown, with the reasons. Computed now; never stored."""
         ev = self.event(event_id)
         if ev is None or ev.kind != "verification":
             raise KeyError(f"{event_id} is not a verification")
+        if reconciled is None:
+            from agent_memory.reconcile import reconcile_ok
+            reconciled = reconcile_ok(self)
         return verification.status(ev.summary_fields, self.current_files(), environment, reconciled)
 
     def verification_view(self, event_id: str):

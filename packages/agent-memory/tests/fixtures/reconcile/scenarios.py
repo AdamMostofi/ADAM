@@ -24,8 +24,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+# Every content a step wrote or found, by sha256, so a test driving the real
+# store can report tool edits with the store's own keyed content ids.
+CONTENT: dict[str, bytes] = {}
+
+
 def sha(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    digest = hashlib.sha256(data).hexdigest()
+    CONTENT[digest] = data
+    return digest
 
 
 def git(repo: Path, *args: str) -> str:
@@ -85,13 +92,16 @@ def _bash(repo: Path, command: str, writer: str = "agent-a") -> list[dict]:
     return [start, {"type": "bash_end", "writer": writer, "command": command, "exit_code": 0}]
 
 
-def run_scenario(root: Path, big_checkout_files: int = 500):
+def run_scenario(root: Path, big_checkout_files: int = 500, on_init=None):
     """Yield (step, repo) in order; each step has already been applied when it is yielded.
 
     The caller reconciles after each step, as the plugin would: after each tool
-    batch, after each Bash command, and at session start.
+    batch, after each Bash command, and at session start. `on_init(repo)` runs
+    once on the initial commit, before any step, so a baseline can be taken.
     """
     repo, remote = init_repo(root)
+    if on_init is not None:
+        on_init(repo)
     pkg = repo / "pkg"
 
     # 1. The agent edits a file through its edit tool.

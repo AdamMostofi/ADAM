@@ -20,6 +20,8 @@ KINDS = frozenset({
     "exclusion",
     # Stage 2.3: declared structure (design 6): development paths, blockers, typed relations, retractions.
     "path", "blocker", "relation", "retraction",
+    # Stage 2.5: conflicting concurrent changes, grouped git operations, and recoveries (design 8).
+    "conflict", "change_group", "recovery",
 })
 
 COMPLETENESS = ("captured", "partial", "unavailable", "imported")

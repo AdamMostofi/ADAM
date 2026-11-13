@@ -56,9 +56,11 @@ STATUSES = {
     "task": ("open", "in_progress", "done", "blocked", "cancelled"),
     "decision": ("proposed", "active", "superseded"),
     "blocker": ("open", "resolved"),
+    "conflict": ("open", "resolved"),
 }
-INITIAL = {"path": "proposed", "goal": "active", "task": "open", "decision": "proposed", "blocker": "open"}
-PLANNING_KINDS = {"path", "goal", "task", "blocker", "decision"}
+INITIAL = {"path": "proposed", "goal": "active", "task": "open", "decision": "proposed", "blocker": "open",
+           "conflict": "open"}
+PLANNING_KINDS = {"path", "goal", "task", "blocker", "decision", "conflict"}
 PATH_ROLES = ("experiment", "accepted", "reverted")
 
 SCHEMA = """
@@ -205,7 +207,15 @@ def validate(conn, kind: str, summary: dict) -> None:
 
 
 # ------------------------------------------------------------ apply
-def apply(conn, ev: Event) -> None:
+def apply(conn, ev: Event, strict: bool = True) -> None:
+    """Add one event to the structure.
+
+    Writes are strict: an event that doesn't fit raises, and the write is
+    refused. Replays (rebuild, recovery) aren't. A record damaged after it
+    was written, which only tampering or disk corruption can cause and which
+    `verify` reports, keeps its place in the tree but adds nothing else, so a
+    replay never stops halfway.
+    """
     s = ev.summary_fields
     _add_node(conn, "project", "project", ev, label="project")
     session = session_node(ev.session_id)
@@ -227,7 +237,17 @@ def apply(conn, ev: Event) -> None:
     _add_edge(conn, parent, ev.event_id, "contains", "recorded", ev, _next_ord(conn, parent))
     if ev.parent_id and _node_exists(conn, ev.parent_id):
         _add_edge(conn, ev.event_id, ev.parent_id, "triggered_by", "recorded", ev)
+    if strict:
+        _by_kind(conn, ev, s, session)
+        return
+    try:
+        _by_kind(conn, ev, s, session)
+    except (KeyError, TypeError, ValueError, AttributeError, sqlite3.Error):
+        pass
 
+
+def _by_kind(conn, ev: Event, s: dict, session: str) -> None:
+    """What an event adds beyond its place in the tree, by kind."""
     if ev.kind == "session_start":
         _session_links(conn, ev, session, s)
     if ev.kind in ("file_change", "exclusion") and s.get("path"):
@@ -245,6 +265,8 @@ def apply(conn, ev: Event) -> None:
                          (ev.event_id, rel_path, object_id, ev.log_position))
     if s.get("path_id"):
         _add_edge(conn, ev.event_id, s["path_id"], "part_of", "recorded", ev, role=s.get("path_role"))
+    if s.get("group") and _node_exists(conn, s["group"]):
+        _add_edge(conn, ev.event_id, s["group"], "part_of", "recorded", ev)
 
     if ev.kind in PLANNING_KINDS:
         _planning(conn, ev, s)
@@ -329,7 +351,11 @@ def _planning(conn, ev: Event, s: dict) -> None:
         status = s.get("status") or INITIAL[kind]
         if kind == "decision" and s.get("status") is None and s.get("from_user_message"):
             status = "active"   # agent-declared decisions start as proposed; a user's are active
-        _add_status(conn, node, status, s.get("reason"), "declared", ev)
+        # A conflict is observed by the engine (reconciliation); everything else here is declared.
+        basis = "recorded" if kind == "conflict" else "declared"
+        _add_status(conn, node, status, s.get("reason"), basis, ev)
+        if kind == "conflict" and s.get("event") and _node_exists(conn, s["event"]):
+            _add_edge(conn, node, s["event"], "references", "recorded", ev)
         _add_edge(conn, node, ev.event_id, "references", "recorded", ev)
         _declared_links(conn, ev, node, s)
     else:
@@ -391,5 +417,5 @@ def rebuild(events) -> dict[str, list]:
     mem = sqlite3.connect(":memory:")
     create(mem)
     for ev in events:
-        apply(mem, ev)
+        apply(mem, ev, strict=False)
     return snapshot(mem)

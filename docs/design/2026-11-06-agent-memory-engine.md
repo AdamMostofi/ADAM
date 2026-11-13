@@ -1,6 +1,6 @@
 # Lossless Tree Memory Engine: Design Spec and Test Plan
 
-**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure), Stage 2.4 section 7 (file history, code graph, verification); the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
+**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure), Stage 2.4 section 7 (file history, code graph, verification), Stage 2.5 section 8 (reconciliation, checkpoints, recovery, concurrency); the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
 **Working name:** `agent-memory`, command `amem`. The final name is decision D8.
 **Relationship to ADAM:** A standalone product developed inside the ADAM repo until release. ADAM uses it through one interface ([#46](https://github.com/AdamMostofi/ADAM/issues/46)), and the engine never imports ADAM code.
 
@@ -167,6 +167,13 @@ Nothing else is truncated or sampled. If storage limits make full preservation i
   - report the size of each project's store, and its growth rate;
   - warn at thresholds you set;
   - never delete anything automatically to make room.
+- **Where it lives (D3, decided 2026-11-13):** inside the project, at `<project>/.agent-memory/`, so the memory travels with the project. `AMEM_HOME` overrides it.
+- **Tiered lossless compression (Stage 2.7):**
+  - Every object is already compressed (zlib) before it is encrypted.
+  - Past a recommended size, which is a setting, old objects that haven't been read recently move to a cold tier. Small objects are packed together and recompressed with a stronger codec, because packing many similar text objects compresses far better than compressing each alone.
+  - Nothing is lost: an object's id, hash and content are unchanged, and reading a cold object restores it transparently.
+  - The agent can also compress (`amem compress`, `mem_compress`) or restore (`mem_restore`) any part explicitly, such as a session or a time range.
+  - "Visited" is tracked in a derived access table, not in the append-only log, so reads don't grow history.
 - **The 400 MB figure is a RAM budget** for ADAM's running processes ([#33](https://github.com/AdamMostofi/ADAM/issues/33)). It is not a disk cap, and it never limits how much history the archive keeps.
 
 ---
@@ -436,6 +443,20 @@ Results are reported; nothing is repaired silently. `amem rebuild` regenerates t
 | Corrupted core record | Reported with location; never silently dropped; restore from backup or record the loss |
 | Memory engine itself fails | Capture fails open: the agent continues, and a gap is recorded |
 
+**As built (Stage 2.5):**
+- `reconcile.py`:
+  - attribution as above;
+  - an explicit full run rehashes every file;
+  - the store's own folder is never reconciled (D3).
+- `recovery.py`:
+  - **What a checkpoint holds:** a snapshot of the core structure tables, not the derived layer or the active context. The derived layer is rebuilt after recovery instead, because rebuilding it is cheap and a snapshot of it could itself be stale.
+  - **How snapshots are stored:** encrypted in the archive, in an append-only table.
+- **Replays never stop on a damaged record.** Writes are strict, but a replay of a tampered record keeps only its place in the tree. `verify` still reports the damage, and recovery never edits the log.
+- **Capture fails open:** `Store.safe_append` never raises. A failed write goes to a content-free spool, and the next open turns it into a `capture_gap` event.
+- **Tests:** every row of 8.4 is a test in `tests/test_reconcile_and_recovery.py`.
+  - Twenty seeded scenarios: none missed, none wrongly attributed, nothing spurious.
+  - Random-kill recovery: 40 of 40 trials match a clean replay.
+
 ### 8.5 Several agents at once
 - **Each agent session is its own writer** with its own sequence. SQLite serializes the writes, so no writer overwrites another.
 - **Every change keeps its own before-hash.** If agent B's before-hash doesn't match what agent A just wrote, the engine records a **conflict** event linking both changes. It never merges or overwrites.
@@ -702,7 +723,7 @@ Taken from each agent's docs on 2026-11-06. Stage 3.5 publishes a table tested a
 | 2.4 | Map the Code | File history, incremental code dependency graph, verification records with environment fingerprints and stale reasons |
 | 2.5 | Survive the Crash | Reconciliation, checkpoints, replay, `amem verify`, concurrency conflicts |
 | 2.6 | Open the Archive | Active context sections and levels, focus selection, search, MCP tools, CLI |
-| 2.7 | Burn the Leak | Purge, storage reporting, and the full engine test suite in CI |
+| 2.7 | Burn the Leak | Purge, storage reporting, tiered lossless compression (D3), and the full engine test suite in CI |
 | 3.1 | First Plugin | Claude Code adapter onto the canonical format; first real use |
 | 3.2 | Weigh the Thesis | The agent benchmark on the complete core; go or no-go |
 | 3.3 | OpenCode Plugin | OpenCode adapter; shared memory across agents |
@@ -746,13 +767,14 @@ Taken from each agent's docs on 2026-11-06. Stage 3.5 publishes a table tested a
 |---|---|---|
 | D1 | First agent | **Decided 2026-11-09:** Claude Code, then OpenCode, then Pi |
 | D2 | Language | Python for the prototype; compiled helpers only if measured latency requires them |
-| D3 | Store location | **Open, for the owner.** Stage 2.2 implements the recommendation as a configurable default: `AMEM_HOME`, else `$XDG_DATA_HOME/agent-memory/<project>-<hash>`. Changing the default needs no migration |
-| D4 | Key storage | OS keychain, with a passphrase fallback on WSL. **Open, for the owner:** Stage 2.2 uses a key file outside the store (or `AMEM_PASSPHRASE`) until this is decided. Measured in Stage 2.3: opening the store takes 2 ms with the key file but 125 ms with a passphrase (scrypt), paid on every hook process. Passphrase mode would need a session-scoped unlocked-key cache, or the keychain |
+| D3 | Store location | **Decided 2026-11-13 (owner):** the store is part of the project, at `<project>/.agent-memory/`, with its own `.gitignore` so it is never committed. `AMEM_HOME` or `--home` still override it. Disk growth is handled by tiered lossless compression: old, unvisited content is packed and recompressed once a recommended size is passed, and the agent can compress or restore any part on demand (Stage 2.7) |
+| D4 | Key storage | **Decided 2026-11-13 (owner):** a choice at onboarding: key file, passphrase, or OS keychain. Measured in Stage 2.3: opening the store takes 2 ms with the key file but 125 ms with a passphrase (scrypt), paid on every hook process, so passphrase mode gets a session-scoped key cache (#83). Until onboarding exists, the key file (outside the store, under `$XDG_CONFIG_HOME/agent-memory/keys/`) is the default |
 | D5 | Default capture | **Revised:** everything in full except secrets and explicit exclusions |
 | D6 | Benchmark budget | Agent runs cost API money; start with one model |
 | D7 | Open source | Public at release, MIT, with benchmark data public |
 | D8 | Name | Choose before 3.6. The working name is `agent-memory`; the architecture name is "Lossless Tree Memory Engine" |
 | D9 | Path declaration | **New:** how strongly plugins prompt agents to declare paths and causes. Recommend a light instruction, then measure |
+| D10 | Four trees and context management | **Open, for the owner (2026-11-13).** Whether history, files, knowledge and active state get separate entry points, whether a knowledge tree is added, and whether the engine tracks and manages what is loaded in the agent's context. See the [four-trees review](2026-11-13-four-trees-review.md) |
 
 ---
 
