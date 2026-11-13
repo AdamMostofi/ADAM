@@ -315,17 +315,54 @@ A verification stays historically true forever. Its *current* status is computed
 ## 8. Reconciliation, recovery, and concurrency
 
 ### 8.1 Reconciliation
-1. **List files** with `git status --porcelain=v2` and `git ls-files -co --exclude-standard`; non-git folders use an ignore-aware walk.
-2. **Skip unchanged files** by size and mtime, with a periodic full hash.
-3. **Check `HEAD`** for moves, using reflog to describe pulls, resets, rebases, and checkouts.
-4. **Attribute each difference** as `agent_tool`, `agent_bash`, `external`, `git_operation`, or `unattributed`. It never guesses.
-5. **Record a change** for each difference, including deletes and renames, and update file history.
-6. **Batch large git operations** that touch hundreds of files into one group record, with every file still listed.
-7. **Mark dependents for re-evaluation:** the code graph, verifications, and active context items.
+Tested in the Stage 2.1 spike ([results](2026-11-13-reconciler-spike.md)):
+1,026 of 1,026 seeded changes were detected, with no wrong attribution.
+
+1. **Find candidates with git.**
+   - Run `git --no-optional-locks status --porcelain -z --untracked-files=all`.
+     `--no-optional-locks` keeps git from refreshing `.git/index`, so
+     reconciling never writes in the project.
+   - The candidates are the files git reports, the files that were dirty at
+     the last reconcile, and the files that differ between the old and new
+     `HEAD`. Together these are complete.
+   - git's index check also compares ctime and inode, so it catches a
+     same-size, same-mtime rewrite that a size and mtime check misses.
+   - It is 10× faster than walking the tree: 0.03 s against 0.3 s on 20,000
+     files.
+   - Folders without git use an ignore-aware walk. A periodic full hash still
+     runs.
+2. **Hash the candidates** and compare them with the last reconcile.
+   - A deleted path and an added path with the same content are a rename,
+     paired one to one.
+3. **Check `HEAD`.**
+   - The reflog says what moved it. Only actions that change the working
+     tree explain file changes: `checkout`, `pull`, `reset`, `merge`,
+     `rebase`, `cherry-pick`, `revert`, `switch`, `am` and `stash`. A
+     `commit` changes no files.
+4. **Attribute each difference.** It never guesses.
+   - `git_operation`: a working-tree git operation changed the file, and the
+     file now matches `HEAD`.
+   - `agent_tool`: an agent tool call reported this path, and its after-hash
+     equals the file's content now.
+   - `agent_bash`: a Bash command ran since the last reconcile, and its text
+     names the path (or, for a rename, the old path).
+   - `external`: no agent activity since the last reconcile.
+   - `unattributed`: anything else. For example, a user edit while the agent
+     was busy, or a script whose effect its command text doesn't show.
+5. **Record a change** for each difference, including deletes and renames,
+   and update file history.
+6. **Batch large git operations.** Operations that touch more than 100 files
+   go into one group record, with every file still listed.
+7. **Record conflicts.** A tool edit whose before-hash doesn't match the
+   last known content is a conflict (section 8.5).
+8. **Mark dependents for re-evaluation:** the code graph, verifications, and
+   active context items.
 
 Reconciliation runs:
 - at session start;
-- after shell commands and edit batches;
+- **before and after** each shell command, so each command's window holds
+  only its own changes;
+- after edit batches;
 - before state queries;
 - on demand.
 
@@ -338,6 +375,13 @@ If it fails, state becomes `unknown`.
   - the chain hashes up to that position;
   - a snapshot of the derived layer and active context.
 - **When checkpoints happen:** at session end, every N events, and before large reconciliations.
+- **How a checkpoint is written and trusted:** it is written in its own
+  transaction, after the events it covers are committed. Recovery uses a
+  checkpoint only if its chain hash matches the verified chain at its
+  position and its snapshot hash is intact; otherwise it falls back to an
+  older one. In the Stage 2.1 spike, 300 of 300 random-kill trials recovered
+  exactly the state of a clean replay, including 50 with a corrupted newest
+  checkpoint.
 - **Recovery:**
   1. Load the newest checkpoint that passes integrity checks.
   2. Replay events after it.
