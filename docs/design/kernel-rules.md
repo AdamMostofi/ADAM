@@ -74,8 +74,8 @@ registrations in total. (The Stage 1.1 and 1.2 versions of this file said
 | `conditional_proof` | `ctx assumes P` + `ctx derives Q`, sharing context ctx | `P implies Q` | product × 0.9 |
 | `contradiction_detection` | `x is C` + `x not_is C`, or `x instance_of C` + `x not_instance_of C` | `x contradiction C` (flagged; no rule takes it as a premise) | 1.0 |
 
-`specificity_resolution` exists in `foundations.py` but isn't registered.
-Stage 1.5 (#31) owns it.
+Exceptions are not Layer 1 rules. Defaults and conflict resolution are
+described under "Conflicts and defaults (Stage 1.5)" below.
 
 Every propositional rule refuses premises built on the reserved words. For
 example, `exists implies p` licenses nothing, and `true` is never a disjunct.
@@ -134,14 +134,17 @@ These were found after the fixes above. Tests are in
 
 ## Known gaps owned by later stages
 
-These are recorded as strict `xfail` tests in
-`tests/integration/test_known_kernel_gaps.py`, so they fail loudly once fixed.
+From Stage 1.1 to 1.5, every gap found had a strict `xfail` test in
+`tests/integration/test_known_kernel_gaps.py`. All of those are fixed, so
+that file is gone. What remains is recorded on its issue:
 
 - **Stage 1.6 (#36):** classifying an ambiguous fact replaces it in the
   engine and stores the classified fact. The original `is` row stays in the
   memory store, so a restart brings it back, alongside the classified one.
   Reconciling restored state is Stage 1.6.
-- **Stage 1.5 (#31):** exceptions such as the penguin case aren't resolved.
+- **Stage 1.6 (#36):** conflict statuses and origins are rebuilt from the
+  stored facts at startup. Statuses aren't stored, because they follow
+  from the facts; origins are stored (schema 3).
 
 ## Tests
 
@@ -152,7 +155,66 @@ These are recorded as strict `xfail` tests in
 | `tests/unit/test_class_rules.py` | `instance_of`, `subclass_of`, inheritance, exclusion, the ambiguous-`is` rules, and `classify()`. |
 | `tests/unit/test_kernel_edge_cases.py` | Every registered rule fires through the engine; confidence stays in [0, 1]; unusual terms, self-reference, cycles and contradictions are handled. |
 | `tests/integration/test_prove_agreement.py` | Generated fact sets, compared against a naive reference closure. `prove()` is sound and complete for what the rules derive, and `infer()` is sound. |
-| `tests/integration/test_known_kernel_gaps.py` | Gaps owned by later stages. |
+| `tests/integration/test_conflicts.py` | The penguin case, both through a more specific default and through direct evidence; the Nixon diamond; strict contradictions; unsupported consequences; restoring on retract; source attribution; and statuses and conflicts that don't depend on fact order. |
+
+## Conflicts and defaults (Stage 1.5, #31)
+
+**DR5.2: the floor stays strict.** Layer 1 rules are deductive and are
+never defeated. General rules that admit exceptions are *defaults*
+(`kernel/defaults.py`):
+- `C typically D` ("bird typically flier");
+- `C typically_not D` ("penguin typically_not flier").
+
+`default_inheritance` and `default_exclusion` apply them to members. Their
+conclusions are defeasible, and so is anything derived from them.
+
+**DR5.1: a contradiction is state, not failure.** After inference,
+`kernel/conflicts.py` looks at every pair of contradicting beliefs, `x
+instance_of C` against `x not_instance_of C` (the same for an ambiguous
+`is`). It records a `Conflict` with:
+- both beliefs;
+- all their derivations;
+- the sources behind each side;
+- the resolution.
+
+| Sides | Resolution | Result |
+|---|---|---|
+| Both strict | `unresolved` | Nothing is withdrawn; the conflict is recorded for review. |
+| Strict against a default | `strict_beats_default` | The default side is defeated. Evidence about the individual ("pingu not_instance_of flier") is strict. |
+| Two defaults, one about a strict subclass of the other's class | `more_specific_default` | The less specific side is defeated (penguin ⊂ bird). |
+| Two defaults, neither more specific | `contested` | Both sides are withheld (the Nixon diamond). |
+
+**Statuses.** Nothing is deleted. Every belief has a status:
+- `active`;
+- `defeated`, if it lost a conflict;
+- `contested`;
+- `unsupported`, if every derivation rests on something not active.
+
+`query()` and `query_pattern()` return only active beliefs, and
+`query(..., include_inactive=True)` returns all of them. A given fact is
+never defeated, so conflicts never remove source-backed evidence.
+Statuses follow from the beliefs alone, so they don't depend on fact
+order (checked with generated fact sets). Retracting the evidence that
+defeated a default brings back its conclusion.
+
+**APIs.**
+- `engine.conflicts()`, `engine.status()`, `/api/conflicts`, and the
+  `contradictions` count in `/api/stats`, which was always 0 before.
+- `ContradictionResolver.get_contradictions()` now reports the engine's
+  conflicts.
+- `prove()` proves only from strict facts: a default conclusion is not a
+  proof.
+
+**Sources.** `Fact.origin` names where a fact came from: a book, a person
+or a URL. A belief keeps every origin it was given by, and
+`engine.attribution()` lists the origins of everything a belief rests on.
+Two sources that disagree are recorded as a conflict, with each side
+attributed to its own source. Neither source's facts are changed. The
+store keeps origins in the `fact_origins` table (schema 3).
+
+**Limit.** Conflicts are resolved in one pass. A conflict between two
+beliefs that are each only defeasible through longer chains (not directly
+from a default) is `contested`, not resolved by specificity.
 
 ## Proofs (Stage 1.4, #30)
 

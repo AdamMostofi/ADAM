@@ -1,5 +1,22 @@
 # Changelog
 
+## Stage 1.5 — Hold the Contradiction (#31)
+
+- **Defaults with exceptions.** `C typically D` and `C typically_not D`
+  give conclusions that admit exceptions (`kernel/defaults.py`). Layer 1
+  stays strict.
+- **Conflicts are recorded state** (`kernel/conflicts.py`). Strict beats a
+  default, a more specific default beats a general one, incomparable
+  defaults are contested, and strict-against-strict is kept for review.
+  Losers are marked `defeated`, `contested` or `unsupported`, never
+  deleted, and queries return active beliefs.
+- **APIs.** `engine.conflicts()` and `/api/conflicts`; `/api/stats`
+  reports the real count.
+- **Sources.** `Fact.origin` gives source attribution, and
+  `engine.attribution()` lists it. The store keeps origins in
+  `fact_origins` (schema 3).
+- **Proofs.** `prove()` proves only from strict facts.
+
 ## Stage 1.4 — Keep the Chain (#30)
 
 - **Derivation records.** Proofs are `Derivation` records naming the rule,

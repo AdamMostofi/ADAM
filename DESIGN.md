@@ -53,7 +53,7 @@ The original "Is Transitivity" chained any two "is" facts, so
 
 ### E. Minimal State Logic
 - Negation as Failure — If searched tape and didn't find P, assume not P with low confidence
-- Contradiction Detection — If tape has P and not P, flag it, don't explode, ask for priority
+- Contradiction Detection — If tape has P and not P, flag it, don't explode, ask for priority. Since Stage 1.5 (#31), each conflict is recorded with both sides, their derivations and their sources. A default loses to strict or more specific evidence, and the loser is marked, never deleted (docs/design/kernel-rules.md).
 
 ---
 
@@ -67,7 +67,7 @@ The original "Is Transitivity" chained any two "is" facts, so
 | Recursive Definitions | Detect self-referential patterns in input |
 | Causal Chains | Compose cause facts transitively |
 | Quantifier Shifting | Syllogism patterns over sets |
-| Meta-Rules (Exception > General) | When contradiction found, mark more specific rule as higher priority |
+| Meta-Rules (Exception > General) | When contradiction found, mark more specific rule as higher priority. Since Stage 1.5, this is built in for defaults ("C typically D"): see kernel/conflicts.py. |
 | Procedure Learning | Extract ordered action sequences from instructional text |
 
 ---
