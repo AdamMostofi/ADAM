@@ -1,5 +1,25 @@
 # Changelog
 
+## Stage 1.6 — Wake with Memory (#36)
+
+- **Startup rebuilds everything from SQLite.** `MemorySystem.restore()`
+  rebuilds the engine (given facts and origins, then inference to
+  completion within a 200,000-step budget) and the graph (rows replayed in
+  ID order). The rebuilt graph and beliefs match the ones before the
+  restart.
+- **Startup is read-only.** Opening a current store writes nothing, and
+  three restarts add zero rows. Chat stores every belief the store is
+  missing (`settle()`), including conclusions found at startup.
+- **Classified facts stay classified.** The ambiguous original is marked
+  superseded, never deleted.
+- **Recalled derived facts** are no longer given back to the engine as if
+  given.
+- **Startup cost is measured:** 20,060 given facts take 3.85 s
+  (`scripts/measure_startup.py`). Attention stays per session, and the
+  reasons are recorded.
+- **Removed** the unused `memory/persistence.py`, and the
+  `'memories' in dir()` check in chat.
+
 ## Stage 1.5 — Hold the Contradiction (#31)
 
 - **Defaults with exceptions.** `C typically D` and `C typically_not D`

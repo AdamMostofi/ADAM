@@ -1,0 +1,39 @@
+{
+  "python": "3.11.15",
+  "machine": "x86_64",
+  "runs": [
+    {
+      "given_facts": 1060,
+      "seconds": 0.1626,
+      "rows": 1060,
+      "superseded": 0,
+      "beliefs": 3173,
+      "inferred": 2113,
+      "not_yet_stored": 2113,
+      "saturated": true,
+      "graph_edges": 2120
+    },
+    {
+      "given_facts": 5060,
+      "seconds": 0.7743,
+      "rows": 5060,
+      "superseded": 0,
+      "beliefs": 15173,
+      "inferred": 10113,
+      "not_yet_stored": 10113,
+      "saturated": true,
+      "graph_edges": 10120
+    },
+    {
+      "given_facts": 20060,
+      "seconds": 3.8487,
+      "rows": 20060,
+      "superseded": 0,
+      "beliefs": 60173,
+      "inferred": 40113,
+      "not_yet_stored": 40113,
+      "saturated": true,
+      "graph_edges": 40120
+    }
+  ]
+}

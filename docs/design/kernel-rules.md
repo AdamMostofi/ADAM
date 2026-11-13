@@ -138,13 +138,10 @@ From Stage 1.1 to 1.5, every gap found had a strict `xfail` test in
 `tests/integration/test_known_kernel_gaps.py`. All of those are fixed, so
 that file is gone. What remains is recorded on its issue:
 
-- **Stage 1.6 (#36):** classifying an ambiguous fact replaces it in the
-  engine and stores the classified fact. The original `is` row stays in the
-  memory store, so a restart brings it back, alongside the classified one.
-  Reconciling restored state is Stage 1.6.
-- **Stage 1.6 (#36):** conflict statuses and origins are rebuilt from the
-  stored facts at startup. Statuses aren't stored, because they follow
-  from the facts; origins are stored (schema 3).
+- None at present. Stage 1.6 (#36) closed the last one: a classified
+  fact now supersedes its ambiguous original, and a restart rebuilds the
+  engine (with conflicts and origins) and the graph from the store. See
+  docs/design/restart.md.
 
 ## Tests
 

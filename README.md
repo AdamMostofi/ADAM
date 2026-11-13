@@ -124,8 +124,9 @@ semantic, then re-ranks by attention.*
   context for the data-vault views.
 - **Attention** — STI/LTI ranking decays and re-ranks recalled facts.
 
-Attention is currently in-memory and resets on restart. Persistence and a global
-STI budget are the next memory work.
+Attention is per session by design: it is the focus of the current conversation.
+Everything else comes back on restart: facts, proofs, conflicts, sources and the
+graph are rebuilt from SQLite (docs/design/restart.md).
 
 ---
 
