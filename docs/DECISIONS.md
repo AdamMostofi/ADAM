@@ -64,6 +64,15 @@ Outcomes are as follows:
 | #37 | DE.1 | Fix EQ first; question its value later. | Adopted; the review is #77. | [eq-appraisal.md](design/eq-appraisal.md) |
 | #44 | DD2.1 | The README describes what runs. | Settled: "works today" (each with a test) and "planned", with a demonstrable headline. **The owner may revise the headline.** | [README.md](../README.md) |
 
+## Phase 2 — Forge the Memory Engine
+
+| Issue | ID | Decision | Outcome | Details |
+|---|---|---|---|---|
+| #50 | — | Continue with the reconciler and replay design, or change it. | Settled: continue. Detection moves to `git --no-optional-locks status`, and attribution gains three precise rules. | [spike results](design/2026-11-13-reconciler-spike.md) |
+| #51 | D3 | Where the store lives. | **Open, for the owner.** The configurable default is a per-project folder under `AMEM_HOME` or the user data directory. | `packages/agent-memory/src/agent_memory/location.py` |
+| #51 | D4 | Key storage. | **Open, for the owner.** The interim default is a key file outside the store, or `AMEM_PASSPHRASE`. | `packages/agent-memory/src/agent_memory/keys.py` |
+| #51 | — | One data key per project instead of per session. | Settled (engineering): per-session keys would prevent deduplication. | [engine design 5.2](design/2026-11-06-agent-memory-engine.md) |
+
 ## Later phases (not started)
 
 | Issue | ID | Decision | Outcome |

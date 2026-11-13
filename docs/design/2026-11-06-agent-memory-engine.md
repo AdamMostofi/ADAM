@@ -1,6 +1,6 @@
 # Lossless Tree Memory Engine: Design Spec and Test Plan
 
-**Status:** Proposed, revision 2 (2026-11-09). Design only: **no engine code exists yet.** Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
+**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2: Stage 2.2 implemented sections 4, 5 and 11 (the write path) in `packages/agent-memory/`; the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
 **Working name:** `agent-memory`, command `amem`. The final name is decision D8.
 **Relationship to ADAM:** A standalone product developed inside the ADAM repo until release. ADAM uses it through one interface ([#46](https://github.com/AdamMostofi/ADAM/issues/46)), and the engine never imports ADAM code.
 
@@ -115,7 +115,7 @@ Every adapter translates its agent's events into one versioned format. Memory lo
 |---|---|
 | `event_id` | Unique ID |
 | `schema_version` | Format version, so old records stay readable |
-| `kind` | `session_start`, `user_message`, `assistant_message`, `tool_call`, `tool_result`, `file_change`, `verification`, `decision`, `goal`, `task`, `note`, `compaction`, `session_end`, `subagent_start`, `subagent_stop`, `capture_gap`, `import` |
+| `kind` | `session_start`, `user_message`, `assistant_message`, `tool_call`, `tool_result`, `file_change`, `verification`, `decision`, `goal`, `task`, `note`, `compaction`, `session_end`, `subagent_start`, `subagent_stop`, `capture_gap`, `import`, and `exclusion` (added in Stage 2.2 for section 5.3) |
 | `session_id`, `parent_id` | Position in the historical tree |
 | `writer_id`, `writer_seq` | Which process wrote it, and its order within that writer |
 | `log_position` | Global order in the core log |
@@ -146,6 +146,10 @@ Every adapter translates its agent's events into one versioned format. Memory lo
 ### 5.2 Raw archive
 - Every message, tool input, tool output, file version, and artifact is stored **in full**.
 - Content is compressed, encrypted, and addressed by a keyed hash, so identical content is stored once.
+  - **As built in Stage 2.2:** zlib, then AES-256-GCM with a fresh nonce and the object id as associated
+    data; ids are HMAC-SHA256 of the content. One data key per project, not one per session: per-session keys
+    would stop identical content being deduplicated across sessions. Purge (Stage 2.7) re-encrypts under a new
+    key instead.
 - The database holds references and small metadata; the archive holds the bytes.
 - Previews such as the first and last lines are derived and can be rebuilt. They never replace the original.
 
@@ -493,8 +497,11 @@ Each update is a `declared` event, so its history is kept.
 - **Excluded paths:** their content is never stored.
 
 ### At rest
-- **Encryption:** AES-256-GCM, with a key per session wrapped by a project key.
-- **Key storage:** the OS keychain, or a passphrase on WSL (decision D4).
+- **Encryption:** AES-256-GCM. The design said a key per session wrapped by a project key; Stage 2.2 uses one
+  data key per project (see 5.2 for why), wrapped by the key encryption key.
+- **Key storage:** the OS keychain, or a passphrase on WSL (decision D4). **Provisional in Stage 2.2,
+  pending the owner:** a random key file outside the store (`$XDG_CONFIG_HOME/agent-memory/keys/<project>.key`,
+  mode 0600) by default, or `AMEM_PASSPHRASE` (scrypt). No keychain is used yet.
 - **Object IDs:** keyed hashes, so an ID can't confirm a guessed value.
 - **The search index:** in the first build it stays readable on disk, protected by file permissions, excluded from backups, and rebuilt after any purge.
 
@@ -716,8 +723,8 @@ Taken from each agent's docs on 2026-11-06. Stage 3.5 publishes a table tested a
 |---|---|---|
 | D1 | First agent | **Decided 2026-11-09:** Claude Code, then OpenCode, then Pi |
 | D2 | Language | Python for the prototype; compiled helpers only if measured latency requires them |
-| D3 | Store location | **Open.** Recommend a user data directory per project, configurable to another drive because of C: free space |
-| D4 | Key storage | OS keychain, with a passphrase fallback on WSL |
+| D3 | Store location | **Open, for the owner.** Stage 2.2 implements the recommendation as a configurable default: `AMEM_HOME`, else `$XDG_DATA_HOME/agent-memory/<project>-<hash>`. Changing the default needs no migration |
+| D4 | Key storage | OS keychain, with a passphrase fallback on WSL. **Open, for the owner:** Stage 2.2 uses a key file outside the store (or `AMEM_PASSPHRASE`) until this is decided |
 | D5 | Default capture | **Revised:** everything in full except secrets and explicit exclusions |
 | D6 | Benchmark budget | Agent runs cost API money; start with one model |
 | D7 | Open source | Public at release, MIT, with benchmark data public |
