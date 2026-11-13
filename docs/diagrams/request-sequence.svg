@@ -18,7 +18,7 @@
     <text x="956" y="52" font-size="9" text-anchor="end" fill="#8a877e">SYNC / JSON</text>
   </g>
   <text x="44" y="88" font-family="'Cinzel', 'Times New Roman', serif" font-size="28" fill="#e8e6df">One transmission, end to end</text>
-  <text x="44" y="112" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="10" fill="#8a877e">A message becomes an intent, a memory query, a proof, and a voice.</text>
+  <text x="44" y="112" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="10" fill="#8a877e">A message becomes an intent, a memory query, inference, and a voice.</text>
   <line x1="44" y1="132" x2="956" y2="132" stroke="#2c333e"/>
 
   <g font-family="'Oswald', 'Arial Narrow', sans-serif">
@@ -36,7 +36,7 @@
 
     <rect x="640" y="150" width="160" height="56" rx="4" fill="#151920" stroke="#2c333e"/>
     <text x="720" y="175" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">MEMORY / KERNEL</text>
-    <text x="720" y="193" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">recall / infer / prove</text>
+    <text x="720" y="193" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">recall / infer</text>
 
     <rect x="800" y="150" width="160" height="56" rx="4" fill="#151920" stroke="#2c333e"/>
     <text x="880" y="175" text-anchor="middle" font-size="13" font-weight="600" fill="#e8e6df">MOUTH</text>
@@ -81,10 +81,10 @@
     <text x="420" y="314" text-anchor="middle">intent + appraisal</text>
 
     <rect x="462" y="342" width="118" height="14" rx="2" fill="#101318"/>
-    <text x="521" y="352" text-anchor="middle">recall / infer / prove</text>
+    <text x="521" y="352" text-anchor="middle">recall / infer</text>
 
     <rect x="470" y="380" width="84" height="14" rx="2" fill="#101318"/>
-    <text x="512" y="390" text-anchor="middle">facts + proof</text>
+    <text x="512" y="390" text-anchor="middle">facts</text>
 
     <rect x="524" y="418" width="148" height="14" rx="2" fill="#101318"/>
     <text x="598" y="428" text-anchor="middle">format_response(context)</text>

@@ -1,5 +1,7 @@
 # ADAM Thread Safety Design
 
+**Status:** Current. The engine and memory use `threading.RLock`; the actor-model alternative is not built.
+
 ## Problem
 
 The InferenceEngine uses a regular dict for beliefs, which is not thread-safe for concurrent writes. Race conditions can occur when multiple threads call add_fact(), retract(), or infer() simultaneously.

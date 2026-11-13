@@ -1,5 +1,7 @@
 # Waking with memory
 
+**Status:** Current.
+
 How a restarted ADAM rebuilds what it knew (Stage 1.6, #36).
 
 ## The rule

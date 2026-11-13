@@ -1,5 +1,7 @@
 # EQ appraisal: what it actually does
 
+**Status:** Current. Revisit: Stage 4.4 ([#77](https://github.com/AdamMostofi/ADAM/issues/77)).
+
 Stage 1.7 (#37). DE.1: fix first, then question the value later. EQ currently
 only shapes the tone sent to the Mouth, and #34 narrows that further. Whether
 it earns its place gets reviewed once #34 lands.

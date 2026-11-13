@@ -1,5 +1,7 @@
 # OpenCog Hyperon — what it does better, what ADAM should adopt
 
+**Status:** Current for the adoption decisions, with later changes marked: PLN revision was replaced by best support in Stage 1.4, and proof became saturation over connected facts in Stage 1.1. The runtime comparison describes ADAM before Stage 0.5 (LanceDB). Index: [DECISIONS.md](DECISIONS.md).
+
 *Analysis against the current ADAM codebase (kernel/, memory/, learning/,
 interface/). Scope: identify the genuinely superior ideas, decide adopt /
 adapt / skip, and record why. Nothing here proposes removing ADAM's existing
@@ -57,7 +59,7 @@ are **LATER**. MeTTa-the-language, Rust, DAS, MOSES-evolution and PRIMUS are
 | NARS goal-directed answering | **ADOPTED** | `kernel/prove.py` |
 | MeTTa rules-as-data | **ADOPTED** | `kernel/rules.py`, `learning/skill_compiler.py` |
 | MeTTa pattern matching | **ADOPTED** | `InferenceEngine.query_pattern` |
-| PLN evidence revision | **ADOPTED (staged)** | `kernel/truth.py`, `Belief.revise` |
+| PLN evidence revision | **SUPERSEDED** (Stage 1.4): confidence is the best support, and evidence counts distinct derivations | `kernel/engine.py`, docs/design/kernel-rules.md |
 | MOSES fitness weighting | **ADOPTED (partial)** | `Skill.fitness` |
 | Atomspace n-ary terms | **LATER** | needs a term-model migration |
 | Attention persistence + global budget | **LATER** | `memory/attention.py` |
@@ -395,7 +397,7 @@ knowledge representation and reasoning quality, not throughput.
 | Goal-directed backward chaining (NARS/PLN query discipline) | `kernel/prove.py`, `InferenceEngine.prove` | `tests/unit/test_prove.py` |
 | Declarative rule registry + executable skills | `kernel/rules.py`, `learning/skill_compiler.py` | `tests/unit/test_rules_registry.py` |
 | Pattern queries with `?variables` | `InferenceEngine.query_pattern` | `tests/unit/test_query_pattern.py` |
-| PLN evidence revision (staged) | `kernel/truth.py`, `Belief.revise` | `tests/unit/test_truth_revision.py` |
+| Evidence and best support (replaced PLN revision in Stage 1.4) | `kernel/engine.py` | `tests/unit/test_truth_revision.py` |
 | Fitness-weighted skills | `Skill.fitness` | `tests/unit/test_skill_fitness.py` |
 | Stats surface for deduced facts/contradictions/trace | `interface/core.py`, `/api/stats` | `tests/integration/test_interface.py` |
 | Phase 14: lazy tabs, aria roles, keyboard nav, graph source colours, source filter/badges | `interface/web/*` | `tests/integration/test_interface.py` |

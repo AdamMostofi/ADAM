@@ -1,5 +1,7 @@
 # ADAM — Design Document
 
+**Status:** Current for the layer design. What each rule does today, and what was never built, is in [docs/design/kernel-rules.md](docs/design/kernel-rules.md).
+
 ## Kernel Architecture
 
 ### Two-Layer Design

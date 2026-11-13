@@ -1,6 +1,6 @@
 # ADAM Neuro-Symbolic Vision
 
-**Status:** Proposed — not implemented  
+**Status:** Proposed: the long-term vision, not implemented. Its memory-stack and budget details predate Stages 0.4 and 0.5; see [memory-budget.md](memory-budget.md) and [vector-index.md](vector-index.md).  
 **Date:** 2026-10-28  
 **Repository:** ADAM
 

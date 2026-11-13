@@ -1,5 +1,31 @@
 # Changelog
 
+## Stage 1.8 — Tell the Truth (#44)
+
+- **README split.** The README is now split into "works today" (each
+  capability with the test that shows it) and "planned" (by roadmap phase).
+  - The headline is now a claim that can be shown: "a small, local
+    reasoning system you can audit".
+  - It names related work (the Learning Reader, NELL, Hyperon).
+  - The corrected claims: semantic recall is MiniLM in SQLite (not
+    LanceDB/bge-small); chat infers but doesn't prove; the learning loop
+    isn't connected to chat; skills run as Layer 2 rules.
+- **Roadmap restored.** `docs/ROADMAP.md` had lost Phases 3–9 in an edit on
+  2026-11-09; it is restored and checked against every issue. The new
+  Stage 4.4 (#77), revisiting EQ, makes 53 stages.
+- **`docs/DECISIONS.md`** indexes every recorded decision and its outcome.
+- **Status lines.** Every document now starts with one: current, proposed,
+  superseded or historical.
+- **Diagrams corrected:** 15 rules, no LanceDB, chat infers rather than
+  proves, attention is per session. The stale V0.9/V1.0 timeline is removed.
+- **USB guide** now names the real model (TinyChat15M GGUF, about 98 MB) and
+  the SQLite vector store.
+- **Banners.** "First Of It's Kind" is gone from the CLI and installer
+  banners.
+- **Tests.** `tests/unit/test_docs_truth.py` checks the README capabilities,
+  the roadmap, status lines and links in CI. `tests/integration/test_cli.py`
+  covers the CLI.
+
 ## Stage 1.7 — Steady the Appraisal (#37)
 
 - **EQ matches whole words and phrases** (`learning/eq/lexicon.py`) instead

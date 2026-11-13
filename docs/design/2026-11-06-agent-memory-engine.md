@@ -1,6 +1,6 @@
 # Lossless Tree Memory Engine: Design Spec and Test Plan
 
-**Status:** Revision 2, 2026-11-09. Design only: **no engine code exists yet.** Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
+**Status:** Proposed, revision 2 (2026-11-09). Design only: **no engine code exists yet.** Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
 **Working name:** `agent-memory`, command `amem`. The final name is decision D8.
 **Relationship to ADAM:** A standalone product developed inside the ADAM repo until release. ADAM uses it through one interface ([#46](https://github.com/AdamMostofi/ADAM/issues/46)), and the engine never imports ADAM code.
 

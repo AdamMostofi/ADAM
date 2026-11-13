@@ -1,5 +1,7 @@
 # ADAM Agent Clones — Architecture
 
+**Status:** Proposed. Stage 9.3 ([#75](https://github.com/AdamMostofi/ADAM/issues/75)) revalidates the idea before anything is built. The version labels (V1.0) predate [the roadmap](../ROADMAP.md).
+
 ## Overview
 
 An Agent Clone is a specialized instance of ADAM focused on a specific domain or task. Each clone has its own knowledge, skills, and learning trajectory. The core ADAM maintains full oversight and can absorb knowledge from all clones.

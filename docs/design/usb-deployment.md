@@ -1,5 +1,7 @@
 # ADAM — USB Deployment Guide
 
+**Status:** Proposed: Stage 9.2 ([#74](https://github.com/AdamMostofi/ADAM/issues/74)). Model and store details were corrected in Stage 1.8. The steps are untested.
+
 ## Overview
 
 Run ADAM entirely from a USB drive on any computer. The USB contains the full runtime, models, and dependencies. The host computer only provides CPU, RAM, and GPU (optional).
@@ -18,7 +20,7 @@ ADAM-USB/
 ├── venv/                    # Virtual environment with all deps
 ├── models/
 │   ├── needle2/            # Needle 2 binary (14MB)
-│   └── tinychat15m/         # TinyChat15M weights (~30MB)
+│   └── TinyChat15M.gguf     # TinyChat15M for llama-server (~98 MB)
 ├── adam/                    # This repository
 │   ├── kernel/
 │   ├── memory/
@@ -27,7 +29,7 @@ ADAM-USB/
 │   └── tests/
 ├── data/                    # Runtime data (created on first run)
 │   ├── adam_memory.db
-│   └── adam_vectors.lance/
+│   └── adam_vectors.db      # embeddings (SQLite)
 ├── start.sh                 # Executable launcher (Linux/Mac)
 ├── start.bat               # Executable launcher (Windows)
 └── README.txt
@@ -43,19 +45,17 @@ git clone https://github.com/AdamMostofi/ADAM.git /media/USB/ADAM-USB/adam
 cd /media/USB/ADAM-USB
 python -m venv venv
 source venv/bin/activate
-pip install -r adam/requirements.txt
+pip install -e adam   # or: cd adam && uv sync --locked
 ```
 
 ### 2. Download Models to USB
 
 ```bash
 mkdir -p /media/USB/ADAM-USB/models
-python -c "
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import shutil
-AutoTokenizer.from_pretrained('sshleifer/tiny-gpt2', cache_dir='/media/USB/ADAM-USB/models')
-AutoModelForCausalLM.from_pretrained('sshleifer/tiny-gpt2', cache_dir='/media/USB/ADAM-USB/models')
-"
+# The Mouth is TinyChat15M served by llama-server; install.sh builds llama-server
+# and converts the model. Copy the converted model onto the USB:
+cp adam/models/TinyChat15M.gguf /media/USB/ADAM-USB/models/
+# The embedding model (MiniLM-L6-v2 int8, ~23 MB) downloads into the Hugging Face cache on first use.
 ```
 
 ### 3. Create Launcher

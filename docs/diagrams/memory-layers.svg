@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" role="img" aria-labelledby="mem-title mem-desc">
   <title id="mem-title">ADAM memory layers</title>
-  <desc id="mem-desc">Four memory layers: exact SQLite facts, semantic LanceDB embeddings, a NetworkX graph, and attention ranking.</desc>
+  <desc id="mem-desc">Four memory layers: exact SQLite facts, semantic embeddings in SQLite, a NetworkX graph, and attention ranking.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M0,0 L8,4 L0,8 Z" fill="#8a877e"/>
@@ -39,13 +39,13 @@
     <text x="82" y="385" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">L2</text>
     <text x="132" y="378" font-size="16" font-weight="600" fill="#e8e6df">SEMANTIC</text>
     <text x="132" y="396" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">meaning</text>
-    <text x="860" y="385" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">LanceDB · fastembed embeddings</text>
+    <text x="860" y="385" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">SQLite · MiniLM embeddings</text>
 
     <rect x="60" y="430" width="820" height="72" rx="4" fill="#151920" stroke="#2c333e"/>
     <text x="82" y="471" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">L1</text>
     <text x="132" y="464" font-size="16" font-weight="600" fill="#e8e6df">EXACT</text>
     <text x="132" y="482" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#8a877e">verbatim</text>
-    <text x="860" y="471" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">SQLite · facts + proof chains</text>
+    <text x="860" y="471" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#b8b4a8">SQLite · facts + derivations</text>
   </g>
 
   <g stroke-width="1" fill="none">
@@ -64,5 +64,5 @@
     <text x="560" y="552">graph supplies context</text>
     <text x="956" y="552" text-anchor="end" fill="#5f6570">write path touches all three stores</text>
   </g>
-  <text x="44" y="580" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">Attention is in-memory and resets on restart; persistence and a global STI budget are planned next.</text>
+  <text x="44" y="580" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#5f6570">Attention is per session by design; everything else is rebuilt from SQLite on restart.</text>
 </svg>

@@ -51,12 +51,12 @@
     <rect x="588" y="224" width="100" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <rect x="588" y="232" width="3" height="48" fill="#d4a94a"/>
     <text x="600" y="248" font-size="12" font-weight="600" fill="#e8e6df">KERNEL</text>
-    <text x="600" y="266" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">16 rules / proof</text>
+    <text x="600" y="266" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">15 rules / proofs</text>
 
     <rect x="700" y="224" width="100" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <rect x="700" y="232" width="3" height="48" fill="#4f7dff"/>
     <text x="712" y="248" font-size="12" font-weight="600" fill="#e8e6df">MEMORY</text>
-    <text x="712" y="266" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">SQLite / LanceDB</text>
+    <text x="712" y="266" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">SQLite / vectors</text>
 
     <rect x="588" y="304" width="100" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <rect x="588" y="312" width="3" height="48" fill="#a86bff"/>
@@ -88,5 +88,5 @@
   <rect x="44" y="466" width="4" height="28" fill="#d4a94a"/>
   <text x="62" y="484" font-family="'Oswald', 'Arial Narrow', sans-serif" font-size="14" fill="#e8e6df">Knowledge is stored, not baked into weights.</text>
   <text x="956" y="484" text-anchor="end" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="9" fill="#d4a94a">4 SUBSYSTEMS / 3 STORES / 0 CLOUD CALLS</text>
-  <text x="44" y="520" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">Local-first / Python / SQLite / LanceDB / NetworkX / llama-server</text>
+  <text x="44" y="520" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">Local-first / Python / SQLite / NetworkX / llama-server</text>
 </svg>

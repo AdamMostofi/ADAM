@@ -50,15 +50,15 @@
 
     <rect x="38" y="286" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <text x="54" y="308" font-size="11" font-weight="600" fill="#e8e6df">Goal-directed proof</text>
-    <text x="54" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">backward chaining</text>
+    <text x="54" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">over connected facts</text>
 
     <rect x="38" y="362" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <text x="54" y="384" font-size="11" font-weight="600" fill="#e8e6df">Rules + pattern queries</text>
     <text x="54" y="402" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">declarative · ?variables</text>
 
     <rect x="38" y="438" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
-    <text x="54" y="460" font-size="11" font-weight="600" fill="#e8e6df">Truth revision + fitness</text>
-    <text x="54" y="478" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">evidence · skill outcomes</text>
+    <text x="54" y="460" font-size="11" font-weight="600" fill="#e8e6df">Evidence + fitness</text>
+    <text x="54" y="478" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">best support · skill outcomes</text>
 
     <rect x="310" y="210" width="208" height="64" rx="4" fill="#1a1710" stroke="#d4a94a" stroke-width="1.2"/>
     <text x="326" y="232" font-size="11" font-weight="600" fill="#e8e6df">Proof step budget</text>
@@ -66,7 +66,7 @@
 
     <rect x="310" y="286" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <text x="326" y="308" font-size="11" font-weight="600" fill="#e8e6df">Attention persistence</text>
-    <text x="326" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">metadata · global cap</text>
+    <text x="326" y="326" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="8" fill="#8a877e">with the memory engine</text>
 
     <rect x="582" y="210" width="208" height="64" rx="4" fill="#101318" stroke="#2c333e"/>
     <text x="598" y="232" font-size="11" font-weight="600" fill="#e8e6df">n-ary terms</text>

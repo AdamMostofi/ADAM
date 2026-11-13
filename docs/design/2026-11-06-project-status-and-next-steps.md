@@ -1,6 +1,6 @@
 # ADAM — Project Status and Next Steps
 
-**Status:** Current — implemented state and recommended next work
+**Status:** Superseded. A snapshot at `a4a21b5` (2026-11-06). For the current state, see [README.md](../../README.md); for the order of work, [ROADMAP.md](../ROADMAP.md); for decisions, [DECISIONS.md](../DECISIONS.md).
 **Date:** 2026-11-06
 **Repository:** ADAM
 **Scope:** State of ADAM at `a4a21b5`: what it is, what is shipped, what is

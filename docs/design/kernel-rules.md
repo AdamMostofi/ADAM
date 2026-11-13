@@ -1,5 +1,7 @@
 # Kernel Layer 1 rules
 
+**Status:** Current. Updated in every Phase 1 stage, 1.1 to 1.6.
+
 The rules in `kernel/foundations.py`, as registered in `kernel/rules.py`
 (`BUILTIN_RULES`). This file is the reference for what each rule does, how its
 input is read, and which test checks it. It was written in Stage 1.1 (#27).

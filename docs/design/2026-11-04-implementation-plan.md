@@ -1,6 +1,6 @@
 # ADAM — Architecture and UI/UX Implementation Plan
 
-**Status:** Proposed — plan only; no memory-backend implementation in this pass  
+**Status:** Superseded by [ROADMAP.md](../ROADMAP.md) (the order of work) and [DECISIONS.md](../DECISIONS.md). Kept as a record of the reasoning. Its LanceDB and fastembed details predate Stage 0.5.  
 **Date:** 2026-11-04  
 **Repository:** ADAM  
 **Scope:** durable record of the neuro-symbolic architecture direction, the

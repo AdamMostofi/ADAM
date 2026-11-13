@@ -1,5 +1,7 @@
 # ADAM — Commit History & Design Decisions
 
+**Status:** Historical. The early commit history, up to V0.7 and the Mouth fix. Its LanceDB, fastembed and bge-small choices were replaced in Stage 0.5 ([vector-index.md](design/vector-index.md)). Later history: [CHANGELOG.md](../CHANGELOG.md) and `git log`.
+
 This file documents every logical commit: what changed, why, the alternatives
 considered, and the theories behind each decision.
 

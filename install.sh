@@ -2,7 +2,7 @@
 set -e
 
 echo "=================================="
-echo "  ADAM — First Of It's Kind"
+echo "  ADAM — a small, local reasoning system"
 echo "  One-command installation"
 echo "=================================="
 echo ""

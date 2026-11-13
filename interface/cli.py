@@ -27,7 +27,7 @@ def main():
         console.print(Panel(result["response"], title="ADAM", border_style="green"))
         return
 
-    console.print(Panel.fit("[bold cyan]ADAM — First Of It's Kind[/bold cyan]\n[dim]Type 'quit' to exit, 'web' to launch UI[/dim]"))
+    console.print(Panel.fit("[bold cyan]ADAM — a small, local reasoning system[/bold cyan]\n[dim]Type 'quit' to exit, 'web' to launch UI[/dim]"))
 
     while True:
         try:

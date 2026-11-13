@@ -1,5 +1,7 @@
 # Future Enhancements
 
+**Status:** Historical. Ideas recorded before the roadmap; the planned work is in [ROADMAP.md](../ROADMAP.md).
+
 ## Joiner — Complex Rule Learning
 
 **Status:** Deferred to V0.5+
