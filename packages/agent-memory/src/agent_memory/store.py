@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_memory import keys
+from agent_memory import keys, navigate, structure
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
 from agent_memory.location import synced_folder_warnings
 from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, canonical_json
@@ -113,6 +113,7 @@ class Store:
                 CREATE TRIGGER IF NOT EXISTS events_append_only_delete BEFORE DELETE ON events
                     BEGIN SELECT RAISE(ABORT, 'the event log is append-only'); END;
             """)
+            structure.create(conn)
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('store_format', ?)", (str(STORE_FORMAT),))
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('created_at', ?)", (_now(),))
@@ -224,6 +225,7 @@ class Store:
                 if row:   # a concurrent retry won the race
                     conn.execute("COMMIT")
                     return self._row(row)
+            structure.validate(conn, record["kind"], record["summary_fields"])
             last = conn.execute("SELECT writer_seq, record_hash FROM events WHERE writer_id = ? "
                                 "ORDER BY writer_seq DESC LIMIT 1", (record["writer_id"],)).fetchone()
             record["writer_seq"] = (last[0] + 1) if last else 1
@@ -241,8 +243,10 @@ class Store:
                  record["recorded_at"], record["payload_object"], canonical_json(record["summary_fields"]),
                  record["completeness"], canonical_json(record["redactions"]), record["idempotency_key"],
                  record["prev_hash"], record_hash))
+            stored = Event(log_position=cur.lastrowid, record_hash=record_hash, **record)
+            structure.apply(conn, stored)   # the tree and graph change in the same transaction
             conn.execute("COMMIT")
-            return Event(log_position=cur.lastrowid, record_hash=record_hash, **record)
+            return stored
         except BaseException:
             if conn.in_transaction:
                 conn.execute("ROLLBACK")
@@ -333,5 +337,78 @@ class Store:
                 self.archive.get(oid)
             except CorruptObject as err:
                 problems.append({"type": "object_problem", "object_id": oid, "detail": str(err)})
+        conn = self._connect()
+        try:
+            stored = structure.snapshot(conn)
+        finally:
+            conn.close()
+        rebuilt = structure.rebuild(self.events())
+        for table in structure.TABLES:
+            if stored[table] != rebuilt[table]:
+                problems.append({"type": "structure_mismatch", "table": table,
+                                 "detail": "doesn't match a rebuild from the event log"})
         return {"ok": not problems, "events": len(positions), "writers": len(chains),
                 "objects_checked": len(referenced), "problems": problems}
+
+    # ------------------------------------------------------------ declaring structure (design 6.2-6.4)
+    def declare(self, kind: str, session_id: str, writer_id: str, **fields) -> Event:
+        """Append a declared event (path, goal, task, blocker, decision, note, relation, retraction)."""
+        return self.append(EventInput(kind=kind, session_id=session_id, writer_id=writer_id,
+                                      summary_fields=fields, agent=fields.pop("agent", "unknown")))
+
+    def create(self, kind: str, session_id: str, writer_id: str, **fields) -> str:
+        """Create a planning record and return its id (for example "path:<event id>")."""
+        return f"{kind}:{self.declare(kind, session_id, writer_id, op='create', **fields).event_id}"
+
+    def set_status(self, kind: str, record_id: str, status: str, session_id: str, writer_id: str, **fields) -> Event:
+        return self.declare(kind, session_id, writer_id, op="status", id=record_id, status=status, **fields)
+
+    def relate(self, src: str, dst: str, type: str, session_id: str, writer_id: str,
+               basis: str = "declared", reason: str | None = None) -> Event:
+        return self.declare("relation", session_id, writer_id, **{"from": src, "to": dst, "type": type,
+                                                                  "basis": basis, "reason": reason})
+
+    def retract(self, edge_id: int, session_id: str, writer_id: str, reason: str | None = None) -> Event:
+        return self.declare("retraction", session_id, writer_id, edge_id=edge_id, reason=reason)
+
+    # ------------------------------------------------------------ navigation (design 6.1)
+    def _nav(self, fn, *args, **kwargs):
+        conn = self._connect()
+        try:
+            return fn(conn, *args, **kwargs)
+        finally:
+            conn.close()
+
+    def node(self, node_id: str, include_retracted: bool = False):
+        return self._nav(navigate.node, node_id, include_retracted)
+
+    def tree(self, node_id: str = "project", depth: int = 2):
+        return self._nav(navigate.tree, node_id, depth)
+
+    def trace(self, start: str, types=None, direction: str = "out", depth: int = 6):
+        return self._nav(navigate.trace, start, types, direction, depth)
+
+    def edges(self, node_id: str, direction: str = "out", types=None, include_retracted: bool = False):
+        return self._nav(navigate.edges, node_id, direction, types, include_retracted)
+
+    def project_view(self):
+        return self._nav(navigate.project)
+
+    def session_view(self, session_id: str):
+        return self._nav(navigate.session, session_id)
+
+    def event_view(self, event_id: str):
+        return self._nav(navigate.event, event_id)
+
+    def file_view(self, path: str):
+        return self._nav(navigate.file, path)
+
+    def decision_view(self, decision_id: str):
+        return self._nav(navigate.decision, decision_id)
+
+    def path_view(self, path_id: str):
+        return self._nav(navigate.path, path_id)
+
+    def verification_view(self, event_id: str):
+        ev = self.event(event_id)
+        return self._nav(navigate.verification, event_id, ev.summary_fields if ev else {})

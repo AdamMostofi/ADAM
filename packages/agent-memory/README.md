@@ -19,6 +19,13 @@ an environment where ADAM isn't installed.
   - secret redaction before any write, and path exclusions;
   - gap records instead of partial copies;
   - a configurable store location.
+- **Stage 2.3:**
+  - the historical tree (project, session, turn, event);
+  - typed relationships with a basis on every edge;
+  - development paths with status history;
+  - goals, tasks, blockers, decisions and notes;
+  - every navigation in design 6.1, and `trace()` along relationships.
+  - All of it is append-only, and `verify()` rebuilds it from the log.
 
 ```bash
 cd packages/agent-memory

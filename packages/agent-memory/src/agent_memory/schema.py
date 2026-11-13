@@ -18,6 +18,8 @@ KINDS = frozenset({
     "session_end", "subagent_start", "subagent_stop", "capture_gap", "import",
     # Stage 2.2: content withheld because its path is explicitly excluded (design 5.3).
     "exclusion",
+    # Stage 2.3: declared structure (design 6): development paths, blockers, typed relations, retractions.
+    "path", "blocker", "relation", "retraction",
 })
 
 COMPLETENESS = ("captured", "partial", "unavailable", "imported")
