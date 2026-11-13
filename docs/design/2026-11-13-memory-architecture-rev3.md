@@ -1,6 +1,6 @@
 # Lossless Tree Memory: Architecture Revision 3
 
-**Status:** Proposed (2026-11-13), for the owner. It reconciles the built engine with the original four-tree design. When accepted, it supersedes sections 3, 6, 9, 10 and 15 of [revision 2](2026-11-06-agent-memory-engine.md), and the [four-trees review](2026-11-13-four-trees-review.md). No code changes until it is accepted.
+**Status:** Current. Accepted by the owner on 2026-11-13 (D10 to D13). It reconciles the built engine with the original four-tree design, and supersedes sections 3, 6, 9, 10 and 15 of [revision 2](2026-11-06-agent-memory-engine.md), and the [four-trees review](2026-11-13-four-trees-review.md). Stage issues: #85 (2.6), #86 (2.7), #87 (2.8), #55 (2.9), #88 (2.10), #76 (2.11).
 
 **The principle this revision protects:** the entire history is kept permanently, but the agent loads only what it needs, from the right tree, at the right time. Everything stays reachable without overwhelming the active context window.
 
@@ -424,7 +424,7 @@ These are stated plainly, not simplified away:
 
 | # | Question | Recommendation |
 |---|---|---|
-| D10 | Accept revision 3: four trees as independent structures over one shared store, a cross-tree layer, and the context manager | Accept |
-| D11 | Plan: insert Stages 2.6 to 2.8 and 2.10; move #55 to 2.9 and #76 to 2.11 | Accept (57 stages) |
-| D12 | Default context budgets and tree shares | Start as in 7.3. Tune with the benchmark |
-| D13 | Profiles enabled in Phase 2 | `generic`, `software`, `documents`. Others later, on demand |
+| D10 | Accept revision 3: four trees as independent structures over one shared store, a cross-tree layer, and the context manager | **Accepted 2026-11-13** |
+| D11 | Plan: insert Stages 2.6 to 2.8 and 2.10; move #55 to 2.9 and #76 to 2.11 | **Accepted 2026-11-13** (57 stages) |
+| D12 | Default context budgets and tree shares | **Accepted 2026-11-13:** as in 7.3, tuned with the benchmark |
+| D13 | Profiles enabled in Phase 2 | **Accepted 2026-11-13:** `generic`, `software`, `documents`; others later, on demand |

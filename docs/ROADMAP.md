@@ -1,8 +1,8 @@
 # ADAM Roadmap
 
-**Status:** Current: 10 phases, 53 stages. This is the single order of work. Every stage has one previous and one next stage, and only one stage runs at a time. It replaces the phase numbers in older design docs, which remain useful as records of the reasoning.
+**Status:** Current: 10 phases, 57 stages. This is the single order of work. Every stage has one previous and one next stage, and only one stage runs at a time. It replaces the phase numbers in older design docs, which remain useful as records of the reasoning.
 
-Memory engine design: [2026-11-06-agent-memory-engine.md](design/2026-11-06-agent-memory-engine.md).
+Memory engine design: [2026-11-06-agent-memory-engine.md](design/2026-11-06-agent-memory-engine.md), with [architecture revision 3](design/2026-11-13-memory-architecture-rev3.md) (accepted 2026-11-13), which reshaped Phase 2 from stage 2.6 on.
 
 **Rules:** phases only group stages and hold no work of their own. Each piece of work belongs to exactly one stage. On a no-go at stage 3.2, close 3.3 to 3.6 as not planned and continue at 4.1.
 
@@ -45,8 +45,12 @@ Build the core of the Lossless Tree Memory Engine, with no dependency on ADAM.
 | 2.3 | [#52](https://github.com/AdamMostofi/ADAM/issues/52) | Grow the Tree | Make the historical tree, the typed relationship graph, development paths, and planning records part of the core. |
 | 2.4 | [#53](https://github.com/AdamMostofi/ADAM/issues/53) | Map the Code | Track every file version, keep an incrementally updated code dependency graph, and record verifications with full context. |
 | 2.5 | [#54](https://github.com/AdamMostofi/ADAM/issues/54) | Survive the Crash | Reconcile memory with the real files and git, recover from crashes by replay, check integrity, and handle several agents at once. |
-| 2.6 | [#55](https://github.com/AdamMostofi/ADAM/issues/55) | Open the Archive | Generate the structured active context, deliver it in levels, and add the retrieval tools and CLI. |
-| 2.7 | [#76](https://github.com/AdamMostofi/ADAM/issues/76) | Burn the Leak | Add secret purge and storage reporting, then pass the complete engine test suite. |
+| 2.6 | [#85](https://github.com/AdamMostofi/ADAM/issues/85) | Plant the Four Trees | Give the memory four independent trees (History, Artifact, Knowledge, Active State) over one shared store, a cross-tree relationship layer, a basis on every record, and domain profiles. |
+| 2.7 | [#86](https://github.com/AdamMostofi/ADAM/issues/86) | Map the Artifacts | Add a symbol index, document structure, metadata for any artifact, and artifact search. |
+| 2.8 | [#87](https://github.com/AdamMostofi/ADAM/issues/87) | Shape the Knowledge | Add knowledge kinds (requirements, concepts, bugs, solutions and more), a topic hierarchy, and knowledge and history search. |
+| 2.9 | [#55](https://github.com/AdamMostofi/ADAM/issues/55) | Hold the Present | Build the Active State tree: sections of declared and generated items, staleness, and levels. |
+| 2.10 | [#88](https://github.com/AdamMostofi/ADAM/issues/88) | Mind the Context | Build the dynamic context manager: ledger, budgets, priorities, load, offload, restore, and compaction recovery, with per-tree tools and the CLI. |
+| 2.11 | [#76](https://github.com/AdamMostofi/ADAM/issues/76) | Burn the Leak | Add secret purge, storage reporting and tiered lossless compression, then pass the complete engine test suite and context-limit stress tests. |
 
 ## Phase 3 — Carry the Memory ([#48](https://github.com/AdamMostofi/ADAM/issues/48))
 
