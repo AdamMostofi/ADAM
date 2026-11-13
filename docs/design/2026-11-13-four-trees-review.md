@@ -1,6 +1,6 @@
 # Four Trees Review: Did the Engine Drift From the Original Design?
 
-**Status:** Proposed (2026-11-13), for the owner to decide as D10. No code changes until it is decided.
+**Status:** Superseded by [architecture revision 3](2026-11-13-memory-architecture-rev3.md), which expands this review into a full specification. It is kept as the record of how the drift was found.
 **Compares:**
 - the owner's original memory design (two pasted messages, 2026-11-06 and 2026-11-09);
 - [engine design revision 2](2026-11-06-agent-memory-engine.md);
