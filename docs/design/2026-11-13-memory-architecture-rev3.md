@@ -176,6 +176,36 @@ Code references are to `packages/agent-memory/src/agent_memory/`.
 | **Navigator** | `state.overview()` (level 0), `state.section(name, level)`, `state.item(id)` |
 | **Built today** | goal, task and blocker records with statuses; verification status. Sections and generation are missing |
 
+### 4.0 As built (Stage 2.6, #85)
+- **Trees** (`structure.py`):
+  - every node has a `tree` and a `basis` column;
+  - the roots are `history:`, `artifacts:`, `knowledge:` and `state:`;
+  - `SCHEMAS` lists each tree's node types and what each may contain, and is checked on every write;
+  - `contains` edges can't be declared or retracted.
+- **Knowledge groups** (`approaches`, `decisions`, `notes`) and **state sections** (`objectives`, `tasks`, `blockers`, `open_conflicts`) are created on first use. Topics arrive in 2.8, and more sections in 2.9.
+- **Stable ids:**
+  - planning records keep `<kind>:<event id>`;
+  - a development path is a knowledge `approach` with id `path:...`;
+  - artifacts are `artifact:<path>`, under `collection:<folder>` nodes;
+  - a legacy `file:<path>` in the log resolves to the artifact (`structure.resolve`).
+- **Navigators** (`trees.py`): `store.history`, `store.artifacts`, `store.knowledge`, `store.state`, each with `root()`, `open()`, `links()` and `schema()`, plus per-tree lookups (`sessions`, `open_path`, `versions`, `find`, `section`). Listings are short entries (id, type, label, status, basis, child count, link counts by tree). A navigator returns nothing for another tree's node.
+- **Cross-tree layer:**
+  - edges carry `cross_tree`, which is indexed;
+  - `store.links(node, to_tree, types)` follows only cross links;
+  - `verify` checks every tree's shape (exactly one container per node) and every cross flag.
+- **Basis:**
+  - `observed` replaces `recorded`;
+  - structural path proposals are `inferred`, with the rule named;
+  - file versions record `attribution` and `attribution_basis`: `agent_tool` and `baseline` are observed; `git_operation`, `agent_bash` and `external` are inferred; `unattributed` has none; changes an adapter reported are `declared`.
+- **Profiles** (`profiles.py`):
+  - `generic` (always on) and `software` (the default pair);
+  - they are stored in the store;
+  - without `software`, verification is refused (`ProfileError`), the code graph is skipped, and reconciliation walks the folder even in a git repository.
+- **Store format 2:**
+  - an older store rebuilds its structure from the log when opened, in one transaction, and records a `recovery` event (`op: migrate`);
+  - older checkpoints are reported as superseded, not corrupt, and a fresh checkpoint is taken;
+  - tested with a store written by the real Stage 2.5 code.
+
 ### 4.5 Cross-tree relationship layer
 
 - **What it is:** a link whose ends are in different trees. It is stored in the shared edge table and marked `cross`, with its own index: from-tree, to-tree, type, basis.

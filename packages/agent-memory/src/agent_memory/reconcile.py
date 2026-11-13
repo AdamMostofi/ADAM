@@ -64,6 +64,12 @@ class Change:
     old_path: str | None = None
     resolves_intent: str | None = None
 
+    @property
+    def basis(self) -> str | None:
+        """How the attribution is known: observed, inferred, or None (unattributed)."""
+        from agent_memory.structure import ATTRIBUTION_BASIS
+        return ATTRIBUTION_BASIS.get(self.attribution)
+
 
 @dataclass
 class Result:
@@ -86,8 +92,9 @@ class Reconciler:
             conn.executescript(SCHEMA)
         finally:
             conn.close()
-        self.is_git = subprocess.run(["git", "-C", str(self.root), "rev-parse", "--git-dir"],
-                                     capture_output=True).returncode == 0
+        # git acceleration and git-operation attribution belong to the software profile; others walk the folder.
+        self.is_git = "software" in getattr(store, "profiles", ("software",)) and subprocess.run(
+            ["git", "-C", str(self.root), "rev-parse", "--git-dir"], capture_output=True).returncode == 0
 
     # ------------------------------------------------------------ git and files
     def _git(self, *args: str, check: bool = True) -> str:

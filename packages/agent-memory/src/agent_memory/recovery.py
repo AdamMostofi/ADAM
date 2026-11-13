@@ -56,7 +56,9 @@ def _heads(conn, upto: int) -> dict[str, list]:
 
 
 def _encode(snap: dict) -> bytes:
-    return json.dumps({t: [list(r) for r in rows] for t, rows in snap.items()}, separators=(",", ":")).encode()
+    from agent_memory.store import STORE_FORMAT
+    return json.dumps({"format": STORE_FORMAT, "tables": {t: [list(r) for r in rows] for t, rows in snap.items()}},
+                      separators=(",", ":")).encode()
 
 
 def checkpoint(store, reason: str = "manual") -> int | None:
@@ -101,8 +103,11 @@ def check_checkpoint(store, conn, row) -> tuple[bool, str, dict | None]:
         return False, f"checkpoint {checkpoint_id}: snapshot doesn't match its hash", None
     if _heads(conn, position) != json.loads(heads):
         return False, f"checkpoint {checkpoint_id}: chain heads don't match the log at position {position}", None
+    from agent_memory.store import STORE_FORMAT
     data = json.loads(raw)
-    return True, "", {t: [tuple(r) for r in rows] for t, rows in data.items()}
+    if data.get("format") != STORE_FORMAT:
+        return False, f"checkpoint {checkpoint_id}: written by an older store format (superseded)", None
+    return True, "", {t: [tuple(r) for r in rows] for t, rows in data["tables"].items()}
 
 
 def checkpoints_report(store) -> list[dict]:
@@ -111,7 +116,8 @@ def checkpoints_report(store) -> list[dict]:
         out = []
         for row in conn.execute("SELECT * FROM checkpoints ORDER BY checkpoint_id").fetchall():
             ok, reason, _ = check_checkpoint(store, conn, row)
-            out.append({"checkpoint_id": row[0], "log_position": row[1], "valid": ok, "problem": reason or None})
+            out.append({"checkpoint_id": row[0], "log_position": row[1], "valid": ok, "problem": reason or None,
+                        "superseded": "older store format" in reason})
         return out
     finally:
         conn.close()

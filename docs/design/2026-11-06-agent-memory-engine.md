@@ -1,6 +1,6 @@
 # Lossless Tree Memory Engine: Design Spec and Test Plan
 
-**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure), Stage 2.4 section 7 (file history, code graph, verification), Stage 2.5 section 8 (reconciliation, checkpoints, recovery, concurrency); the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
+**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure), Stage 2.4 section 7 (file history, code graph, verification), Stage 2.5 section 8 (reconciliation, checkpoints, recovery, concurrency), Stage 2.6 the four trees of revision 3; the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
 **Revision 3 accepted (2026-11-13):** [architecture revision 3](2026-11-13-memory-architecture-rev3.md) restores the four-tree design and adds the context manager. It supersedes sections 3, 6, 9, 10 and 15 here; the rest of this document still holds.
 **Working name:** `agent-memory`, command `amem`. The final name is decision D8.
 **Relationship to ADAM:** A standalone product developed inside the ADAM repo until release. ADAM uses it through one interface ([#46](https://github.com/AdamMostofi/ADAM/issues/46)), and the engine never imports ADAM code.

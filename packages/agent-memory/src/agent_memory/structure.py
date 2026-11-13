@@ -1,34 +1,43 @@
-"""The permanent core's structure: historical tree, relationships, paths, planning (design section 6).
+"""The permanent core's structure: four trees and the links between them (architecture revision 3, section 4).
 
 Every structural fact comes from an event. `apply(conn, event)` is the only
 writer of the structure tables. It runs in the same transaction as the event
 insert, and it is a deterministic function of the event and the structure
-already there:
+already there. `rebuild()` recomputes everything from the log, which `verify`
+and recovery use.
 
-* **Recorded** structure comes from ordinary events:
-  - the project, session, turn and event nodes, joined by ordered
-    `contains` edges;
-  - `triggered_by` edges from an event's `parent_id`;
-  - `modifies` edges from file changes;
-  - session resume, fork and continuation links;
-  - path proposals from structural signals: a session fork, a new git
-    branch, or a reported revert.
-* **Declared** structure comes from planning events: `path`, `goal`, `task`,
-  `blocker`, `decision`, `note`, `relation` and `retraction`, each carrying
-  its operation in `summary_fields`.
+**Four trees, one store.** Every node belongs to exactly one tree:
+
+| Tree | Root | Holds |
+|---|---|---|
+| history | `history:` | sessions, turns, events: what happened |
+| artifacts | `artifacts:` | collections (folders) and artifacts (any file or resource), with versions: what exists |
+| knowledge | `knowledge:` | groups of entries: approaches (development paths), decisions, notes: what is known |
+| state | `state:` | sections of items: objectives, tasks, blockers, open conflicts: what matters now |
+
+* **Tree structure:** each tree's shape is made by `contains` edges inside
+  it, and checked against that tree's schema (`SCHEMAS`) on every write.
+* **Cross-tree links:** edges whose ends are in different trees are marked
+  `cross`, and they form the cross-tree relationship layer.
+
+**Basis, on every node, status and edge:**
+- `observed`: the engine saw it through an instrumented operation;
+- `declared`: an agent or the user stated it;
+- `inferred`: the engine derived it from evidence, and the rule is named in the record.
+
+**Stable ids:** record ids that appear in the log never change.
+- Planning records keep `<kind>:<event id>`. A development path is a knowledge
+  `approach` whose id is still `path:...`.
+- Artifacts are `artifact:<path>`. A legacy `file:<path>` reference, from a
+  store written before format 2, resolves to the same node.
 
 The tables are append-only, like the log:
 - a status change is a new row in `statuses`;
 - a withdrawn edge gets a row in `retractions`;
 - nothing is updated or deleted.
 
-Because structure is a pure function of the log, `rebuild()` can recompute
-it from scratch. `Store.verify()` uses that to detect tampering with these
-tables, and Stage 2.5's replay uses it for recovery.
-
-The boundary rule (design 1): the engine records time order and observed
-links. It never claims one event caused another unless an event declares it,
-and every edge says how it is known (`basis`).
+The boundary rule: the engine records time order and observed links. It
+never claims one event caused another unless an event declares it.
 """
 from __future__ import annotations
 
@@ -48,7 +57,20 @@ EDGE_TYPES = frozenset({
     "blocks", "blocked_by", "advances",                                              # planning
     "related_to",                                                                    # general
 })
-BASES = ("recorded", "declared", "inferred")
+BASES = ("observed", "declared", "inferred")
+
+TREES = ("history", "artifacts", "knowledge", "state")
+# Per-tree schema: node type -> the node types it may contain.
+SCHEMAS = {
+    "history": {"root": ("session",), "session": ("turn", "event"), "turn": ("event",), "event": ()},
+    "artifacts": {"root": ("collection", "artifact"), "collection": ("collection", "artifact"), "artifact": ()},
+    "knowledge": {"root": ("group",), "group": ("approach", "decision", "note"),
+                  "approach": (), "decision": (), "note": ()},
+    "state": {"root": ("section",), "section": ("goal", "task", "blocker", "conflict"),
+              "goal": (), "task": (), "blocker": (), "conflict": ()},
+}
+TREE_OF = {t: tree for tree, schema in SCHEMAS.items() for t in schema if t != "root"}
+GROUP_TYPES = {"group", "section"}
 
 STATUSES = {
     "path": ("proposed", "exploring", "selected", "abandoned", "superseded", "reconsidered"),
@@ -61,34 +83,45 @@ STATUSES = {
 INITIAL = {"path": "proposed", "goal": "active", "task": "open", "decision": "proposed", "blocker": "open",
            "conflict": "open"}
 PLANNING_KINDS = {"path", "goal", "task", "blocker", "decision", "conflict"}
+# The log's event kind -> the node type it creates, and the group or section that holds it.
+KIND_NODE = {"path": "approach", "decision": "decision", "goal": "goal", "task": "task", "blocker": "blocker",
+             "conflict": "conflict", "note": "note"}
+CONTAINER = {"approach": "knowledge:approaches", "decision": "knowledge:decisions", "note": "knowledge:notes",
+             "goal": "state:objectives", "task": "state:tasks", "blocker": "state:blockers",
+             "conflict": "state:open_conflicts"}
 PATH_ROLES = ("experiment", "accepted", "reverted")
+# How a reconciled file change was attributed -> how that attribution is known.
+ATTRIBUTION_BASIS = {"agent_tool": "observed", "baseline": "observed", "git_operation": "inferred",
+                     "agent_bash": "inferred", "external": "inferred", "unattributed": None}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS nodes (
-    node_id TEXT PRIMARY KEY, node_type TEXT NOT NULL, label TEXT, attrs TEXT NOT NULL,
-    source_event TEXT NOT NULL, log_position INTEGER NOT NULL);
+    node_id TEXT PRIMARY KEY, node_type TEXT NOT NULL, tree TEXT NOT NULL, basis TEXT NOT NULL, label TEXT,
+    attrs TEXT NOT NULL, source_event TEXT NOT NULL, log_position INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS edges (
     edge_id INTEGER PRIMARY KEY AUTOINCREMENT, from_id TEXT NOT NULL, to_id TEXT NOT NULL,
     type TEXT NOT NULL, basis TEXT NOT NULL, ord INTEGER, attrs TEXT NOT NULL,
-    source_event TEXT NOT NULL, log_position INTEGER NOT NULL);
+    source_event TEXT NOT NULL, log_position INTEGER NOT NULL, cross_tree INTEGER);
 CREATE TABLE IF NOT EXISTS retractions (
     edge_id INTEGER NOT NULL, retracted_by TEXT NOT NULL, reason TEXT, log_position INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS statuses (
     node_id TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, basis TEXT NOT NULL,
     source_event TEXT NOT NULL, log_position INTEGER NOT NULL, at TEXT NOT NULL);
--- Stage 2.4: every observed version of every file (design 7.1).
+-- Every observed version of every artifact, with how its change was attributed and how that is known.
 CREATE TABLE IF NOT EXISTS file_versions (
     version_id TEXT PRIMARY KEY, path TEXT NOT NULL, object_id TEXT, size INTEGER, change TEXT NOT NULL,
     git_blob TEXT, git_commit TEXT, renamed_from TEXT, path_id TEXT, path_role TEXT,
-    source_event TEXT NOT NULL, log_position INTEGER NOT NULL);
+    source_event TEXT NOT NULL, log_position INTEGER NOT NULL, attribution TEXT, attribution_basis TEXT);
 CREATE INDEX IF NOT EXISTS idx_versions_path ON file_versions(path, log_position);
--- Stage 2.4: the files a verification depended on, and the version of each it ran against (design 7.3).
+-- The files a verification depended on, and the version of each it ran against.
 CREATE TABLE IF NOT EXISTS verification_files (
     event_id TEXT NOT NULL, path TEXT NOT NULL, object_id TEXT, log_position INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_vfiles_path ON verification_files(path);
 CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_id, type);
 CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id, type);
+CREATE INDEX IF NOT EXISTS idx_edges_cross ON edges(cross_tree, type);
 CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(node_type);
+CREATE INDEX IF NOT EXISTS idx_nodes_tree ON nodes(tree, node_type);
 CREATE INDEX IF NOT EXISTS idx_statuses_node ON statuses(node_id);
 """
 TABLES = ("nodes", "edges", "retractions", "statuses", "file_versions", "verification_files")
@@ -96,22 +129,47 @@ FILE_CHANGES = ("added", "modified", "deleted", "renamed")
 
 
 def create(conn: sqlite3.Connection) -> None:
-    conn.executescript(SCHEMA)
+    for statement in SCHEMA.split(";"):
+        if statement.strip():
+            conn.execute(statement)
     for table in TABLES:
         for action in ("UPDATE", "DELETE"):
             conn.execute(f"CREATE TRIGGER IF NOT EXISTS {table}_append_only_{action.lower()} BEFORE {action} "
                          f"ON {table} BEGIN SELECT RAISE(ABORT, 'the {table} table is append-only'); END")
 
 
-# ------------------------------------------------------------ helpers
+def drop(conn: sqlite3.Connection) -> None:
+    """Remove the structure tables (only for rebuilding them from the log; the log is never touched)."""
+    for table in TABLES:
+        for action in ("update", "delete"):
+            conn.execute(f"DROP TRIGGER IF EXISTS {table}_append_only_{action}")
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+
+
+# ------------------------------------------------------------ ids
+def root(tree: str) -> str:
+    return f"{tree}:"
+
+
 def session_node(session_id: str) -> str:
     return f"session:{session_id}"
 
 
-def file_node(path: str) -> str:
-    return f"file:{path}"
+def artifact_node(path: str) -> str:
+    return f"artifact:{path}"
 
 
+file_node = artifact_node   # the name used before format 2
+
+
+def resolve(node_id: str) -> str:
+    """A record id as stored in the log -> the node it names now (legacy `file:` ids become artifacts)."""
+    if isinstance(node_id, str) and node_id.startswith("file:"):
+        return "artifact:" + node_id[len("file:"):]
+    return node_id
+
+
+# ------------------------------------------------------------ helpers
 def _node_exists(conn, node_id: str) -> bool:
     return conn.execute("SELECT 1 FROM nodes WHERE node_id = ?", (node_id,)).fetchone() is not None
 
@@ -121,16 +179,36 @@ def _node_type(conn, node_id: str) -> str | None:
     return row[0] if row else None
 
 
-def _add_node(conn, node_id: str, node_type: str, ev: Event, label: str | None = None, **attrs) -> None:
-    if not _node_exists(conn, node_id):
-        conn.execute("INSERT INTO nodes VALUES (?, ?, ?, ?, ?, ?)",
-                     (node_id, node_type, label, canonical_json(attrs), ev.event_id, ev.log_position))
+def _tree_of(conn, node_id: str) -> tuple[str, str] | None:
+    return conn.execute("SELECT tree, node_type FROM nodes WHERE node_id = ?", (node_id,)).fetchone()
+
+
+def _add_node(conn, node_id: str, node_type: str, ev: Event, label: str | None = None, parent: str | None = None,
+              tree: str | None = None, basis: str = "observed", **attrs) -> bool:
+    """Add a node to its tree (under `parent`) unless it exists. Returns True if it was new."""
+    if _node_exists(conn, node_id):
+        return False
+    tree = tree or TREE_OF.get(node_type)
+    if tree not in SCHEMAS or node_type not in SCHEMAS[tree]:
+        raise SchemaError(f"node type {node_type!r} doesn't belong to any tree")
+    if basis not in BASES:
+        raise SchemaError(f"basis must be one of {BASES}")
+    conn.execute("INSERT INTO nodes VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                 (node_id, node_type, tree, basis, label, canonical_json(attrs), ev.event_id, ev.log_position))
+    if parent is not None:
+        _add_edge(conn, parent, node_id, "contains", "observed", ev, _next_ord(conn, parent))
+    return True
 
 
 def _add_edge(conn, src: str, dst: str, etype: str, basis: str, ev: Event, ord_: int | None = None, **attrs) -> None:
-    conn.execute("INSERT INTO edges (from_id, to_id, type, basis, ord, attrs, source_event, log_position) "
-                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                 (src, dst, etype, basis, ord_, canonical_json(attrs), ev.event_id, ev.log_position))
+    a, b = _tree_of(conn, src), _tree_of(conn, dst)
+    if etype == "contains":
+        if a is None or b is None or a[0] != b[0] or b[1] not in SCHEMAS[a[0]][a[1]]:
+            raise SchemaError(f"{src} ({a}) may not contain {dst} ({b})")
+    cross = None if a is None or b is None else int(a[0] != b[0])
+    conn.execute("INSERT INTO edges (from_id, to_id, type, basis, ord, attrs, source_event, log_position, cross_tree) "
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (src, dst, etype, basis, ord_, canonical_json(attrs), ev.event_id, ev.log_position, cross))
 
 
 def _add_status(conn, node_id: str, status: str, reason: str | None, basis: str, ev: Event) -> None:
@@ -153,7 +231,7 @@ def _current_turn(conn, session: str) -> str | None:
 def _ids(value: Any) -> list[str]:
     if value is None:
         return []
-    return [value] if isinstance(value, str) else list(value)
+    return [resolve(v) for v in ([value] if isinstance(value, str) else list(value))]
 
 
 def current_status(conn, node_id: str) -> str | None:
@@ -162,11 +240,45 @@ def current_status(conn, node_id: str) -> str | None:
     return row[0] if row else None
 
 
+# ------------------------------------------------------------ placing nodes in their trees
+def _roots(conn, ev: Event) -> None:
+    for tree in TREES:
+        _add_node(conn, root(tree), "root", ev, label=tree, tree=tree)
+
+
+def _container(conn, ev: Event, node_id: str) -> str:
+    """A knowledge group or state section, created under its tree's root on first use."""
+    tree, name = node_id.split(":", 1)
+    _add_node(conn, node_id, "group" if tree == "knowledge" else "section", ev, label=name, parent=root(tree))
+    return node_id
+
+
+def _session(conn, ev: Event, session_id: str, agent: str | None = None) -> str:
+    node = session_node(session_id)
+    _add_node(conn, node, "session", ev, label=session_id, parent=root("history"), agent=agent)
+    return node
+
+
+def _artifact(conn, ev: Event, path: str) -> str:
+    node = artifact_node(path)
+    if _node_exists(conn, node):
+        return node
+    parts = path.split("/")
+    parent = root("artifacts")
+    for i in range(len(parts) - 1):
+        folder = "/".join(parts[: i + 1])
+        _add_node(conn, f"collection:{folder}", "collection", ev, label=parts[i], parent=parent, path=folder)
+        parent = f"collection:{folder}"
+    _add_node(conn, node, "artifact", ev, label=parts[-1], parent=parent, path=path)
+    return node
+
+
 # ------------------------------------------------------------ validation (before the event is stored)
 def validate(conn, kind: str, summary: dict) -> None:
     """Reject a declared operation that can't be applied, so no event is stored for it."""
     op = summary.get("op")
     if kind in PLANNING_KINDS:
+        node_type = KIND_NODE[kind]
         if op not in ("create", "status"):
             raise SchemaError(f"a {kind} event needs op 'create' or 'status'")
         status = summary.get("status")
@@ -176,30 +288,34 @@ def validate(conn, kind: str, summary: dict) -> None:
             raise SchemaError(f"creating a {kind} needs a title (or, for a path, a topic)")
         if op == "status":
             target = summary.get("id")
-            if not target or _node_type(conn, target) != kind:
+            if not target or _node_type(conn, target) != node_type:
                 raise SchemaError(f"no {kind} with id {target!r}")
             if status is None:
                 raise SchemaError("a status change needs a status")
         for ref in ("alternative_to", "supersedes"):
             for target in _ids(summary.get(ref)):
-                if _node_type(conn, target) != kind:
+                if _node_type(conn, target) != node_type:
                     raise SchemaError(f"{ref} must name existing {kind} records; {target!r} isn't one")
     elif kind == "relation":
-        if summary.get("type") not in EDGE_TYPES:
-            raise SchemaError(f"relation type must be one of {sorted(EDGE_TYPES)}")
+        if summary.get("type") not in EDGE_TYPES or summary.get("type") == "contains":
+            raise SchemaError(f"relation type must be one of {sorted(EDGE_TYPES - {'contains'})}")
         if summary.get("basis", "declared") not in ("declared", "inferred"):
-            raise SchemaError("a relation event's basis is 'declared' or 'inferred'; 'recorded' is the engine's")
+            raise SchemaError("a relation event's basis is 'declared' or 'inferred'; 'observed' is the engine's")
         for end in ("from", "to"):
-            if not summary.get(end) or not _node_exists(conn, summary[end]):
+            if not summary.get(end) or not _node_exists(conn, resolve(summary[end])):
                 raise SchemaError(f"relation '{end}' must name an existing record")
     elif kind == "retraction":
         edge = summary.get("edge_id")
-        if not isinstance(edge, int) or not conn.execute("SELECT 1 FROM edges WHERE edge_id = ?", (edge,)).fetchone():
+        row = conn.execute("SELECT type FROM edges WHERE edge_id = ?", (edge,)).fetchone() \
+            if isinstance(edge, int) else None
+        if row is None:
             raise SchemaError("a retraction names an existing edge_id")
+        if row[0] == "contains":
+            raise SchemaError("tree structure is observed and can't be retracted; retract a relationship instead")
     if kind == "file_change" and summary.get("change") not in (None, *FILE_CHANGES):
         raise SchemaError(f"file_change change must be one of {FILE_CHANGES}")
     path = summary.get("path_id")
-    if path is not None and _node_type(conn, path) != "path":
+    if path is not None and _node_type(conn, path) != "approach":
         raise SchemaError(f"path_id {path!r} is not a development path")
     role = summary.get("path_role")
     if role is not None and role not in PATH_ROLES:
@@ -213,30 +329,25 @@ def apply(conn, ev: Event, strict: bool = True) -> None:
     Writes are strict: an event that doesn't fit raises, and the write is
     refused. Replays (rebuild, recovery) aren't. A record damaged after it
     was written, which only tampering or disk corruption can cause and which
-    `verify` reports, keeps its place in the tree but adds nothing else, so a
-    replay never stops halfway.
+    `verify` reports, keeps its place in the history tree but adds nothing
+    else, so a replay never stops halfway.
     """
     s = ev.summary_fields
-    _add_node(conn, "project", "project", ev, label="project")
-    session = session_node(ev.session_id)
-    if not _node_exists(conn, session):
-        _add_node(conn, session, "session", ev, label=ev.session_id, agent=ev.agent)
-        _add_edge(conn, "project", session, "contains", "recorded", ev, _next_ord(conn, "project"))
+    _roots(conn, ev)
+    session = _session(conn, ev, ev.session_id, ev.agent)
 
-    # The event's place in the tree: a user message opens a turn; other events join the current turn.
-    parent = session
+    # The event's place in the history tree: a user message opens a turn; other events join the current turn.
     if ev.kind == "user_message":
         n = _next_ord(conn, session)
         turn = f"turn:{ev.session_id}:{n}"
         _add_node(conn, turn, "turn", ev, label=f"turn {n}")
-        _add_edge(conn, session, turn, "contains", "recorded", ev, n)
+        _add_edge(conn, session, turn, "contains", "observed", ev, n)
         parent = turn
     else:
         parent = _current_turn(conn, session) or session
-    _add_node(conn, ev.event_id, "event", ev, label=ev.kind, kind=ev.kind)
-    _add_edge(conn, parent, ev.event_id, "contains", "recorded", ev, _next_ord(conn, parent))
+    _add_node(conn, ev.event_id, "event", ev, label=ev.kind, parent=parent, kind=ev.kind)
     if ev.parent_id and _node_exists(conn, ev.parent_id):
-        _add_edge(conn, ev.event_id, ev.parent_id, "triggered_by", "recorded", ev)
+        _add_edge(conn, ev.event_id, ev.parent_id, "triggered_by", "observed", ev)
     if strict:
         _by_kind(conn, ev, s, session)
         return
@@ -247,55 +358,59 @@ def apply(conn, ev: Event, strict: bool = True) -> None:
 
 
 def _by_kind(conn, ev: Event, s: dict, session: str) -> None:
-    """What an event adds beyond its place in the tree, by kind."""
+    """What an event adds beyond its place in the history tree, by kind."""
     if ev.kind == "session_start":
         _session_links(conn, ev, session, s)
     if ev.kind in ("file_change", "exclusion") and s.get("path"):
-        f = file_node(s["path"])
-        _add_node(conn, f, "file", ev, label=s["path"])
-        _add_edge(conn, ev.event_id, f, "modifies", "recorded", ev)
+        f = _artifact(conn, ev, s["path"])
+        _add_edge(conn, ev.event_id, f, "modifies", "observed", ev)
         if ev.kind == "file_change":
             _file_version(conn, ev, s, f)
     if ev.kind == "verification":
         for target in _ids(s.get("verifies")):
             if _node_exists(conn, target):
-                _add_edge(conn, ev.event_id, target, "verifies", "recorded", ev)
+                _add_edge(conn, ev.event_id, target, "verifies", "observed", ev)
         for rel_path, object_id in sorted((s.get("relevant_files") or {}).items()):
             conn.execute("INSERT INTO verification_files VALUES (?, ?, ?, ?)",
                          (ev.event_id, rel_path, object_id, ev.log_position))
     if s.get("path_id"):
-        _add_edge(conn, ev.event_id, s["path_id"], "part_of", "recorded", ev, role=s.get("path_role"))
+        _add_edge(conn, ev.event_id, s["path_id"], "part_of", "observed", ev, role=s.get("path_role"))
     if s.get("group") and _node_exists(conn, s["group"]):
-        _add_edge(conn, ev.event_id, s["group"], "part_of", "recorded", ev)
+        _add_edge(conn, ev.event_id, s["group"], "part_of", "observed", ev)
 
     if ev.kind in PLANNING_KINDS:
         _planning(conn, ev, s)
     elif ev.kind == "note":
-        _add_node(conn, f"note:{ev.event_id}", "note", ev, label=s.get("title") or s.get("text", "")[:80],
+        node = f"note:{ev.event_id}"
+        _add_node(conn, node, "note", ev, label=s.get("title") or s.get("text", "")[:80],
+                  parent=_container(conn, ev, CONTAINER["note"]), basis="declared",
                   note_type=s.get("note_type", "note"))
-        _add_edge(conn, f"note:{ev.event_id}", ev.event_id, "references", "recorded", ev)
-        _declared_links(conn, ev, f"note:{ev.event_id}", s)
+        _add_edge(conn, node, ev.event_id, "references", "observed", ev)
+        _declared_links(conn, ev, node, s)
     elif ev.kind == "relation":
-        _add_edge(conn, s["from"], s["to"], s["type"], s.get("basis", "declared"), ev, reason=s.get("reason"))
+        _add_edge(conn, resolve(s["from"]), resolve(s["to"]), s["type"], s.get("basis", "declared"), ev,
+                  reason=s.get("reason"))
     elif ev.kind == "retraction":
         conn.execute("INSERT INTO retractions VALUES (?, ?, ?, ?)",
                      (s["edge_id"], ev.event_id, s.get("reason"), ev.log_position))
 
 
 def _file_version(conn, ev: Event, s: dict, f: str) -> None:
-    """Record the version, link renames, and notice a return to an earlier version (design 7.1, 6.2)."""
+    """Record the version, link renames, and notice a return to an earlier version."""
     path = s["path"]
     change = s.get("change") or ("deleted" if ev.payload_object is None and s.get("deleted") else "modified")
+    attribution = s.get("attribution")
+    basis = ATTRIBUTION_BASIS.get(attribution) if attribution else "declared"   # reported by an adapter
+    attribution = attribution or "reported"
     previous = conn.execute("SELECT object_id FROM file_versions WHERE path = ? ORDER BY log_position DESC LIMIT 1",
                             (path,)).fetchone()
-    conn.execute("INSERT INTO file_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    conn.execute("INSERT INTO file_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                  (ev.event_id, path, ev.payload_object, s.get("size"), change, s.get("git_blob"),
                   s.get("git_commit"), s.get("old_path"), s.get("path_id"), s.get("path_role"),
-                  ev.event_id, ev.log_position))
+                  ev.event_id, ev.log_position, attribution, basis))
     if s.get("old_path"):
-        old = file_node(s["old_path"])
-        _add_node(conn, old, "file", ev, label=s["old_path"])
-        _add_edge(conn, f, old, "follows", "recorded", ev, link="rename")
+        old = _artifact(conn, ev, s["old_path"])
+        _add_edge(conn, f, old, "follows", "observed", ev, link="rename")
     # Back to content this path had before (but not just now): a structural revert signal.
     earlier = None
     if ev.payload_object and previous and previous[0] != ev.payload_object:
@@ -303,7 +418,7 @@ def _file_version(conn, ev: Event, s: dict, f: str) -> None:
                                "AND version_id != ? ORDER BY log_position DESC LIMIT 1",
                                (path, ev.payload_object, ev.event_id)).fetchone()
     if earlier:
-        _add_edge(conn, ev.event_id, earlier[0], "reverts", "recorded", ev)
+        _add_edge(conn, ev.event_id, earlier[0], "reverts", "observed", ev)
     if earlier or s.get("restores_version"):
         _propose_path(conn, ev, f"revert of {path} to an earlier version", "revert", [ev.event_id])
 
@@ -312,17 +427,15 @@ def _session_links(conn, ev: Event, session: str, s: dict) -> None:
     for key, etype, link in (("resumed_from", "follows", "resume"), ("forked_from", "based_on", "fork")):
         other = s.get(key)
         if other:
-            _add_node(conn, session_node(other), "session", ev, label=other)
-            _add_edge(conn, session, session_node(other), etype, "recorded", ev, link=link)
+            _add_edge(conn, session, _session(conn, ev, other), etype, "observed", ev, link=link)
             if link == "fork":
                 _propose_path(conn, ev, f"fork of session {other}", "session_fork", [ev.event_id], session=session)
     for other in _ids(s.get("continues")):
-        _add_node(conn, session_node(other), "session", ev, label=other)
-        _add_edge(conn, session, session_node(other), "based_on", "recorded", ev, link="continues")
+        _add_edge(conn, session, _session(conn, ev, other), "based_on", "observed", ev, link="continues")
     branch = s.get("git_branch")
     if branch:
-        seen = conn.execute("SELECT 1 FROM nodes WHERE node_type = 'path' AND json_extract(attrs, '$.git_branch') = ?",
-                            (branch,)).fetchone()
+        seen = conn.execute("SELECT 1 FROM nodes WHERE node_type = 'approach' "
+                            "AND json_extract(attrs, '$.git_branch') = ?", (branch,)).fetchone()
         if not seen and branch not in ("main", "master"):
             _propose_path(conn, ev, f"git branch {branch}", "git_branch", [ev.event_id], session=session,
                           git_branch=branch)
@@ -330,38 +443,41 @@ def _session_links(conn, ev: Event, session: str, s: dict) -> None:
 
 def _propose_path(conn, ev: Event, description: str, signal: str, evidence: list[str],
                   session: str | None = None, **attrs) -> None:
-    """A structural signal proposes a path but doesn't name its topic (design 6.2)."""
+    """A structural signal proposes an approach, inferred by a named rule; it doesn't name its topic."""
     node = f"path:{ev.event_id}:{signal}"
-    _add_node(conn, node, "path", ev, label=description, topic=None, description=description, signal=signal,
-              source="recorded", **attrs)
-    _add_status(conn, node, "proposed", f"structural signal: {signal}", "recorded", ev)
+    _add_node(conn, node, "approach", ev, label=description, parent=_container(conn, ev, CONTAINER["approach"]),
+              basis="inferred", topic=None, description=description, signal=signal, source="inferred",
+              rule=f"structural signal: {signal}", **attrs)
+    _add_status(conn, node, "proposed", f"structural signal: {signal}", "inferred", ev)
     for e in evidence:
-        _add_edge(conn, e, node, "supports", "recorded", ev)
+        _add_edge(conn, e, node, "supports", "inferred", ev)
     if session:
-        _add_edge(conn, session, node, "part_of", "recorded", ev, role="experiment")
+        _add_edge(conn, session, node, "part_of", "inferred", ev, role="experiment")
 
 
 def _planning(conn, ev: Event, s: dict) -> None:
     kind = ev.kind
+    node_type = KIND_NODE[kind]
     if s["op"] == "create":
         node = f"{kind}:{ev.event_id}"
         title = s.get("title") or s.get("topic")
-        _add_node(conn, node, kind, ev, label=title, title=title, topic=s.get("topic"),
-                  description=s.get("description"), source="declared")
+        # A conflict is observed by the engine (reconciliation); everything else here is declared.
+        basis = "observed" if kind == "conflict" else "declared"
+        _add_node(conn, node, node_type, ev, label=title, parent=_container(conn, ev, CONTAINER[node_type]),
+                  basis=basis, title=title, topic=s.get("topic"), description=s.get("description"),
+                  source=basis)
         status = s.get("status") or INITIAL[kind]
         if kind == "decision" and s.get("status") is None and s.get("from_user_message"):
             status = "active"   # agent-declared decisions start as proposed; a user's are active
-        # A conflict is observed by the engine (reconciliation); everything else here is declared.
-        basis = "recorded" if kind == "conflict" else "declared"
         _add_status(conn, node, status, s.get("reason"), basis, ev)
         if kind == "conflict" and s.get("event") and _node_exists(conn, s["event"]):
-            _add_edge(conn, node, s["event"], "references", "recorded", ev)
-        _add_edge(conn, node, ev.event_id, "references", "recorded", ev)
+            _add_edge(conn, node, s["event"], "references", "observed", ev)
+        _add_edge(conn, node, ev.event_id, "references", "observed", ev)
         _declared_links(conn, ev, node, s)
     else:
         node = s["id"]
         _add_status(conn, node, s["status"], s.get("reason"), "declared", ev)
-        _add_edge(conn, node, ev.event_id, "references", "recorded", ev)
+        _add_edge(conn, node, ev.event_id, "references", "observed", ev)
         if kind == "path":
             if s["status"] == "abandoned":
                 for e in _ids(s.get("evidence")):
@@ -386,18 +502,10 @@ def _declared_links(conn, ev: Event, node: str, s: dict, statuses_only: bool = F
     for old in _ids(s.get("supersedes")):
         _add_edge(conn, node, old, "supersedes", "declared", ev)
         _add_status(conn, old, "superseded", f"superseded by {node}", "declared", ev)
-    for goal in _ids(s.get("advances")):
-        if _node_exists(conn, goal):
-            _add_edge(conn, node, goal, "advances", "declared", ev)
-    for other in _ids(s.get("blocks")):
-        if _node_exists(conn, other):
-            _add_edge(conn, node, other, "blocks", "declared", ev)
-    for other in _ids(s.get("blocked_by")):
-        if _node_exists(conn, other):
-            _add_edge(conn, node, other, "blocked_by", "declared", ev)
-    for cause in _ids(s.get("caused_by")):
-        if _node_exists(conn, cause):
-            _add_edge(conn, node, cause, "caused_by", "declared", ev)
+    for etype in ("advances", "blocks", "blocked_by", "caused_by"):
+        for other in _ids(s.get(etype)):
+            if _node_exists(conn, other):
+                _add_edge(conn, node, other, etype, "declared", ev)
 
 
 def _alternatives(conn, node: str) -> list[str]:
@@ -405,6 +513,24 @@ def _alternatives(conn, node: str) -> list[str]:
                         "UNION SELECT from_id FROM edges WHERE to_id = ? AND type = 'alternative_to'",
                         (node, node)).fetchall()
     return sorted(r[0] for r in rows)
+
+
+# ------------------------------------------------------------ integrity
+def check_trees(conn) -> list[dict]:
+    """Every non-root node has exactly one container in its own tree, and every cross flag is right."""
+    problems = []
+    for node_id, tree, parents in conn.execute(
+            "SELECT n.node_id, n.tree, (SELECT COUNT(*) FROM edges e JOIN nodes p ON p.node_id = e.from_id "
+            "WHERE e.to_id = n.node_id AND e.type = 'contains' AND p.tree = n.tree) "
+            "FROM nodes n WHERE n.node_type != 'root'"):
+        if parents != 1:
+            problems.append({"type": "tree_shape", "node_id": node_id, "tree": tree, "containers": parents})
+    for edge_id, flag, a, b in conn.execute(
+            "SELECT e.edge_id, e.cross_tree, f.tree, t.tree FROM edges e "
+            "JOIN nodes f ON f.node_id = e.from_id JOIN nodes t ON t.node_id = e.to_id"):
+        if flag != int(a != b):
+            problems.append({"type": "cross_flag", "edge_id": edge_id})
+    return problems
 
 
 # ------------------------------------------------------------ rebuild (integrity and recovery)

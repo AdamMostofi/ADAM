@@ -71,7 +71,7 @@ def history(store):
 # ------------------------------------------------------------ the tree
 
 def test_the_tree_has_project_sessions_turns_and_events_in_order(store, history):
-    tree = store.tree("project", depth=3)
+    tree = store.tree("history:", depth=3)
     assert [s["id"] for s in tree["children"]] == ["session:s1", "session:s2", "session:s3"]
     s1 = tree["children"][0]
     turns = [c for c in s1["children"] if c["type"] == "turn"]
@@ -102,7 +102,7 @@ def test_session_navigation(store, history):
 
 def test_event_navigation(store, history):
     change = store.event_view(history["change1"].event_id)
-    assert change["files"] == ["file:api/cache.py"]
+    assert change["files"] == ["artifact:api/cache.py"]
     assert change["verifications"] == [history["fail"].event_id]
     assert change["triggered_by"] == [history["call1"].event_id]
     assert history["change1"].event_id in store.event_view(history["call1"].event_id)["caused"]
@@ -150,7 +150,7 @@ def test_an_abandoned_path_keeps_its_reason_and_evidence_and_can_be_reconsidered
 
 
 def test_structural_signals_propose_unnamed_paths(store, history):
-    proposals = [p for p in store.project_view()["paths"] if store.path_view(p)["source"] == "recorded"]
+    proposals = [p for p in store.project_view()["paths"] if store.path_view(p)["source"] == "inferred"]
     signals = {store.node(p)["attrs"]["signal"] for p in proposals}
     assert signals == {"git_branch", "session_fork", "revert"}
     for p in proposals:
@@ -166,9 +166,9 @@ def test_inferred_edges_are_always_labelled(store, history):
     inferred = [e for e in store.edges(history["change1"].event_id, "out") if e["type"] == "related_to"]
     assert inferred and all(e["basis"] == "inferred" for e in inferred)
     for step in store.trace(history["change1"].event_id, direction="both", depth=3):
-        assert step["basis"] in ("recorded", "declared", "inferred")
+        assert step["basis"] in ("observed", "declared", "inferred")
     with pytest.raises(SchemaError):
-        store.relate(history["change1"].event_id, history["fix"].event_id, "caused_by", "s1", "w1", basis="recorded")
+        store.relate(history["change1"].event_id, history["fix"].event_id, "caused_by", "s1", "w1", basis="observed")
 
 
 def test_the_engine_never_claims_causes_it_did_not_observe(store, history):
@@ -184,7 +184,7 @@ def test_a_causal_chain_can_be_followed_end_to_end(store, history):
     reached = [step["to"] for step in walked]
     cause = f"note:{history['cause'].event_id}"
     assert reached == [history["fix"].event_id, cause, history["fail"].event_id, history["change1"].event_id]
-    assert [s["basis"] for s in walked] == ["recorded", "declared", "declared", "recorded"]
+    assert [s["basis"] for s in walked] == ["observed", "declared", "declared", "observed"]
 
 
 # ------------------------------------------------------------ append-only, retraction, integrity

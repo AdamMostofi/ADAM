@@ -33,14 +33,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_memory import keys, navigate, recovery, structure, verification
+from agent_memory import keys, navigate, profiles as _profiles, recovery, structure, trees, verification
 from agent_memory.codegraph import CodeGraph, supported
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
 from agent_memory.location import default_project_id, ignore_in_git, synced_folder_warnings
 from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, canonical_json
 from agent_memory.secrets import SecretScanner
 
-STORE_FORMAT = 1
+STORE_FORMAT = 2   # 2: four trees, cross-tree flags, a basis on every node, attribution bases (Stage 2.6)
 DEFAULT_EXCLUSIONS = (".env", ".env.*", "*.pem", "*.key", "id_rsa", "id_ed25519", "*.p12", "*.pfx",
                       ".netrc", ".npmrc", ".pypirc", "credentials.json")
 
@@ -57,7 +57,7 @@ def _sha256(text: str) -> str:
 class Store:
     def __init__(self, path: str | os.PathLike, project_id: str | None = None,
                  exclusions: tuple[str, ...] = DEFAULT_EXCLUSIONS, quota_bytes: int | None = None,
-                 min_free_bytes: int | None = None, key_dir: Path | None = None):
+                 min_free_bytes: int | None = None, key_dir: Path | None = None, profiles=None):
         self.path = Path(path)
         self.path.mkdir(parents=True, exist_ok=True)
         ignore_in_git(self.path)   # D3: an in-project store is never committed
@@ -67,13 +67,26 @@ class Store:
         self.project_id = project_id or default_project_id(self.path)
         self.exclusions = tuple(exclusions)
         self._db = self.path / "memory.db"
+        self._migrated_from = None
         self._init_db()
+        self.profiles = self._init_profiles(profiles)
         data_key, id_key, fp_key = self._unlock(key_dir)
         kwargs = {} if min_free_bytes is None else {"min_free_bytes": min_free_bytes}
         self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes, **kwargs)
         self.scanner = SecretScanner(fp_key)
         self.codegraph = CodeGraph(self._connect)   # derived layer (design 7.2)
         self.checkpoint_every = recovery.CHECKPOINT_EVERY
+        # The four trees (architecture revision 3, section 4).
+        self.history = trees.History(self._connect)
+        self.artifacts = trees.Artifacts(self._connect)
+        self.knowledge = trees.Knowledge(self._connect)
+        self.state = trees.State(self._connect)
+        if self._migrated_from is not None:
+            self.append(EventInput(kind="recovery", session_id="engine", writer_id="engine-migration",
+                                   summary_fields={"op": "migrate", "from_format": self._migrated_from,
+                                                   "to_format": STORE_FORMAT,
+                                                   "detail": "structure rebuilt from the log; the log is unchanged"}))
+            self.checkpoint(reason="after migrating the store format")
         self._drain_spool()
 
     # ------------------------------------------------------------ setup
@@ -118,13 +131,45 @@ class Store:
                 CREATE TRIGGER IF NOT EXISTS events_append_only_delete BEFORE DELETE ON events
                     BEGIN SELECT RAISE(ABORT, 'the event log is append-only'); END;
             """)
-            structure.create(conn)
+            conn.execute("BEGIN IMMEDIATE")
+            found = self._meta(conn, "store_format")
+            if found is not None and int(found) < STORE_FORMAT:
+                # Rebuild the structure in the new format by replaying the log, which is never changed.
+                structure.drop(conn)
+                structure.create(conn)
+                for row in conn.execute("SELECT * FROM events ORDER BY log_position").fetchall():
+                    structure.apply(conn, self._row(row), strict=False)
+                conn.execute("UPDATE meta SET value = ? WHERE key = 'store_format'", (str(STORE_FORMAT),))
+                self._migrated_from = int(found)
+            else:
+                structure.create(conn)
+            conn.execute("COMMIT")
             recovery.create(conn)
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('store_format', ?)", (str(STORE_FORMAT),))
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
             conn.execute("INSERT OR IGNORE INTO meta VALUES ('created_at', ?)", (_now(),))
         finally:
             conn.close()
+
+    def _init_profiles(self, chosen) -> tuple[str, ...]:
+        conn = self._connect()
+        try:
+            stored = self._meta(conn, "profiles")
+            if chosen is None:
+                return tuple(json.loads(stored)) if stored else self._save_profiles(conn, _profiles.DEFAULT)
+            return self._save_profiles(conn, _profiles.normalize(chosen))
+        finally:
+            conn.close()
+
+    @staticmethod
+    def _save_profiles(conn, names) -> tuple[str, ...]:
+        names = _profiles.normalize(names)
+        conn.execute("INSERT OR REPLACE INTO meta VALUES ('profiles', ?)", (json.dumps(list(names)),))
+        return names
+
+    def _require(self, profile: str, what: str) -> None:
+        if profile not in self.profiles:
+            raise _profiles.ProfileError(f"{what} needs the {profile!r} profile; this store has {list(self.profiles)}")
 
     def _meta(self, conn, key: str):
         row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
@@ -445,8 +490,13 @@ class Store:
             if stored[table] != rebuilt[table]:
                 problems.append({"type": "structure_mismatch", "table": table,
                                  "detail": "doesn't match a rebuild from the event log"})
+        conn = self._connect()
+        try:
+            problems += structure.check_trees(conn)
+        finally:
+            conn.close()
         for cp in recovery.checkpoints_report(self):
-            if not cp["valid"]:
+            if not cp["valid"] and not cp.get("superseded"):
                 problems.append({"type": "checkpoint_invalid", **cp})
         conn = self._connect()
         try:
@@ -494,7 +544,7 @@ class Store:
     def node(self, node_id: str, include_retracted: bool = False):
         return self._nav(navigate.node, node_id, include_retracted)
 
-    def tree(self, node_id: str = "project", depth: int = 2):
+    def tree(self, node_id: str = "history:", depth: int = 2):
         return self._nav(navigate.tree, node_id, depth)
 
     def trace(self, start: str, types=None, direction: str = "out", depth: int = 6):
@@ -528,7 +578,13 @@ class Store:
 
     def update_code_graph(self) -> dict:
         """Re-parse changed files and refresh the derived dependency graph. Returns parse counts."""
+        if "software" not in self.profiles:
+            return {"skipped": "the software profile is off"}
         return self.codegraph.update(self.archive)
+
+    def links(self, node_id: str, to_tree: str | None = None, types=None) -> list[dict]:
+        """Cross-tree links of a record (architecture revision 3, section 4.5)."""
+        return self._nav(trees.links, node_id, to_tree, types)
 
     def record_verification(self, session_id: str, writer_id: str, command: str, result: str,
                             exit_code: int | None = None, output: bytes | str = b"", check_type: str = "test",
@@ -536,6 +592,7 @@ class Store:
                             commit: str | None = None, branch: str | None = None, worktree: str | None = None,
                             dirty: bool | None = None, verifies=(), parent_id: str | None = None) -> Event:
         """Record a check with everything needed to tell later whether it still holds (design 7.3)."""
+        self._require("software", "recording a verification")
         current = {path: oid for path, (oid, _) in self.current_files().items()}
         targets = list(targets)
         if coverage_files is not None:
@@ -559,6 +616,7 @@ class Store:
     def verification_status(self, event_id: str, environment: dict | None = None,
                             reconciled: bool | None = None) -> dict:
         """verified, stale or unknown, with the reasons. Computed now; never stored."""
+        self._require("software", "verification status")
         ev = self.event(event_id)
         if ev is None or ev.kind != "verification":
             raise KeyError(f"{event_id} is not a verification")

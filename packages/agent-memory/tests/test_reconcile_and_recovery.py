@@ -211,7 +211,7 @@ def test_two_writers_changing_one_file_produce_a_conflict_record(tmp_path):
     (record,) = [e for e in store.events() if e.kind == "conflict"]
     node_id = f"conflict:{record.event_id}"
     node = store.node(node_id)
-    assert node["status"] == "open" and node["status_history"][-1]["basis"] == "recorded"
+    assert node["status"] == "open" and node["status_history"][-1]["basis"] == "observed"
     # Nothing was overwritten: both edits are still in the log.
     edits = [e for e in store.events() if e.kind == "tool_call" and e.summary_fields.get("path") == "pkg/mod_005.py"]
     assert [e.writer_id for e in edits] == ["agent-a", "agent-b"]

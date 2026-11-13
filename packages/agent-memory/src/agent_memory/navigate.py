@@ -1,6 +1,6 @@
-"""Navigating the historical tree and the relationship graph (design section 6.1).
+"""Record-level navigation inside the engine (the agent-facing navigators are in `trees.py`).
 
-Every edge returned carries its `type` and its `basis` (`recorded`,
+Every edge returned carries its `type` and its `basis` (`observed`,
 `declared` or `inferred`), so an inferred link is never presented as
 observed. Retracted edges are left out of navigation by default, and are
 still visible with `include_retracted=True`. Nothing is ever deleted.
@@ -11,7 +11,7 @@ import json
 import sqlite3
 from collections import deque
 
-from agent_memory.structure import current_status, file_node, session_node
+from agent_memory.structure import artifact_node, current_status, resolve, root, session_node
 
 
 def _edge(row) -> dict:
@@ -25,6 +25,7 @@ EDGE_SQL = ("SELECT e.edge_id, e.from_id, e.to_id, e.type, e.basis, e.ord, e.att
 
 
 def edges(conn, node_id: str, direction: str = "out", types=None, include_retracted: bool = False) -> list[dict]:
+    node_id = resolve(node_id)
     clauses, args = [], []
     if direction in ("out", "both"):
         clauses.append("e.from_id = ?"); args.append(node_id)
@@ -41,15 +42,17 @@ def edges(conn, node_id: str, direction: str = "out", types=None, include_retrac
 
 
 def node(conn, node_id: str, include_retracted: bool = False) -> dict | None:
-    row = conn.execute("SELECT node_id, node_type, label, attrs, source_event FROM nodes WHERE node_id = ?",
-                       (node_id,)).fetchone()
+    node_id = resolve(node_id)
+    row = conn.execute("SELECT node_id, node_type, label, attrs, source_event, tree, basis FROM nodes "
+                       "WHERE node_id = ?", (node_id,)).fetchone()
     if row is None:
         return None
     history = [{"status": s, "reason": r, "basis": b, "source_event": e, "at": at}
                for s, r, b, e, at in conn.execute(
                    "SELECT status, reason, basis, source_event, at FROM statuses WHERE node_id = ? "
                    "ORDER BY log_position, rowid", (node_id,))]
-    return {"id": row[0], "type": row[1], "label": row[2], "attrs": json.loads(row[3]), "source_event": row[4],
+    return {"id": row[0], "type": row[1], "tree": row[5], "basis": row[6], "label": row[2],
+            "attrs": json.loads(row[3]), "source_event": row[4],
             "status": history[-1]["status"] if history else None, "status_history": history,
             "out": edges(conn, node_id, "out", include_retracted=include_retracted),
             "in": edges(conn, node_id, "in", include_retracted=include_retracted)}
@@ -59,7 +62,7 @@ def children(conn, node_id: str) -> list[str]:
     return [e["to"] for e in edges(conn, node_id, "out", "contains")]
 
 
-def tree(conn, node_id: str = "project", depth: int = 2) -> dict:
+def tree(conn, node_id: str = "history:", depth: int = 2) -> dict:
     """The tree below a node, to `depth` levels, in recorded order."""
     n = node(conn, node_id)
     out = {"id": node_id, "type": n["type"] if n else None, "label": n["label"] if n else None}
@@ -114,7 +117,7 @@ def _session_events(conn, session: str) -> list[str]:
 # ------------------------------------------------------------ the navigations of design 6.1
 def project(conn) -> dict:
     nodes = lambda t: [r[0] for r in conn.execute("SELECT node_id FROM nodes WHERE node_type = ? ORDER BY rowid", (t,))]
-    return {"sessions": children(conn, "project"), "paths": nodes("path"), "goals": nodes("goal"),
+    return {"sessions": children(conn, root("history")), "paths": nodes("approach"), "goals": nodes("goal"),
             "decisions": nodes("decision")}
 
 
@@ -141,13 +144,15 @@ def event(conn, event_id: str) -> dict:
 
 
 def file(conn, path: str) -> dict:
-    f = file_node(path)
+    f = artifact_node(path)
     changes = [e["from"] for e in edges(conn, f, "in", "modifies")]
     versions = [{"version_id": v, "object_id": o, "size": size, "change": c, "git_blob": b, "git_commit": gc,
-                 "renamed_from": rf, "path_id": pid, "path_role": role, "event": e}
-                for v, o, size, c, b, gc, rf, pid, role, e in conn.execute(
+                 "renamed_from": rf, "path_id": pid, "path_role": role, "event": e, "attribution": a,
+                 "attribution_basis": ab}
+                for v, o, size, c, b, gc, rf, pid, role, e, a, ab in conn.execute(
                     "SELECT version_id, object_id, size, change, git_blob, git_commit, renamed_from, path_id, "
-                    "path_role, source_event FROM file_versions WHERE path = ? ORDER BY log_position", (path,))]
+                    "path_role, source_event, attribution, attribution_basis FROM file_versions WHERE path = ? "
+                    "ORDER BY log_position", (path,))]
     covered_by = [r[0] for r in conn.execute(
         "SELECT event_id FROM verification_files WHERE path = ? ORDER BY log_position", (path,))] \
         if conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'verification_files'").fetchone() else []
