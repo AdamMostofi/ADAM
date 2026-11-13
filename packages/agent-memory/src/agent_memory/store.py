@@ -33,7 +33,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_memory import keys, navigate, structure
+from agent_memory import keys, navigate, structure, verification
+from agent_memory.codegraph import CodeGraph, supported
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
 from agent_memory.location import synced_folder_warnings
 from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, canonical_json
@@ -70,6 +71,7 @@ class Store:
         kwargs = {} if min_free_bytes is None else {"min_free_bytes": min_free_bytes}
         self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes, **kwargs)
         self.scanner = SecretScanner(fp_key)
+        self.codegraph = CodeGraph(self._connect)   # derived layer (design 7.2)
 
     # ------------------------------------------------------------ setup
     def _connect(self) -> sqlite3.Connection:
@@ -408,6 +410,48 @@ class Store:
 
     def path_view(self, path_id: str):
         return self._nav(navigate.path, path_id)
+
+    # ------------------------------------------------------------ file history and verification (design 7)
+    def current_files(self) -> dict[str, tuple[str, str]]:
+        """The latest version of every path that exists: {path: (content id, event that produced it)}."""
+        return self._nav(CodeGraph.current_files)
+
+    def update_code_graph(self) -> dict:
+        """Re-parse changed files and refresh the derived dependency graph. Returns parse counts."""
+        return self.codegraph.update(self.archive)
+
+    def record_verification(self, session_id: str, writer_id: str, command: str, result: str,
+                            exit_code: int | None = None, output: bytes | str = b"", check_type: str = "test",
+                            targets=(), coverage_files=None, environment: dict | None = None,
+                            commit: str | None = None, branch: str | None = None, worktree: str | None = None,
+                            dirty: bool | None = None, verifies=(), parent_id: str | None = None) -> Event:
+        """Record a check with everything needed to tell later whether it still holds (design 7.3)."""
+        current = {path: oid for path, (oid, _) in self.current_files().items()}
+        targets = list(targets)
+        if coverage_files is not None:
+            relevant = {p: current[p] for p in coverage_files if p in current}
+            method = "coverage"
+        elif targets and all(t in current and supported(t) for t in targets):
+            self.update_code_graph()
+            closure = self.codegraph.closure(targets, "dependencies")
+            relevant = {p: current[p] for p in sorted(closure) if p in current}
+            method = "import_closure"
+        else:
+            relevant, method = dict(current), "whole_tree"
+        summary = {"command": command, "result": result, "exit_code": exit_code, "check_type": check_type,
+                   "commit": commit, "branch": branch, "worktree": worktree, "dirty": dirty,
+                   "tree_hash": verification.tree_hash(current), "relevant_files": relevant,
+                   "relevance_method": method, "targets": targets, "environment": environment or {},
+                   "verifies": list(verifies)}
+        return self.append(EventInput(kind="verification", session_id=session_id, writer_id=writer_id,
+                                      payload=output, summary_fields=summary, parent_id=parent_id))
+
+    def verification_status(self, event_id: str, environment: dict | None = None, reconciled: bool = True) -> dict:
+        """verified, stale or unknown, with the reasons. Computed now; never stored."""
+        ev = self.event(event_id)
+        if ev is None or ev.kind != "verification":
+            raise KeyError(f"{event_id} is not a verification")
+        return verification.status(ev.summary_fields, self.current_files(), environment, reconciled)
 
     def verification_view(self, event_id: str):
         ev = self.event(event_id)

@@ -143,10 +143,16 @@ def event(conn, event_id: str) -> dict:
 def file(conn, path: str) -> dict:
     f = file_node(path)
     changes = [e["from"] for e in edges(conn, f, "in", "modifies")]
-    return {"changes": changes,
-            "verifications": [e["from"] for e in edges(conn, f, "in", ("verifies", "tests"))],
-            # File versions are Stage 2.4 (file history); the changes above are the events that made them.
-            "versions": []}
+    versions = [{"version_id": v, "object_id": o, "size": size, "change": c, "git_blob": b, "git_commit": gc,
+                 "renamed_from": rf, "path_id": pid, "path_role": role, "event": e}
+                for v, o, size, c, b, gc, rf, pid, role, e in conn.execute(
+                    "SELECT version_id, object_id, size, change, git_blob, git_commit, renamed_from, path_id, "
+                    "path_role, source_event FROM file_versions WHERE path = ? ORDER BY log_position", (path,))]
+    covered_by = [r[0] for r in conn.execute(
+        "SELECT event_id FROM verification_files WHERE path = ? ORDER BY log_position", (path,))] \
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'verification_files'").fetchone() else []
+    return {"changes": changes, "versions": versions,
+            "verifications": [e["from"] for e in edges(conn, f, "in", ("verifies", "tests"))] + covered_by}
 
 
 def decision(conn, decision_id: str) -> dict:

@@ -26,6 +26,11 @@ an environment where ADAM isn't installed.
   - goals, tasks, blockers, decisions and notes;
   - every navigation in design 6.1, and `trace()` along relationships.
   - All of it is append-only, and `verify()` rebuilds it from the log.
+- **Stage 2.4:**
+  - every file version, with renames and automatic revert detection;
+  - an incremental tree-sitter dependency graph for Python and TypeScript;
+  - verification records with relevant files and an environment fingerprint;
+  - computed `verified` / `stale` / `unknown` status, with reasons.
 
 ```bash
 cd packages/agent-memory

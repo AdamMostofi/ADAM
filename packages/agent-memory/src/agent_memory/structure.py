@@ -74,12 +74,23 @@ CREATE TABLE IF NOT EXISTS retractions (
 CREATE TABLE IF NOT EXISTS statuses (
     node_id TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, basis TEXT NOT NULL,
     source_event TEXT NOT NULL, log_position INTEGER NOT NULL, at TEXT NOT NULL);
+-- Stage 2.4: every observed version of every file (design 7.1).
+CREATE TABLE IF NOT EXISTS file_versions (
+    version_id TEXT PRIMARY KEY, path TEXT NOT NULL, object_id TEXT, size INTEGER, change TEXT NOT NULL,
+    git_blob TEXT, git_commit TEXT, renamed_from TEXT, path_id TEXT, path_role TEXT,
+    source_event TEXT NOT NULL, log_position INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_versions_path ON file_versions(path, log_position);
+-- Stage 2.4: the files a verification depended on, and the version of each it ran against (design 7.3).
+CREATE TABLE IF NOT EXISTS verification_files (
+    event_id TEXT NOT NULL, path TEXT NOT NULL, object_id TEXT, log_position INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_vfiles_path ON verification_files(path);
 CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_id, type);
 CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id, type);
 CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(node_type);
 CREATE INDEX IF NOT EXISTS idx_statuses_node ON statuses(node_id);
 """
-TABLES = ("nodes", "edges", "retractions", "statuses")
+TABLES = ("nodes", "edges", "retractions", "statuses", "file_versions", "verification_files")
+FILE_CHANGES = ("added", "modified", "deleted", "renamed")
 
 
 def create(conn: sqlite3.Connection) -> None:
@@ -183,6 +194,8 @@ def validate(conn, kind: str, summary: dict) -> None:
         edge = summary.get("edge_id")
         if not isinstance(edge, int) or not conn.execute("SELECT 1 FROM edges WHERE edge_id = ?", (edge,)).fetchone():
             raise SchemaError("a retraction names an existing edge_id")
+    if kind == "file_change" and summary.get("change") not in (None, *FILE_CHANGES):
+        raise SchemaError(f"file_change change must be one of {FILE_CHANGES}")
     path = summary.get("path_id")
     if path is not None and _node_type(conn, path) != "path":
         raise SchemaError(f"path_id {path!r} is not a development path")
@@ -221,12 +234,15 @@ def apply(conn, ev: Event) -> None:
         f = file_node(s["path"])
         _add_node(conn, f, "file", ev, label=s["path"])
         _add_edge(conn, ev.event_id, f, "modifies", "recorded", ev)
-        if s.get("restores_version"):
-            _propose_path(conn, ev, f"revert of {s['path']} to an earlier version", "revert", [ev.event_id])
+        if ev.kind == "file_change":
+            _file_version(conn, ev, s, f)
     if ev.kind == "verification":
         for target in _ids(s.get("verifies")):
             if _node_exists(conn, target):
                 _add_edge(conn, ev.event_id, target, "verifies", "recorded", ev)
+        for rel_path, object_id in sorted((s.get("relevant_files") or {}).items()):
+            conn.execute("INSERT INTO verification_files VALUES (?, ?, ?, ?)",
+                         (ev.event_id, rel_path, object_id, ev.log_position))
     if s.get("path_id"):
         _add_edge(conn, ev.event_id, s["path_id"], "part_of", "recorded", ev, role=s.get("path_role"))
 
@@ -242,6 +258,32 @@ def apply(conn, ev: Event) -> None:
     elif ev.kind == "retraction":
         conn.execute("INSERT INTO retractions VALUES (?, ?, ?, ?)",
                      (s["edge_id"], ev.event_id, s.get("reason"), ev.log_position))
+
+
+def _file_version(conn, ev: Event, s: dict, f: str) -> None:
+    """Record the version, link renames, and notice a return to an earlier version (design 7.1, 6.2)."""
+    path = s["path"]
+    change = s.get("change") or ("deleted" if ev.payload_object is None and s.get("deleted") else "modified")
+    previous = conn.execute("SELECT object_id FROM file_versions WHERE path = ? ORDER BY log_position DESC LIMIT 1",
+                            (path,)).fetchone()
+    conn.execute("INSERT INTO file_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (ev.event_id, path, ev.payload_object, s.get("size"), change, s.get("git_blob"),
+                  s.get("git_commit"), s.get("old_path"), s.get("path_id"), s.get("path_role"),
+                  ev.event_id, ev.log_position))
+    if s.get("old_path"):
+        old = file_node(s["old_path"])
+        _add_node(conn, old, "file", ev, label=s["old_path"])
+        _add_edge(conn, f, old, "follows", "recorded", ev, link="rename")
+    # Back to content this path had before (but not just now): a structural revert signal.
+    earlier = None
+    if ev.payload_object and previous and previous[0] != ev.payload_object:
+        earlier = conn.execute("SELECT source_event FROM file_versions WHERE path = ? AND object_id = ? "
+                               "AND version_id != ? ORDER BY log_position DESC LIMIT 1",
+                               (path, ev.payload_object, ev.event_id)).fetchone()
+    if earlier:
+        _add_edge(conn, ev.event_id, earlier[0], "reverts", "recorded", ev)
+    if earlier or s.get("restores_version"):
+        _propose_path(conn, ev, f"revert of {path} to an earlier version", "revert", [ev.event_id])
 
 
 def _session_links(conn, ev: Event, session: str, s: dict) -> None:
