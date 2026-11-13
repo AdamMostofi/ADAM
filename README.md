@@ -58,8 +58,8 @@ affect. The Mouth renders the answer.*
   recall, NetworkX for relationships, and ECAN-style attention for ranking.
 - **Learning** — proof patterns become skills, skills become Layer 2 rules, and
   outcomes update fitness.
-- **EQ** — cognitive appraisal produces a tone, goal status, and response
-  parameters, then folds the turn into a rolling baseline.
+- **EQ** — keyword appraisal along appraisal-theory dimensions produces a tone,
+  goal status, and response parameters, then folds the turn into a rolling baseline.
 - **Mouth** — TinyChat15M served through `llama-server`.
 - **Interface** — a `rich` CLI and a Flask web UI built with vanilla HTML, CSS,
   and JavaScript.
@@ -155,8 +155,11 @@ them.
 
 *Affect is computed before the answer is written.*
 
-The EQ subsystem is inspired by Scherer's Component Process Model and
-Lazarus/Folkman appraisal:
+The EQ subsystem borrows its dimensions from Scherer's Component Process Model
+and Lazarus/Folkman appraisal. The mechanism itself is keyword counting: small
+word-and-phrase lexicons, matched on word boundaries with simple negation. It
+reads explicit wording, not sarcasm or context. On a 24-sentence held-out probe
+set it gets 83% of tones right (docs/design/eq-appraisal.md).
 
 - **Primary appraisal** — novelty, goal relevance, goal congruence.
 - **Secondary appraisal** — coping potential and agency.

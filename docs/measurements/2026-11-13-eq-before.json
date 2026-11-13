@@ -1,0 +1,185 @@
+{
+  "labelled": {
+    "items": 38,
+    "correct": 25,
+    "accuracy": 0.658,
+    "per_label": {
+      "positive": {
+        "correct": 9,
+        "total": 12,
+        "accuracy": 0.75
+      },
+      "neutral": {
+        "correct": 7,
+        "total": 13,
+        "accuracy": 0.538
+      },
+      "negative": {
+        "correct": 9,
+        "total": 13,
+        "accuracy": 0.692
+      }
+    },
+    "misses": [
+      {
+        "text": "That was helpful, thank you",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "It is not broken anymore, thanks",
+        "expected": "positive",
+        "got": "neutral"
+      },
+      {
+        "text": "I know how this works, it's easy",
+        "expected": "positive",
+        "got": "neutral"
+      },
+      {
+        "text": "Tell me about the economy of Spain",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "Is seven greater than five?",
+        "expected": "neutral",
+        "got": "positive"
+      },
+      {
+        "text": "Show me the answer now",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "Tell me whatever you think about it",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "My train leaves at noon",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "Know your tools before you start",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "I can't do this, it's too hard",
+        "expected": "negative",
+        "got": "neutral"
+      },
+      {
+        "text": "I'm unhappy with this answer",
+        "expected": "negative",
+        "got": "positive"
+      },
+      {
+        "text": "This is not great",
+        "expected": "negative",
+        "got": "positive"
+      },
+      {
+        "text": "I can\u2019t make it work",
+        "expected": "negative",
+        "got": "positive"
+      }
+    ]
+  },
+  "probe": {
+    "items": 24,
+    "correct": 10,
+    "accuracy": 0.417,
+    "per_label": {
+      "positive": {
+        "correct": 3,
+        "total": 13,
+        "accuracy": 0.231
+      },
+      "neutral": {
+        "correct": 3,
+        "total": 6,
+        "accuracy": 0.5
+      },
+      "negative": {
+        "correct": 4,
+        "total": 5,
+        "accuracy": 0.8
+      }
+    },
+    "misses": [
+      {
+        "text": "I can't wait to try it",
+        "expected": "positive",
+        "got": "neutral"
+      },
+      {
+        "text": "not bad at all",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "no problem, thanks",
+        "expected": "positive",
+        "got": "neutral"
+      },
+      {
+        "text": "there are no errors now",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "it never fails",
+        "expected": "positive",
+        "got": "neutral"
+      },
+      {
+        "text": "without any issue",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "is it wrong?",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "great, it broke again",
+        "expected": "negative",
+        "got": "positive"
+      },
+      {
+        "text": "I don't hate it",
+        "expected": "neutral",
+        "got": "negative"
+      },
+      {
+        "text": "this isn't wrong",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "I'm not unhappy",
+        "expected": "neutral",
+        "got": "positive"
+      },
+      {
+        "text": "it's not that hard",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "it's hardly broken",
+        "expected": "positive",
+        "got": "negative"
+      },
+      {
+        "text": "Thank you so much",
+        "expected": "positive",
+        "got": "neutral"
+      }
+    ]
+  }
+}

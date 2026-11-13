@@ -1,5 +1,20 @@
 # Changelog
 
+## Stage 1.7 — Steady the Appraisal (#37)
+
+- **EQ matches whole words and phrases** (`learning/eq/lexicon.py`) instead
+  of substrings, with clause-scoped negation, contrast ("but"), idioms and
+  elongated words. "know", "unhappy", "whatever" and "economy" are no longer
+  misread.
+- **The manual override fires only on explicit, un-negated emotion words.**
+- **Each chat turn is recorded once** (`chat()` used to repeat
+  `process_input`'s recording).
+- **EQ state is one row,** with the interaction history, instead of one new
+  row per turn.
+- **Accuracy:** the labelled set went from 25/38 to 38/38, and held-out
+  probes from 10/24 to 20/24 (`scripts/measure_eq.py`). The remaining misses
+  (sarcasm, questions, litotes) are documented.
+
 ## Stage 1.6 — Wake with Memory (#36)
 
 - **Startup rebuilds everything from SQLite.** `MemorySystem.restore()`
