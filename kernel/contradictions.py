@@ -10,8 +10,17 @@ from kernel.facts import Belief, Fact, Source
 
 
 class ContradictionResolver:
-    def __init__(self):
+    """Legacy confidence-based resolution, plus the engine's recorded conflicts.
+
+    Since Stage 1.5 (#31) the engine records every conflict itself
+    (InferenceEngine.conflicts(), kernel/conflicts.py); get_contradictions()
+    reports those as (positive, negative) belief pairs. check() and its
+    confidence * source score are kept for callers that use them directly.
+    """
+
+    def __init__(self, engine=None):
         self.contradictions: list[tuple[Belief, Belief]] = []
+        self._engine = engine
 
     def check(self, new_belief: Belief, existing_beliefs: list[Belief]) -> Belief | None:
         """Check if new belief contradicts any existing belief."""
@@ -48,4 +57,8 @@ class ContradictionResolver:
         return existing
 
     def get_contradictions(self) -> list[tuple[Belief, Belief]]:
-        return list(self.contradictions)
+        recorded = []
+        if self._engine is not None:
+            beliefs = self._engine.beliefs
+            recorded = [(beliefs[c.positive], beliefs[c.negative]) for c in self._engine.conflicts()]
+        return list(self.contradictions) + recorded

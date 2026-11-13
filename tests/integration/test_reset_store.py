@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"
 
 import backup_stores
 import reset_store
+from memory.exact_store import SCHEMA_VERSION
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +57,7 @@ def test_reset_backs_up_then_creates_fresh_empty_stores(tmp_path):
     assert not (tmp_path / "adam_vectors.lance").exists()
     assert not (tmp_path / "adam_save").exists()
     with sqlite3.connect(tmp_path / "adam_memory.db") as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2  # schema 2: derivations (Stage 1.4)
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION  # 2: derivations, 3: origins
         assert conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0] == 0
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert "eq_state" not in tables

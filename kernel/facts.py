@@ -22,6 +22,8 @@ class Fact:
     confidence: float = 1.0
     source: Source = Source.USER
     timestamp: float = field(default_factory=time.time)
+    # Where the fact came from (a book, a person, a URL), so disagreeing sources stay apart (Stage 1.5).
+    origin: str = ""
 
     def __post_init__(self):
         if not self.subject or not self.predicate or not self.object:
@@ -91,12 +93,16 @@ class Belief:
     derivations: dict = field(default_factory=dict)
     # The derivation records, in the order they were found (the first is the founding one).
     proofs: list = field(default_factory=list)
+    # The origins this fact was given by (Fact.origin); empty for derived-only beliefs.
+    origins: set = field(default_factory=set)
 
     def __post_init__(self):
         if self.truth is None:
             self.truth = TruthValue(self.fact.confidence, 0.5)
         if self.given and self.given_confidence is None:
             self.given_confidence = self.fact.confidence
+        if self.given and self.fact.origin:
+            self.origins.add(self.fact.origin)
 
     @property
     def confidence(self) -> float:

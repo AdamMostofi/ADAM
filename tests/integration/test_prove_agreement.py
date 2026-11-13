@@ -8,8 +8,8 @@ definition of what the Layer 1 rules derive. Then, on generated fact sets:
 * prove() is complete: everything in the reference closure it handles is provable;
 * infer() is sound: everything it derives is in the reference closure.
 
-infer() is not yet complete when facts depend on facts derived later; that is
-Stage 1.2 (#28) and is recorded in test_known_kernel_gaps.py.
+Since Stage 1.2 (#28) infer() is also complete: test_order_independence.py
+checks that saturated inference equals the reference closure exactly.
 """
 from __future__ import annotations
 

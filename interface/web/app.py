@@ -93,6 +93,10 @@ def create_app(core: ADAMCore | None = None) -> Flask:
         ambiguous = is_ambiguous(Fact(data["subject"], data["predicate"], data["object"]))
         return jsonify({"id": fact_id, "ambiguous": ambiguous})
 
+    @app.route("/api/conflicts", methods=["GET"])
+    def conflicts():
+        return jsonify(get_core().conflicts())
+
     @app.route("/api/ambiguous", methods=["GET"])
     def ambiguous():
         return jsonify(get_core().ambiguous_facts())

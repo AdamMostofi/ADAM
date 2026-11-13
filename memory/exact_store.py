@@ -18,7 +18,7 @@ import time
 
 from kernel.facts import Fact, Source
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 DERIVED = Source.DEDUCED
 
 
@@ -90,9 +90,17 @@ class ExactStore:
                 )
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_derivation_conclusion ON derivations(conclusion_id)")
+            # Schema 3 (Stage 1.5, #31): where each fact came from; one fact can have many origins.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS fact_origins (
+                    fact_id INTEGER NOT NULL REFERENCES facts(id),
+                    origin TEXT NOT NULL,
+                    UNIQUE (fact_id, origin)
+                )
+            """)
             conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
             if 0 < version < SCHEMA_VERSION:
-                # Schema 1 -> 2 only adds the derivations table; existing rows are kept as they are.
+                # Schema 1 -> 2 adds derivations, 2 -> 3 adds fact_origins; existing rows are kept as they are.
                 conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)",
                              (f"migrated_from_{version}", time.strftime("%Y-%m-%dT%H:%M:%S%z")))
             conn.execute("INSERT OR REPLACE INTO meta VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
@@ -138,6 +146,8 @@ class ExactStore:
                    proof_chain = COALESCE(proof_chain, ?) WHERE id = ?""",
                 (fact.confidence, fact.timestamp, proof_json, row[0]),
             )
+            if fact.origin:
+                conn.execute("INSERT OR IGNORE INTO fact_origins VALUES (?, ?)", (row[0], fact.origin))
             return row[0], False
         cursor = conn.execute(
             """INSERT INTO facts (fact_key, subject, predicate, object, confidence, source, timestamp,
@@ -146,6 +156,8 @@ class ExactStore:
             (key, fact.subject, fact.predicate, fact.object, fact.confidence, fact.source.value,
              fact.timestamp, str(fact), proof_json, json.dumps({})),
         )
+        if fact.origin:
+            conn.execute("INSERT OR IGNORE INTO fact_origins VALUES (?, ?)", (cursor.lastrowid, fact.origin))
         return cursor.lastrowid, True
 
     def store_derived(self, entries: list[tuple[Fact, list[dict]]]) -> list[tuple[int, bool]]:
@@ -266,6 +278,12 @@ class ExactStore:
             rows = conn.execute(
                 "SELECT id FROM facts WHERE source = ? AND id NOT IN (SELECT conclusion_id FROM derivations) "
                 "ORDER BY id", (DERIVED.value,)).fetchall()
+        return [r[0] for r in rows]
+
+    def origins_of(self, fact_id: int) -> list[str]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute("SELECT origin FROM fact_origins WHERE fact_id = ? ORDER BY origin",
+                                (fact_id,)).fetchall()
         return [r[0] for r in rows]
 
     def count_derivations(self) -> int:

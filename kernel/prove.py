@@ -69,7 +69,7 @@ def prove(engine, subject: str, predicate: str, object: str, max_depth: int = 6)
     goal_fact = canonical_fact(Fact(subject, predicate, object))
     subject, predicate, object = goal_fact.subject, goal_fact.predicate, goal_fact.object
     goal = (subject, predicate, object)
-    facts = [b.fact for b in engine.beliefs.values()]
+    facts = engine.strict_facts()  # defaults are not proofs (Stage 1.5)
     if goal in {_key(f) for f in facts}:
         return [f"[given] {subject} {predicate} {object}"]
 

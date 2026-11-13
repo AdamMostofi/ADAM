@@ -4,6 +4,8 @@ Provides perfect recall, semantic search, and auto-connection.
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 import threading
 
 from kernel.facts import Fact
@@ -78,6 +80,9 @@ class MemorySystem:
                 ]
                 index[k] = len(entries)
                 entries.append((belief.fact, derivations))
+                # Every origin it was given by (one row, many origins).
+                entries.extend((replace(belief.fact, origin=o), []) for o in sorted(belief.origins)
+                               if o != belief.fact.origin)
 
             keys = list(keys)
             for k in keys:

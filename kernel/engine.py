@@ -39,7 +39,9 @@ import logging
 import threading
 from dataclasses import replace
 
+from kernel.conflicts import ACTIVE, Conflict, analyse
 from kernel.contradictions import ContradictionResolver
+from kernel.defaults import DEFAULT_RULES
 from kernel.facts import Belief, Derivation, Fact, Source
 from kernel.foundations import (
     EXISTS, TRUE, canonical_fact, contradiction_detection, is_ambiguous, split_term,
@@ -82,7 +84,9 @@ class InferenceEngine:
         self.beliefs: dict[Key, Belief] = {}
         # (derivation, conclusion) in the order they were found; get_trace() renders them.
         self.trace: list[tuple[Derivation, Key]] = []
-        self.resolver = ContradictionResolver()
+        self.resolver = ContradictionResolver(engine=self)
+        # (statuses, conflicts) from kernel.conflicts.analyse; None when beliefs changed since.
+        self._analysis: tuple[dict, list] | None = None
         self.lock = threading.RLock()
         self.agenda: collections.deque[Key] = collections.deque()
         self._queued: set[Key] = set()
@@ -90,9 +94,10 @@ class InferenceEngine:
         # Beliefs that have left the agenda. A fact is joined only with these,
         # so each pair is combined once: when the later of the two is processed.
         self._done: set[Key] = set()
-        self.rules: list[Rule] = list(BUILTIN_RULES)
-        self._builtin = {rule.name for rule in BUILTIN_RULES}
-        self._versions = {rule.name: rule.version for rule in BUILTIN_RULES}
+        self.rules: list[Rule] = list(BUILTIN_RULES) + list(DEFAULT_RULES)
+        # Layer 1 and default rules only combine facts that share a term (indexed joins).
+        self._builtin = {rule.name for rule in self.rules}
+        self._versions = {rule.name: rule.version for rule in self.rules}
         self._versions["contradiction_detection"] = KERNEL_RULES_VERSION
         self.rules_by_trigger: dict[str, list[Rule]] = {}
         self.rules_by_partner: dict[str, list[Rule]] = {}
@@ -113,6 +118,7 @@ class InferenceEngine:
             self.rules_by_partner.setdefault(rule.partner, []).append(rule)
 
     def _store(self, k: Key, belief: Belief) -> None:
+        self._analysis = None
         self.beliefs[k] = belief
         self.index[k[1]].add(k)
         for term in _join_terms(belief.fact):
@@ -129,10 +135,13 @@ class InferenceEngine:
             fact = canonical_fact(fact)
             k = key_of(fact)
             existing = self.beliefs.get(k)
+            self._analysis = None
             if existing is None:
                 self._store(k, Belief(fact=fact, given=True))
                 self._flag_contradictions(fact)
             else:
+                if fact.origin:
+                    existing.origins.add(fact.origin)
                 if not existing.given:
                     existing.given = True
                     existing.evidence += 1
@@ -152,6 +161,7 @@ class InferenceEngine:
             self.rules.append(rule)
             self._versions[rule.name] = rule.version
             self._register(rule)
+            self._analysis = None
             for k in list(self.beliefs):
                 if k[1] == rule.trigger:
                     self._fire(rule, self.beliefs[k].fact, k, as_trigger=True)
@@ -162,8 +172,9 @@ class InferenceEngine:
             k = key_of(canonical_fact(fact))
             if k not in self.beliefs:
                 return
-            remaining = [replace(b.fact, confidence=b.given_confidence)
-                         for key, b in self.beliefs.items() if key != k and b.given]
+            remaining = [replace(b.fact, confidence=b.given_confidence, origin=origin)
+                         for key, b in self.beliefs.items() if key != k and b.given
+                         for origin in (sorted(b.origins) or [b.fact.origin])]
             self.beliefs.clear()
             self.trace.clear()
             self.agenda.clear()
@@ -172,6 +183,7 @@ class InferenceEngine:
             self._done.clear()
             self.index.clear()
             self.term_index.clear()
+            self._analysis = None
             self.add_facts(remaining)
             self.infer()
 
@@ -271,6 +283,7 @@ class InferenceEngine:
                 self.trace.append((record, k))
                 continue
             if len(belief.derivations) < MAX_DERIVATIONS:
+                self._analysis = None
                 belief.derivations[identity] = len(belief.proofs)
                 belief.proofs.append(record)
                 belief.evidence += 1
@@ -294,6 +307,55 @@ class InferenceEngine:
             pair = (k, other_k) if fact.predicate in ("is", "instance_of") else (other_k, k)
             self._admit("contradiction_detection",
                         contradiction_detection(self.beliefs[pair[0]].fact, self.beliefs[pair[1]].fact), pair)
+
+    # ------------------------------------------------- conflicts and status
+    def _analysed(self) -> tuple[dict, list]:
+        if self._analysis is None:
+            self._analysis = analyse(self)
+        return self._analysis
+
+    def status(self, subject: str, predicate: str, object: str) -> str | None:
+        """active, defeated, contested or unsupported (kernel/conflicts.py); None if no such belief."""
+        with self.lock:
+            k = key_of(canonical_fact(Fact(subject, predicate, object)))
+            if k not in self.beliefs:
+                return None
+            return self._analysed()[0].get(k, ACTIVE)
+
+    def is_active(self, k: Key) -> bool:
+        return k not in self._analysed()[0]
+
+    def conflicts(self) -> list[Conflict]:
+        """Every pair of contradicting beliefs, with how it was resolved (DR5.1: state, not failure)."""
+        with self.lock:
+            return list(self._analysed()[1])
+
+    def attribution(self, subject: str, predicate: str, object: str) -> list[str]:
+        """The origins (Fact.origin) of every given fact this belief rests on, sorted."""
+        with self.lock:
+            start = key_of(canonical_fact(Fact(subject, predicate, object)))
+            origins, seen, stack = set(), set(), [start]
+            while stack:
+                k = stack.pop()
+                if k in seen or k not in self.beliefs:
+                    continue
+                seen.add(k)
+                belief = self.beliefs[k]
+                origins |= belief.origins
+                for d in belief.proofs:
+                    stack.extend(d.premises)
+            return sorted(origins)
+
+    def strict_facts(self) -> list[Fact]:
+        """Facts that hold without any default: given, or derived only by Layer 1 rules."""
+        with self.lock:
+            from kernel.conflicts import _grounded
+            from kernel.defaults import DEFAULT_RULE_NAMES
+
+            if not any(self.index.get(p) for p in ("typically", "typically_not")):
+                return [b.fact for b in self.beliefs.values()]
+            strict = _grounded(self.beliefs, lambda d: d.rule not in DEFAULT_RULE_NAMES)
+            return [self.beliefs[k].fact for k in sorted(strict)]
 
     # ------------------------------------------------------- explanations
     def explain(self, subject: str, predicate: str, object: str) -> list[tuple[Key, Derivation | None]] | None:
@@ -388,17 +450,24 @@ class InferenceEngine:
         subject: str | None = None,
         predicate: str | None = None,
         object: str | None = None,
+        include_inactive: bool = False,
     ) -> list[Belief]:
+        """Beliefs matching the given terms. Defeated, contested and unsupported beliefs
+        (kernel/conflicts.py) are left out unless include_inactive is True."""
         with self.lock:
+            inactive = {} if include_inactive else self._analysed()[0]
             if subject and predicate and object:
-                belief = self.beliefs.get(key_of(canonical_fact(Fact(subject, predicate, object))))
-                return [belief] if belief else []
+                k = key_of(canonical_fact(Fact(subject, predicate, object)))
+                belief = self.beliefs.get(k)
+                return [belief] if belief and k not in inactive else []
             pool = self.index.get(predicate, ()) if predicate else self.beliefs.keys()
             results = []
             for k in pool:
                 if subject and k[0] != subject:
                     continue
                 if object and k[2] != object:
+                    continue
+                if k in inactive:
                     continue
                 results.append(self.beliefs[k])
             return results
@@ -414,8 +483,11 @@ class InferenceEngine:
 
         pattern = Fact(subject or "?s", predicate or "?p", object or "?o")
         with self.lock:
+            inactive = self._analysed()[0]
             matches = []
-            for belief in self.beliefs.values():
+            for k, belief in self.beliefs.items():
+                if k in inactive:
+                    continue
                 bindings = unify(pattern, belief.fact)
                 if bindings is not None:
                     matches.append((belief, bindings))

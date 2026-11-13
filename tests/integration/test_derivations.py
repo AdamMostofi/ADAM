@@ -21,7 +21,7 @@ from kernel.engine import InferenceEngine
 from kernel.facts import Derivation, Fact, Source
 from kernel.rules import KERNEL_RULES_VERSION
 from learning.engine import LearningEngine
-from memory.exact_store import ExactStore, UnderivedFactError
+from memory.exact_store import SCHEMA_VERSION, ExactStore, UnderivedFactError
 from memory.system import MemorySystem
 from tests.integration.test_prove_agreement import fact_sets
 
@@ -162,12 +162,12 @@ def test_a_schema_1_store_is_migrated_in_place(tmp_path):
         conn.execute("PRAGMA user_version = 1")
     store = ExactStore(str(path))
     assert store.count() == 1
-    assert store.meta()["schema_version"] == "2" and "migrated_from_1" in store.meta()
+    assert store.meta()["schema_version"] == str(SCHEMA_VERSION) and "migrated_from_1" in store.meta()
     assert store.count_derivations() == 0
     assert store.underived() == [1]  # reported, never deleted
     assert store.get_with_proof(1)[1] == []  # no derivation: nothing to render
     with sqlite3.connect(path) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
 
 
 def test_proof_text_is_rendered_from_the_records(tmp_path):

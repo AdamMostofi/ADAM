@@ -42,7 +42,7 @@ EXPECTATIONS = {
     # A store straight after scripts/reset_store.py (Stage 0.6, #23).
     "fresh": {
         ("sqlite", "fact_rows"): 0,
-        ("sqlite", "user_version"): 2,
+        ("sqlite", "user_version"): 3,
         ("vectors", "rows"): 0,
         ("vectors", "placeholder_rows"): 0,
         ("vectors", "under_10_mb"): True,

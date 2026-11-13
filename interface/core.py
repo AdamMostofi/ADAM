@@ -91,6 +91,10 @@ class ADAMCore:
         self.engine.add_fact(fact)
         return self.memory.store(fact)
 
+    def conflicts(self) -> list[dict]:
+        """Every recorded conflict and how it was resolved (Stage 1.5, #31)."""
+        return [c.to_record() for c in self.engine.conflicts()]
+
     def ambiguous_facts(self) -> list[dict]:
         """Given facts whose "is" could mean instance_of or subclass_of (Stage 1.3, #29)."""
         return [{"subject": f.subject, "predicate": f.predicate, "object": f.object}
@@ -159,7 +163,7 @@ class ADAMCore:
             "mood_shift": self.eq.detect_mood_shift(),
             "by_source": by_source,
             "deduced": by_source.get("deduced", 0),
-            "contradictions": len(self.engine.resolver.get_contradictions()),
+            "contradictions": len(self.engine.conflicts()),
             "trace_steps": len(self.engine.trace),
         }
 

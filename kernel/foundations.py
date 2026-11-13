@@ -411,7 +411,6 @@ def contradiction_detection(p: Fact, not_p: Fact) -> Fact | None:
         return _deduced(p.subject, "contradiction", p.object, 1.0)
     return None
 
-
-def specificity_resolution(general: Fact, specific: Fact) -> Fact:
-    """Placeholder: exceptions overriding general rules are Stage 1.5 (#31). Not registered."""
-    return specific
+# Exceptions to general rules are not Layer 1 rules: defaults ("typically") live in
+# kernel/defaults.py, and kernel/conflicts.py decides which side of a conflict holds
+# (Stage 1.5, #31; DR5.2 keeps this floor strict).
