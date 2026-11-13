@@ -1,0 +1,722 @@
+{
+  "walk": {
+    "scenarios": {
+      "totals": {
+        "expected": 1026,
+        "detected": 1026,
+        "exact": 1022,
+        "acceptable": 4,
+        "wrong": 0,
+        "spurious": 0,
+        "fast_path_misses": 1,
+        "conflicts_expected": 1,
+        "conflicts_found": 1
+      },
+      "steps": [
+        {
+          "step": "agent tool edit",
+          "seconds": 0.0101,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "agent tool create",
+          "seconds": 0.0095,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external edit",
+          "seconds": 0.011,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "sed through bash",
+          "seconds": 0.0122,
+          "expected": 3,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "delete through bash",
+          "seconds": 0.0111,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external delete",
+          "seconds": 0.01,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "rename through bash",
+          "seconds": 0.0105,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external rename",
+          "seconds": 0.0108,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "touch without change",
+          "seconds": 0.0103,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "ignored files",
+          "seconds": 0.0098,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "same size and mtime",
+          "seconds": 0.0229,
+          "expected": 1,
+          "fast_path_missed": [
+            "pkg/mod_010.py"
+          ],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "commit through bash",
+          "seconds": 0.0126,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "git pull through bash",
+          "seconds": 0.0184,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "git reset outside the agent",
+          "seconds": 0.017,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "prepare feature branch",
+          "seconds": 0.0103,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "checkout outside the agent",
+          "seconds": 0.0186,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "checkout back to main",
+          "seconds": 0.0131,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "prepare bulk branch",
+          "seconds": 0.0128,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "large checkout through bash",
+          "seconds": 0.0412,
+          "expected": 500,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 1,
+          "conflicts": 0
+        },
+        {
+          "step": "large checkout back",
+          "seconds": 0.0172,
+          "expected": 500,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 1,
+          "conflicts": 0
+        },
+        {
+          "step": "parallel edits",
+          "seconds": 0.0097,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 1
+        },
+        {
+          "step": "external edit during a bash command",
+          "seconds": 0.0143,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_014.py: unattributed (truth external)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "commit script",
+          "seconds": 0.0114,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "bash script with hidden effect",
+          "seconds": 0.0111,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_015.py: unattributed (truth agent_bash)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external edit between tool calls",
+          "seconds": 0.0087,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_017.py: unattributed (truth external)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external edit after an agent edit",
+          "seconds": 0.0088,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_018.py: unattributed (truth external)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        }
+      ]
+    },
+    "small_repo": {
+      "files": 40,
+      "build_seconds": 0.06,
+      "cold_full_scan_seconds": 0.008,
+      "warm_scan_no_changes_seconds": 0.009,
+      "warm_hashed": 0,
+      "warm_scan_10_changes_seconds": 0.01,
+      "detected": 10,
+      "full_rehash_seconds": 0.01,
+      "git_status_seconds": 0.004
+    },
+    "large_repo": {
+      "files": 20000,
+      "build_seconds": 2.36,
+      "cold_full_scan_seconds": 0.62,
+      "warm_scan_no_changes_seconds": 0.319,
+      "warm_hashed": 0,
+      "warm_scan_10_changes_seconds": 0.309,
+      "detected": 10,
+      "full_rehash_seconds": 0.611,
+      "git_status_seconds": 0.018
+    }
+  },
+  "git_status": {
+    "scenarios": {
+      "totals": {
+        "expected": 1026,
+        "detected": 1026,
+        "exact": 1022,
+        "acceptable": 4,
+        "wrong": 0,
+        "spurious": 0,
+        "fast_path_misses": 0,
+        "conflicts_expected": 1,
+        "conflicts_found": 1
+      },
+      "steps": [
+        {
+          "step": "agent tool edit",
+          "seconds": 0.0085,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "agent tool create",
+          "seconds": 0.0075,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external edit",
+          "seconds": 0.0077,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "sed through bash",
+          "seconds": 0.0079,
+          "expected": 3,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "delete through bash",
+          "seconds": 0.0082,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external delete",
+          "seconds": 0.0091,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "rename through bash",
+          "seconds": 0.0079,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external rename",
+          "seconds": 0.008,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "touch without change",
+          "seconds": 0.0083,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "ignored files",
+          "seconds": 0.0077,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "same size and mtime",
+          "seconds": 0.0103,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "commit through bash",
+          "seconds": 0.0101,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "git pull through bash",
+          "seconds": 0.015,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "git reset outside the agent",
+          "seconds": 0.0143,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "prepare feature branch",
+          "seconds": 0.0082,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "checkout outside the agent",
+          "seconds": 0.0143,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "checkout back to main",
+          "seconds": 0.0133,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "prepare bulk branch",
+          "seconds": 0.0089,
+          "expected": 0,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "large checkout through bash",
+          "seconds": 0.0316,
+          "expected": 500,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 1,
+          "conflicts": 0
+        },
+        {
+          "step": "large checkout back",
+          "seconds": 0.0212,
+          "expected": 500,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 1,
+          "conflicts": 0
+        },
+        {
+          "step": "parallel edits",
+          "seconds": 0.0082,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 1
+        },
+        {
+          "step": "external edit during a bash command",
+          "seconds": 0.0154,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_014.py: unattributed (truth external)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "commit script",
+          "seconds": 0.0209,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "bash script with hidden effect",
+          "seconds": 0.0131,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_015.py: unattributed (truth agent_bash)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external edit between tool calls",
+          "seconds": 0.0121,
+          "expected": 2,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_017.py: unattributed (truth external)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        },
+        {
+          "step": "external edit after an agent edit",
+          "seconds": 0.0116,
+          "expected": 1,
+          "fast_path_missed": [],
+          "misses": [],
+          "wrong": [],
+          "acceptable": [
+            "pkg/mod_018.py: unattributed (truth external)"
+          ],
+          "spurious": [],
+          "groups": 0,
+          "conflicts": 0
+        }
+      ]
+    },
+    "small_repo": {
+      "files": 40,
+      "build_seconds": 0.07,
+      "cold_full_scan_seconds": 0.014,
+      "warm_scan_no_changes_seconds": 0.011,
+      "warm_hashed": 0,
+      "warm_scan_10_changes_seconds": 0.011,
+      "detected": 10,
+      "full_rehash_seconds": 0.015,
+      "git_status_seconds": 0.003
+    },
+    "large_repo": {
+      "files": 20000,
+      "build_seconds": 2.33,
+      "cold_full_scan_seconds": 0.643,
+      "warm_scan_no_changes_seconds": 0.031,
+      "warm_hashed": 0,
+      "warm_scan_10_changes_seconds": 0.039,
+      "detected": 10,
+      "full_rehash_seconds": 0.648,
+      "git_status_seconds": 0.018
+    }
+  }
+}
