@@ -1,6 +1,6 @@
 # Lossless Tree Memory Engine: Design Spec and Test Plan
 
-**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2: Stage 2.2 implemented sections 4, 5 and 11 (the write path) in `packages/agent-memory/`; the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
+**Status:** Proposed, revision 2 (2026-11-09). Being built in Phase 2 in `packages/agent-memory/`: Stage 2.2 implemented sections 4, 5 and 11 (the write path), Stage 2.3 section 6 (structure); the rest is design only. Work order: [ROADMAP.md](../ROADMAP.md), Phases 2 to 4.
 **Working name:** `agent-memory`, command `amem`. The final name is decision D8.
 **Relationship to ADAM:** A standalone product developed inside the ADAM repo until release. ADAM uses it through one interface ([#46](https://github.com/AdamMostofi/ADAM/issues/46)), and the engine never imports ADAM code.
 
@@ -174,6 +174,14 @@ Nothing else is truncated or sampled. If storage limits make full preservation i
 ## 6. Permanent core: structure
 
 ### 6.1 Historical tree
+**As built in Stage 2.3:** every structural fact comes from an event. One deterministic function of the
+event log writes the structure tables (nodes, edges, statuses, retractions), in the same transaction as
+the event. The tables are append-only, and `verify()` rebuilds them from the log to detect tampering.
+Declared structure arrives as events of four added kinds (`path`, `blocker`, `relation`, `retraction`)
+plus `goal`, `task`, `decision` and `note`, each with its operation in `summary_fields`. An event's
+`parent_id` becomes a recorded `triggered_by` edge. File versions and verification details join the
+file and verification navigations in Stage 2.4.
+
 The tree is stored structure, not a view. Its node kinds:
 
 ```text
@@ -724,7 +732,7 @@ Taken from each agent's docs on 2026-11-06. Stage 3.5 publishes a table tested a
 | D1 | First agent | **Decided 2026-11-09:** Claude Code, then OpenCode, then Pi |
 | D2 | Language | Python for the prototype; compiled helpers only if measured latency requires them |
 | D3 | Store location | **Open, for the owner.** Stage 2.2 implements the recommendation as a configurable default: `AMEM_HOME`, else `$XDG_DATA_HOME/agent-memory/<project>-<hash>`. Changing the default needs no migration |
-| D4 | Key storage | OS keychain, with a passphrase fallback on WSL. **Open, for the owner:** Stage 2.2 uses a key file outside the store (or `AMEM_PASSPHRASE`) until this is decided |
+| D4 | Key storage | OS keychain, with a passphrase fallback on WSL. **Open, for the owner:** Stage 2.2 uses a key file outside the store (or `AMEM_PASSPHRASE`) until this is decided. Measured in Stage 2.3: opening the store takes 2 ms with the key file but 125 ms with a passphrase (scrypt), paid on every hook process. Passphrase mode would need a session-scoped unlocked-key cache, or the keychain |
 | D5 | Default capture | **Revised:** everything in full except secrets and explicit exclusions |
 | D6 | Benchmark budget | Agent runs cost API money; start with one model |
 | D7 | Open source | Public at release, MIT, with benchmark data public |
