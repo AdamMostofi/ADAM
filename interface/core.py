@@ -26,6 +26,9 @@ class ADAMCore:
         self.engine = self.memory.engine
         for rule in self.learning.skill_compiler.rules():
             self.engine.add_rule(rule)
+        # Startup stays read-only (Stage 1.6, #36): conclusions of the skills just registered
+        # are inferred in memory and stored the next time ADAM writes.
+        self.engine.infer()
         self.ear = ear if ear is not None else Ear()
         self.mouth = mouth if mouth is not None else Mouth()
 
@@ -38,10 +41,13 @@ class ADAMCore:
         else:
             relevant = self.memory.recall(message, limit=5)
             for fact in relevant:
-                self.engine.add_fact(fact)
-            inferred = self.engine.infer(max_iterations=CHAT_INFERENCE_BUDGET)
-            # Derived facts are stored with their derivations, in one transaction (Stage 1.4, #30).
-            self.memory.store_inferred(self.engine, inferred)
+                # A recalled derived fact is already a consequence in the engine; giving it again
+                # would make it outlive its premises (Stage 1.6, #36).
+                if fact.source != Source.DEDUCED:
+                    self.engine.add_fact(fact)
+            # Store, with their derivations and in one transaction (Stage 1.4), every belief the
+            # store doesn't have yet: this turn's conclusions and any found at startup (Stage 1.6).
+            self.memory.settle(self.engine, max_iterations=CHAT_INFERENCE_BUDGET)
             memories = self.memory.recall(message, limit=10)
 
         context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
@@ -76,7 +82,7 @@ class ADAMCore:
                 "empathetic_opening": params.empathetic_opening,
                 "encouraging_closing": params.encouraging_closing,
             },
-            "memories_used": len(memories) if 'memories' in dir() else 0,
+            "memories_used": len(memories),
         }
 
     def add_fact(self, subject: str, predicate: str, obj: str) -> int:
@@ -103,11 +109,16 @@ class ADAMCore:
     def classify_fact(self, subject: str, predicate: str, obj: str, meaning: str) -> dict:
         """Resolve an ambiguous fact to instance_of / subclass_of / not_instance_of.
 
-        The engine replaces it; the classified fact is stored too. The original
-        row stays in the store until Stage 1.6 (#36) reconciles restored state.
+        The engine replaces it, the classified fact is stored, and the original
+        row is kept but marked superseded, so a restart doesn't restore it.
         """
-        classified = self.engine.classify(Fact(subject, predicate, obj), meaning)
-        self.memory.store(classified)
+        original = Fact(subject, predicate, obj)
+        classified = self.engine.classify(original, meaning)
+        new_id = self.memory.store(classified)
+        # The original row is kept but marked, so a restart doesn't bring the ambiguous fact back.
+        self.memory.exact.supersede(original, new_id)
+        self.memory.graph.remove_fact(original)
+        self.memory.settle(self.engine)  # store what the classification lets ADAM conclude
         return {"subject": classified.subject, "predicate": classified.predicate, "object": classified.object}
 
     def query_knowledge(self, query: str) -> list[dict]:
@@ -164,6 +175,7 @@ class ADAMCore:
             "by_source": by_source,
             "deduced": by_source.get("deduced", 0),
             "contradictions": len(self.engine.conflicts()),
+            "startup": self.memory.startup,
             "trace_steps": len(self.engine.trace),
         }
 
@@ -175,3 +187,6 @@ class ADAMCore:
         self.memory = MemorySystem.load(path)
         self.learning.memory = self.memory
         self.engine = self.memory.engine
+        for rule in self.learning.skill_compiler.rules():
+            self.engine.add_rule(rule)
+        self.engine.infer()

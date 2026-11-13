@@ -6,10 +6,12 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import collections
 import threading
+import time
 
-from kernel.facts import Fact
-from kernel.engine import InferenceEngine
+from kernel.facts import Fact, Source
+from kernel.engine import InferenceEngine, key_of
 from memory.exact_store import ExactStore
 from memory.semantic_index import DEFAULT_MODEL, SemanticIndex
 from memory.connection_graph import ConnectionGraph
@@ -29,27 +31,120 @@ def _embedding_similarity(semantic_index: SemanticIndex, text_a: str, text_b: st
     return float(dot / norm)
 
 
+# Agenda entries a restart may process (Stage 1.6, #36). Enough to saturate stores far larger than
+# today's (20,000 given facts take ~60,000), so a restarted ADAM knows all it knew; a pathological
+# store stops here with a warning and continues during chat turns.
+STARTUP_INFERENCE_BUDGET = 200_000
+
+
 class MemorySystem:
     def __init__(
         self,
         db_path: str = "adam_memory.db",
         lance_path: str = "adam_vectors.db",
         embedding_model: str = DEFAULT_MODEL,
+        restore: bool = True,
     ):
         self.exact = ExactStore(db_path)
         self.semantic = SemanticIndex(lance_path, embedding_model)
         self.graph = ConnectionGraph()
         self.engine = InferenceEngine()
+        # Session-only by design (Stage 1.6, #36): short-term attention is the focus of the
+        # current conversation and is meant to fade; see docs/design/restart.md.
         self.attention = AttentionBank()
         self.lock = threading.RLock()
+        self.startup: dict = {}
+        self._stored_keys: set[str] | None = None  # cache of stored fact keys, loaded on first use
+        if restore:
+            self.restore()
+
+    def restore(self) -> dict:
+        """Rebuild the graph and the engine from the store (DS1: SQLite is the source of truth).
+
+        * Graph: every stored row is replayed in id order, exactly as store()
+          built it (its edge, then its "related" connections), so the graph
+          matches the one before the restart. Superseded rows keep their
+          connections but not their own edge.
+        * Engine: every given (not derived) row that isn't superseded, with
+          all its origins; then inference. Derived facts come back by
+          inference, with their derivations.
+        Startup is read-only: it writes nothing to the store, so the facts
+        are the same before and after a restart and loading a save doesn't
+        change it. Conclusions the store doesn't have yet are stored the
+        next time ADAM writes (settle()).
+
+        Returns and records the startup cost in self.startup.
+        """
+        start = time.perf_counter()
+        with self.lock:
+            self.engine = InferenceEngine()
+            self.graph = ConnectionGraph()
+            rows = self.exact.get_all_with_ids()
+            superseded = self.exact.superseded_ids()
+            origins = self.exact.all_origins()
+            by_subject: dict[str, list[Fact]] = collections.defaultdict(list)
+            by_object: dict[str, list[Fact]] = collections.defaultdict(list)
+            for fact_id, fact in rows:
+                by_subject[fact.subject].append(fact)
+                by_object[fact.object].append(fact)
+                if fact_id not in superseded:
+                    self.graph.add_fact(fact)
+                if self.graph.similarity_fn is None:
+                    self.graph.similarity_fn = lambda a, b: _embedding_similarity(self.semantic, a, b)
+                    self.graph.similarity_threshold = 0.7
+                # store() calls auto_connect(fact, rows with its subject + rows with its object). Every
+                # such row shares a term with the fact, so each connection is (fact.subject, row.object):
+                # connecting the distinct objects gives the same edges in linear time.
+                for obj in sorted({f.object for f in by_subject[fact.subject]} | {fact.object}):
+                    self.graph.add_connection(fact.subject, obj)
+            given_rows = [(i, f) for i, f in rows if f.source != Source.DEDUCED and i not in superseded]
+            self.engine.add_facts([replace(f, origin=o) for i, f in given_rows for o in (origins.get(i) or [""])])
+            inferred = self.engine.infer(max_iterations=STARTUP_INFERENCE_BUDGET)
+            self._stored_keys = self.exact.all_keys()
+            self.startup = {
+                "rows": len(rows), "given_facts": len(given_rows), "superseded": len(superseded),
+                "beliefs": len(self.engine.beliefs), "inferred": len(inferred),
+                "not_yet_stored": len(self.unstored(self.engine)), "saturated": self.engine.saturated,
+                "seconds": round(time.perf_counter() - start, 4),
+            }
+            return self.startup
+
+    def _known_keys(self) -> set[str]:
+        if self._stored_keys is None:
+            self._stored_keys = self.exact.all_keys()
+        return self._stored_keys
+
+    def unstored(self, engine) -> list:
+        """Keys of engine beliefs the store doesn't have yet."""
+        from memory.exact_store import fact_key
+        known = self._known_keys()
+        return sorted(k for k, b in engine.beliefs.items() if fact_key(b.fact) not in known)
+
+    def settle(self, engine, max_iterations: int = 10000) -> int:
+        """Infer, then store every belief the store doesn't have yet. Returns how many were stored.
+
+        Compares all beliefs with the stored keys (cached) rather than
+        trusting infer()'s return value, which a retract in between resets,
+        and which misses conclusions found at startup.
+        """
+        with self.lock:
+            engine.infer(max_iterations=max_iterations)
+            missing = self.unstored(engine)
+            if missing:
+                self.store_beliefs(engine, missing)
+            return len(missing)
 
     def store(self, fact: Fact) -> int:
         """Store a given fact once; storing it again only updates confidence and timestamp.
 
         Derived facts go through store_beliefs(), which keeps their derivations.
         """
+        from memory.exact_store import fact_key
+
         with self.lock:
             fact_id, created = self.exact.upsert(fact)
+            if self._stored_keys is not None:
+                self._stored_keys.add(fact_key(fact))
             self._index_new(fact_id, fact, created)
             return fact_id
 
@@ -88,6 +183,9 @@ class MemorySystem:
             for k in keys:
                 visit(k)
             results = self.exact.store_derived(entries)
+            if self._stored_keys is not None:
+                from memory.exact_store import fact_key
+                self._stored_keys.update(fact_key(fact) for fact, _ in entries)
             for (fact, _), (fact_id, created) in zip(entries, results):
                 self._index_new(fact_id, fact, created)
             return [results[index[k]][0] for k in keys if k in index]
@@ -180,13 +278,7 @@ class MemorySystem:
             lance_path = os.path.join(path, "vectors.db")
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"Database file not found: {db_path}")
-        system = cls(db_path=db_path, lance_path=lance_path)
-        user_facts = system.exact.get_user_facts()
-        system.engine.add_facts(user_facts)
-        system.engine.infer()
-        for fact in system.exact.get_all():
-            system.graph.add_fact(fact)
-        return system
+        return cls(db_path=db_path, lance_path=lance_path)  # restores engine and graph
 
     def rebuild_index(self) -> int:
         """Recreate the semantic index from the fact store. Returns the number of vectors."""

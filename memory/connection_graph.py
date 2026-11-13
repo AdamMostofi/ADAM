@@ -79,6 +79,16 @@ class ConnectionGraph:
     def get_all_edges(self) -> list[tuple[str, str, dict]]:
         return [(u, v, data) for u, v, data in self.graph.edges(data=True)]
 
+    def remove_fact(self, fact: Fact) -> bool:
+        """Remove the edge add_fact() made for this fact (one edge, matched by predicate and source)."""
+        if not self.graph.has_edge(fact.subject, fact.object):
+            return False
+        for key, data in list(self.graph[fact.subject][fact.object].items()):
+            if data.get("predicate") == fact.predicate and data.get("source") == fact.source.value:
+                self.graph.remove_edge(fact.subject, fact.object, key)
+                return True
+        return False
+
     def auto_connect(self, new_fact: Fact, existing_facts: list[Fact]) -> list[tuple[str, str]]:
         connections = []
         for existing in existing_facts:

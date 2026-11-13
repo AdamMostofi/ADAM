@@ -56,6 +56,8 @@ class ExactStore:
                     f"{self.db_path} uses an old fact schema (version {version}) without duplicate "
                     "protection. Run `python scripts/reset_store.py --yes` to back it up and start fresh."
                 )
+            if version == SCHEMA_VERSION and {"facts", "derivations", "fact_origins", "meta"} <= tables:
+                return  # current schema: opening the store writes nothing (Stage 1.6, #36)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS facts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -279,6 +281,55 @@ class ExactStore:
                 "SELECT id FROM facts WHERE source = ? AND id NOT IN (SELECT conclusion_id FROM derivations) "
                 "ORDER BY id", (DERIVED.value,)).fetchall()
         return [r[0] for r in rows]
+
+    def all_keys(self) -> set[str]:
+        """Every stored fact_key (one query; used to find what the store is missing)."""
+        with sqlite3.connect(self.db_path) as conn:
+            return {r[0] for r in conn.execute("SELECT fact_key FROM facts")}
+
+    def has(self, fact: Fact) -> bool:
+        """Whether this fact (same terms, ignoring case and spacing, and same source) is stored."""
+        with sqlite3.connect(self.db_path) as conn:
+            return conn.execute("SELECT 1 FROM facts WHERE fact_key = ?", (fact_key(fact),)).fetchone() is not None
+
+    def supersede(self, fact: Fact, by_id: int) -> int | None:
+        """Mark a stored fact as replaced by another row (e.g. a classified "is"). Nothing is deleted.
+
+        Superseded rows stay in the store and in the graph's history, but a
+        restart doesn't give them to the engine again (Stage 1.6, #36).
+        Returns the superseded row's id, or None if the fact isn't stored.
+        """
+        conn = sqlite3.connect(self.db_path, isolation_level=None)
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT id, metadata FROM facts WHERE fact_key = ?", (fact_key(fact),)).fetchone()
+            if row is None:
+                conn.execute("ROLLBACK")
+                return None
+            metadata = json.loads(row[1] or "{}")
+            metadata["superseded_by"] = by_id
+            conn.execute("UPDATE facts SET metadata = ? WHERE id = ?", (json.dumps(metadata), row[0]))
+            conn.execute("COMMIT")
+            return row[0]
+        except BaseException:
+            conn.execute("ROLLBACK")
+            raise
+        finally:
+            conn.close()
+
+    def superseded_ids(self) -> set[int]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                "SELECT id FROM facts WHERE json_extract(metadata, '$.superseded_by') IS NOT NULL").fetchall()
+        return {r[0] for r in rows}
+
+    def all_origins(self) -> dict[int, list[str]]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute("SELECT fact_id, origin FROM fact_origins ORDER BY fact_id, origin").fetchall()
+        origins: dict[int, list[str]] = {}
+        for fact_id, origin in rows:
+            origins.setdefault(fact_id, []).append(origin)
+        return origins
 
     def origins_of(self, fact_id: int) -> list[str]:
         with sqlite3.connect(self.db_path) as conn:

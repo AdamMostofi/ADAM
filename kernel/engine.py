@@ -184,14 +184,19 @@ class InferenceEngine:
             self.index.clear()
             self.term_index.clear()
             self._analysis = None
+            self._added = []
             self.add_facts(remaining)
             self.infer()
 
     # ----------------------------------------------------------- inference
     def infer(self, max_iterations: int = 10000) -> list[Fact]:
-        """Run the agenda; return the beliefs this call added."""
+        """Run the agenda; return the beliefs added since the previous call.
+
+        That includes beliefs a rule added when it was registered (add_rule)
+        and contradictions flagged when a fact was given, so a caller that
+        stores what infer() returns misses nothing (Stage 1.6, #36).
+        """
         with self.lock:
-            self._added = []
             self._applications = 0
             iterations = 0
             while (self.agenda or self._later) and iterations < max_iterations:
@@ -209,7 +214,8 @@ class InferenceEngine:
                 log.warning(
                     "infer() stopped after %d iterations with %d facts still queued; "
                     "call infer() again to continue", iterations, len(self._queued))
-            return self._added
+            added, self._added = self._added, []
+            return added
 
     def _process(self, fact: Fact, k: Key) -> None:
         for rule in self.rules_by_trigger.get(fact.predicate, ()):
