@@ -4,7 +4,14 @@ User says "this is annoying" or "let's go" and ADAM adapts.
 """
 from __future__ import annotations
 
+from learning.eq import lexicon
 from learning.eq.user_state import UserState, GoalStatus, EmotionalTone, Agency
+
+# Matched on word boundaries (Stage 1.7, #37): "unhappy" is not "happy", "whatever" is
+# not "hate". Only explicit, un-negated emotion words override the appraisal; a negated
+# one ("not happy") is left to the appraiser, which weighs it with everything else.
+NEGATIVE_SIGNALS = ["annoying", "frustrated", "angry", "upset", "hate", "stupid", "terrible", "awful", "unhappy"]
+POSITIVE_SIGNALS = ["let's go", "awesome", "excited", "love", "amazing", "great", "perfect", "happy"]
 
 
 class ManualOverride:
@@ -13,10 +20,9 @@ class ManualOverride:
         self.override_state: UserState | None = None
 
     def detect_override(self, user_input: str) -> UserState | None:
-        text_lower = user_input.lower()
-        negative_signals = ["annoying", "frustrated", "angry", "upset", "hate", "stupid", "terrible", "awful"]
-        positive_signals = ["let's go", "awesome", "excited", "love", "amazing", "great", "perfect", "happy"]
-        if any(signal in text_lower for signal in negative_signals):
+        pos = lexicon.explicit(user_input, POSITIVE_SIGNALS)
+        neg = lexicon.explicit(user_input, NEGATIVE_SIGNALS)
+        if neg > pos:
             self.override_active = True
             self.override_state = UserState(
                 goal_status=GoalStatus.BLOCKED,
@@ -30,7 +36,7 @@ class ManualOverride:
                 coping=0.2,
             )
             return self.override_state
-        if any(signal in text_lower for signal in positive_signals):
+        if pos > neg:
             self.override_active = True
             self.override_state = UserState(
                 goal_status=GoalStatus.ACHIEVED,

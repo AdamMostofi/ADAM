@@ -57,8 +57,7 @@ class ADAMCore:
             "tone": user_state.emotional_tone.value,
         }, context=context_text)
 
-        self.eq.tracker.update(user_state)
-        self.eq.baseline.record_interaction(user_state)
+        # process_input() already recorded this turn in the tracker and the baseline (Stage 1.7, #37).
         self.eq.save()
 
         return {

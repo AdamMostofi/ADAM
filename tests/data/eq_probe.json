@@ -1,0 +1,29 @@
+{
+  "description": "Held-out red-team sentences for EQ tone (Stage 1.7, #37). Written after the fix to find what keyword appraisal still gets wrong; the score is recorded as is, not tuned to 100%. Some labels are debatable (litotes such as 'not unhappy').",
+  "items": [
+    {"text": "I can't wait to try it", "tone": "positive"},
+    {"text": "can't complain", "tone": "neutral"},
+    {"text": "not bad at all", "tone": "positive"},
+    {"text": "no problem, thanks", "tone": "positive"},
+    {"text": "there are no errors now", "tone": "positive"},
+    {"text": "it never fails", "tone": "positive"},
+    {"text": "without any issue", "tone": "positive"},
+    {"text": "is it wrong?", "tone": "neutral"},
+    {"text": "great, it broke again", "tone": "negative"},
+    {"text": "I don't hate it", "tone": "neutral"},
+    {"text": "this isn't wrong", "tone": "positive"},
+    {"text": "nothing works", "tone": "negative"},
+    {"text": "I'm not unhappy", "tone": "neutral"},
+    {"text": "not perfect but it worked", "tone": "positive"},
+    {"text": "Help!", "tone": "negative"},
+    {"text": "What's new?", "tone": "neutral"},
+    {"text": "I knew you could do it, great", "tone": "positive"},
+    {"text": "NO! WRONG!", "tone": "negative"},
+    {"text": "it's not that hard", "tone": "positive"},
+    {"text": "it's hardly broken", "tone": "positive"},
+    {"text": "The error message is clear", "tone": "neutral"},
+    {"text": "Thank you so much", "tone": "positive"},
+    {"text": "this is stupid", "tone": "negative"},
+    {"text": "you're amazing", "tone": "positive"}
+  ]
+}
