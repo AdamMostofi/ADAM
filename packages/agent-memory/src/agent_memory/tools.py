@@ -72,6 +72,13 @@ TOOLS = {
                        "compacted (after compaction), request (tier A), delta (tier B).",
         "ops": ["assemble", "working_set", "detect", "compacted", "request", "delta"],
         "properties": {"prompt": {"type": "string"}, "since": {"type": "integer"}}},
+    "mem_storage": {
+        "description": "Storage: report sizes and growth, or compress / decompress content losslessly (by session_id, "
+                       "before an ISO time, object ids, or old and unvisited). Nothing is ever deleted.",
+        "ops": ["report", "compress", "decompress"],
+        "properties": {"session_id": {"type": "string"}, "before": {"type": "string"},
+                       "ids": {"type": "array", "items": {"type": "string"}}, "older_than_days": {"type": "number"},
+                       "everything": {"type": "boolean"}}},
     "mem_declare": {
         "description": "Record knowledge or state: decision, approach, requirement, constraint, concept, explanation, "
                        "discovery, bug, solution, question, reference, goal, task, blocker, progress, priority, "
@@ -230,6 +237,14 @@ def call(store, session_id: str, name: str, args: dict) -> str:
         if op == "delta":
             d = ctx.delta(session_id, int(args.get("since", 0)))
             return f"(position {d['position']})\n{d['text']}"
+    if name == "mem_storage":
+        op = args["op"]
+        if op == "report":
+            return _plain(store.storage_report())
+        scope = {"session_id": args.get("session_id"), "before": args.get("before"), "object_ids": args.get("ids")}
+        if op == "compress":
+            return _plain(store.compress(**scope, older_than_days=args.get("older_than_days")))
+        return _plain(store.decompress(**scope, everything=bool(args.get("everything"))))
     if name == "mem_offload":
         return _plain(ctx.offload(session_id, args["handle"], args.get("keep"), bool(args.get("force"))))
     if name == "mem_restore":

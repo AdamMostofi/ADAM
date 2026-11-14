@@ -54,7 +54,10 @@ DEFAULT_SETTINGS = {"state_budgets": {"0": 200, "1": 1500, "2": 3000}, "stale_af
                     "recent_changes": 20,
                     # Stage 2.10: the context manager (context.py); shares are fractions of the budget.
                     "context": {"budget": 12000, "packet_max": 2000,
-                                "shares": {"state": 0.30, "knowledge": 0.25, "artifacts": 0.25, "history": 0.20}}}
+                                "shares": {"state": 0.30, "knowledge": 0.25, "artifacts": 0.25, "history": 0.20}},
+                    # Stage 2.11: storage thresholds and the cold tier (storage.py).
+                    "storage": {"recommended_bytes": 1 << 30, "warn_bytes": 5 << 30, "cold_after_days": 30,
+                                "pack_bytes": 4 << 20}}
 TASK_ORDER = {"in_progress": 0, "blocked": 1, "open": 2}
 
 

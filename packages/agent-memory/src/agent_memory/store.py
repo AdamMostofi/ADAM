@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_memory import keys, navigate, profiles as _profiles, recovery, structure, trees, verification
+from agent_memory import keys, navigate, profiles as _profiles, recovery, storage, structure, trees, verification
 from agent_memory.search import SearchIndex
 from agent_memory.codegraph import ArtifactIndex, supported
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
@@ -66,6 +66,7 @@ class Store:
         for w in self.warnings:
             warnings.warn(w, stacklevel=2)
         self.project_id = project_id or default_project_id(self.path)
+        self._key_path = None
         self.exclusions = tuple(exclusions)
         self._db = self.path / "memory.db"
         self._migrated_from = None
@@ -74,7 +75,9 @@ class Store:
         self.settings = self._load_settings()
         data_key, id_key, fp_key = self._unlock(key_dir)
         kwargs = {} if min_free_bytes is None else {"min_free_bytes": min_free_bytes}
-        self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes, **kwargs)
+        self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes,
+                               previous_key=self._previous_key, **kwargs)
+        storage.attach(self)   # cold tier, purge redirects, visits (Stage 2.11)
         self.scanner = SecretScanner(fp_key)
         self.codegraph = ArtifactIndex(self._connect, self.profiles)   # the derived artifact index (rev 3, 4.2)
         self.index = self.codegraph
@@ -233,6 +236,10 @@ class Store:
                 kek = keys.passphrase_kek(passphrase, self._meta(conn, "kek_salt"))
             else:
                 kek = keys.key_file_kek(self.project_id, key_dir)
+                self._key_path = (key_dir or keys.config_dir()) / "keys" / f"{self.project_id}.key"
+            self._kek = kek   # kept for key rotation (storage.rotate_data_key)
+            previous = self._meta(conn, "data_key_previous")   # a rotation that was interrupted
+            self._previous_key = keys.unwrap(kek, previous, "data_key_previous") if previous else None
             unlocked = []
             for label in ("data_key", "object_id_key", "fingerprint_key"):
                 blob = self._meta(conn, label)
@@ -270,11 +277,28 @@ class Store:
         return value
 
     def append(self, inp: EventInput) -> Event:
-        inp.validate()
+        """Record one event (redacted, archived, chained, and applied to the trees) in its own transaction."""
         if inp.idempotency_key:
+            inp.validate()
             existing = self._by_idempotency(inp.idempotency_key)
             if existing:
                 return existing
+        return self._insert_many([self._prepare(inp)])[0]
+
+    def append_many(self, inputs) -> list[Event]:
+        """Record many events in one transaction: all or none, one fsync (#89).
+
+        Each event still gets its own redaction, archive object, chain link and
+        hash. If any event is refused (for example a schema error), nothing in
+        the batch is stored. Use it for bulk work such as a project's first
+        reconcile; live capture keeps one event per transaction.
+        """
+        records = [self._prepare(inp, sync=False) for inp in inputs]
+        self.archive.flush()   # every object is durable before any event that names it commits
+        return self._insert_many(records) if records else []
+
+    def _prepare(self, inp: EventInput, sync: bool = True) -> dict:
+        inp.validate()
         payload = inp.payload.encode() if isinstance(inp.payload, str) else inp.payload
         kind, completeness = inp.kind, inp.completeness
         summary = dict(inp.summary_fields)
@@ -290,7 +314,7 @@ class Store:
             clean, found = self.scanner.redact(payload, "payload")
             redactions.extend(r.record() for r in found)
             try:
-                payload_object = self.archive.put(clean)
+                payload_object = self.archive.put(clean, sync=sync)
             except ArchiveError as err:
                 summary = {"missed_kind": inp.kind, "missed_summary": summary, "size": len(payload),
                            "content_fingerprint": self.scanner.fingerprint(payload), "reason": str(err)}
@@ -298,7 +322,7 @@ class Store:
                 redactions = [r for r in redactions if r["field"] != "payload"]
 
         recorded = _now()
-        return self._insert({
+        return ({
             "event_id": uuid.uuid4().hex, "schema_version": SCHEMA_VERSION, "kind": kind,
             "session_id": inp.session_id, "parent_id": inp.parent_id, "writer_id": inp.writer_id,
             "agent": inp.agent, "agent_version": inp.agent_version, "adapter_version": inp.adapter_version,
@@ -307,36 +331,14 @@ class Store:
             "redactions": redactions, "idempotency_key": inp.idempotency_key,
         })
 
-    def _insert(self, record: dict) -> Event:
+    def _insert_many(self, records: list[dict]) -> list[Event]:
         conn = self._connect()
+        stored_all: list[Event] = []
         try:
             conn.execute("BEGIN IMMEDIATE")
-            if record["idempotency_key"]:
-                row = conn.execute("SELECT * FROM events WHERE idempotency_key = ?",
-                                   (record["idempotency_key"],)).fetchone()
-                if row:   # a concurrent retry won the race
-                    conn.execute("COMMIT")
-                    return self._row(row)
-            structure.validate(conn, record["kind"], record["summary_fields"])
-            last = conn.execute("SELECT writer_seq, record_hash FROM events WHERE writer_id = ? "
-                                "ORDER BY writer_seq DESC LIMIT 1", (record["writer_id"],)).fetchone()
-            record["writer_seq"] = (last[0] + 1) if last else 1
-            record["prev_hash"] = last[1] if last else f"genesis:{record['writer_id']}"
-            draft = Event(log_position=0, record_hash="", **record)
-            record_hash = _sha256(canonical_json(draft.hashed_fields()))
-            cur = conn.execute(
-                """INSERT INTO events (event_id, schema_version, kind, session_id, parent_id, writer_id, writer_seq,
-                       agent, agent_version, adapter_version, occurred_at, recorded_at, payload_object,
-                       summary_fields, completeness, redactions, idempotency_key, prev_hash, record_hash)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (record["event_id"], record["schema_version"], record["kind"], record["session_id"],
-                 record["parent_id"], record["writer_id"], record["writer_seq"], record["agent"],
-                 record["agent_version"], record["adapter_version"], record["occurred_at"],
-                 record["recorded_at"], record["payload_object"], canonical_json(record["summary_fields"]),
-                 record["completeness"], canonical_json(record["redactions"]), record["idempotency_key"],
-                 record["prev_hash"], record_hash))
-            stored = Event(log_position=cur.lastrowid, record_hash=record_hash, **record)
-            structure.apply(conn, stored)   # the tree and graph change in the same transaction
+            storage.flush_visits(self, conn)   # reads queue their visits; writes record them
+            for record in records:
+                stored_all.append(self._insert_one(conn, record))
             conn.execute("COMMIT")
         except BaseException:
             if conn.in_transaction:
@@ -344,11 +346,44 @@ class Store:
             raise
         finally:
             conn.close()
-        if stored.kind == "session_end" or (self.checkpoint_every and stored.log_position % self.checkpoint_every == 0):
+        fresh = [e for e in stored_all if e.log_position > 0]
+        every = self.checkpoint_every
+        crossed = fresh and every and any(e.log_position % every == 0 for e in fresh)
+        if fresh and (any(e.kind == "session_end" for e in fresh) or crossed):
             try:
-                self.checkpoint(reason="session end" if stored.kind == "session_end" else "every N events")
+                self.checkpoint(reason="session end" if any(e.kind == "session_end" for e in fresh)
+                                else "every N events")
             except Exception as err:   # a missed checkpoint only slows recovery; never fail the write
                 warnings.warn(f"checkpoint failed: {err}", stacklevel=2)
+        return stored_all
+
+    def _insert_one(self, conn, record: dict) -> Event:
+        """Insert one prepared record inside the caller's transaction."""
+        if record["idempotency_key"]:
+            row = conn.execute("SELECT * FROM events WHERE idempotency_key = ?",
+                               (record["idempotency_key"],)).fetchone()
+            if row:   # a retry (or a concurrent writer) already stored it
+                return self._row(row)
+        structure.validate(conn, record["kind"], record["summary_fields"])
+        last = conn.execute("SELECT writer_seq, record_hash FROM events WHERE writer_id = ? "
+                            "ORDER BY writer_seq DESC LIMIT 1", (record["writer_id"],)).fetchone()
+        record["writer_seq"] = (last[0] + 1) if last else 1
+        record["prev_hash"] = last[1] if last else f"genesis:{record['writer_id']}"
+        draft = Event(log_position=0, record_hash="", **record)
+        record_hash = _sha256(canonical_json(draft.hashed_fields()))
+        cur = conn.execute(
+            """INSERT INTO events (event_id, schema_version, kind, session_id, parent_id, writer_id, writer_seq,
+                   agent, agent_version, adapter_version, occurred_at, recorded_at, payload_object,
+                   summary_fields, completeness, redactions, idempotency_key, prev_hash, record_hash)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (record["event_id"], record["schema_version"], record["kind"], record["session_id"],
+             record["parent_id"], record["writer_id"], record["writer_seq"], record["agent"],
+             record["agent_version"], record["adapter_version"], record["occurred_at"],
+             record["recorded_at"], record["payload_object"], canonical_json(record["summary_fields"]),
+             record["completeness"], canonical_json(record["redactions"]), record["idempotency_key"],
+             record["prev_hash"], record_hash))
+        stored = Event(log_position=cur.lastrowid, record_hash=record_hash, **record)
+        structure.apply(conn, stored)   # the tree and graph change in the same transaction
         return stored
 
     # ------------------------------------------------------------ reading
@@ -479,7 +514,33 @@ class Store:
         return Reconciler(self, project_root, session_id, writer_id)
 
     def checkpoint(self, reason: str = "manual") -> int | None:
-        return recovery.checkpoint(self, reason)
+        made = recovery.checkpoint(self, reason)
+        try:   # sample the size for growth reporting, and compress old content past the recommended size
+            storage.report(self)
+            storage.maybe_compress(self)
+        except Exception as err:   # storage upkeep never fails a checkpoint
+            warnings.warn(f"storage upkeep failed: {err}", stacklevel=2)
+        return made
+
+    # ------------------------------------------------------------ storage (Stage 2.11)
+    def storage_report(self) -> dict:
+        return storage.report(self)
+
+    def compress(self, **scope) -> dict:
+        """Move content to the compressed cold tier: by session, before a time, by object ids, or old and unvisited."""
+        return storage.compress(self, **scope)
+
+    def decompress(self, **scope) -> dict:
+        return storage.decompress(self, **scope)
+
+    def purge(self, value=None, object_id=None, session_id=None, reason: str = "", rotate_key: bool = False) -> dict:
+        return storage.purge(self, value, object_id, session_id, reason, rotate_key)
+
+    def rotate_data_key(self) -> dict:
+        return storage.rotate_data_key(self)
+
+    def export(self, destination, include_key: bool = False) -> dict:
+        return storage.export(self, destination, include_key)
 
     def recover(self, project_root=None, session_id: str = "engine") -> dict:
         return recovery.recover(self, self.reconciler(project_root, session_id) if project_root else None)
@@ -491,9 +552,17 @@ class Store:
         return counts
 
     # ------------------------------------------------------------ integrity
-    def verify(self) -> dict:
-        """Check chains, objects, references, checkpoints, structure and the derived layer. Reports; never repairs."""
+    def verify(self, full: bool = True) -> dict:
+        """Check chains, objects, references, checkpoints, structure and the derived layer. Reports; never repairs.
+
+        `full=False` starts from the newest valid checkpoint: it checks that
+        checkpoint, then only what came after it (#79). That is fast on a long
+        history; `full=True` re-checks everything.
+        """
+        if not full:
+            return self._verify_since_checkpoint()
         problems: list[dict] = []
+        purged = storage.purged_report(self)
         conn = self._connect()
         try:
             check = conn.execute("PRAGMA integrity_check").fetchall()
@@ -512,12 +581,13 @@ class Store:
                                  "expected_seq": last_seq + 1, "found_seq": ev.writer_seq})
             if ev.prev_hash != last_hash:
                 problems.append({"type": "chain_break", "event_id": ev.event_id, "writer_id": ev.writer_id})
-            if _sha256(canonical_json(ev.hashed_fields())) != ev.record_hash:
+            if _sha256(canonical_json(ev.hashed_fields())) != ev.record_hash and ev.event_id not in purged["events"]:
                 problems.append({"type": "record_altered", "event_id": ev.event_id,
                                  "log_position": ev.log_position})
             chains[ev.writer_id] = (ev.writer_seq, ev.record_hash)
             if ev.payload_object:
                 referenced.add(ev.payload_object)
+        problems += storage.check(self)
         for oid in sorted(referenced):
             try:
                 self.archive.get(oid)
@@ -548,12 +618,66 @@ class Store:
                 if object_id not in referenced:
                     problems.append({"type": "dangling_reference", "event_id": event_id, "object_id": object_id})
             for (oid,) in conn.execute("SELECT object_id FROM artifact_parse UNION SELECT object_id FROM artifact_meta"):
-                if not self.archive.path(oid).exists():
+                if not storage.exists(self, oid):
                     problems.append({"type": "derived_problem", "detail": f"artifact index entry for missing object {oid}"})
         finally:
             conn.close()
         return {"ok": not problems, "events": len(positions), "writers": len(chains),
-                "objects_checked": len(referenced), "problems": problems}
+                "objects_checked": len(referenced), "purged_records": len(purged["events"]),
+                "purged_objects": len(purged["objects"]), "mode": "full", "problems": problems}
+
+    def _verify_since_checkpoint(self) -> dict:
+        """verify(full=False): trust the newest checkpoint that checks out, then verify everything after it."""
+        conn = self._connect()
+        try:
+            rows = conn.execute("SELECT * FROM checkpoints ORDER BY checkpoint_id DESC").fetchall()
+            used, snapshot, heads = None, None, {}
+            for row in rows:
+                ok, _reason, snap = recovery.check_checkpoint(self, conn, row)
+                if ok:
+                    used, snapshot, heads = row, snap, json.loads(row[2])
+                    break
+            check = conn.execute("PRAGMA quick_check").fetchall()
+            stored = structure.snapshot(conn)
+        finally:
+            conn.close()
+        if used is None:
+            report = self.verify(full=True)
+            report["mode"] = "full (no valid checkpoint)"
+            return report
+        problems: list[dict] = []
+        if check != [("ok",)]:
+            problems.append({"type": "database_corrupt", "detail": [r[0] for r in check][:20]})
+        purged = storage.purged_report(self)
+        position = used[1]
+        chains = {w: (seq, h) for w, (seq, h) in heads.items()}
+        later = [ev for ev in self.events() if ev.log_position > position]
+        referenced = set()
+        for ev in later:
+            last_seq, last_hash = chains.get(ev.writer_id, (0, f"genesis:{ev.writer_id}"))
+            if ev.writer_seq != last_seq + 1:
+                problems.append({"type": "sequence_gap", "event_id": ev.event_id, "writer_id": ev.writer_id,
+                                 "expected_seq": last_seq + 1, "found_seq": ev.writer_seq})
+            if ev.prev_hash != last_hash:
+                problems.append({"type": "chain_break", "event_id": ev.event_id, "writer_id": ev.writer_id})
+            if _sha256(canonical_json(ev.hashed_fields())) != ev.record_hash and ev.event_id not in purged["events"]:
+                problems.append({"type": "record_altered", "event_id": ev.event_id, "log_position": ev.log_position})
+            chains[ev.writer_id] = (ev.writer_seq, ev.record_hash)
+            if ev.payload_object:
+                referenced.add(ev.payload_object)
+        for oid in sorted(referenced):
+            try:
+                self.archive.get(oid)
+            except CorruptObject as err:
+                problems.append({"type": "object_problem", "object_id": oid, "detail": str(err)})
+        replayed = recovery._replay(snapshot, later)
+        for table in structure.TABLES:
+            if stored[table] != replayed[table]:
+                problems.append({"type": "structure_mismatch", "table": table,
+                                 "detail": f"doesn't match checkpoint {used[0]} plus replay"})
+        problems += storage.check(self)
+        return {"ok": not problems, "mode": f"since checkpoint {used[0]} (log position {position})",
+                "events": len(later), "objects_checked": len(referenced), "problems": problems}
 
     # ------------------------------------------------------------ declaring structure (design 6.2-6.4)
     def declare(self, kind: str, session_id: str, writer_id: str, **fields) -> Event:

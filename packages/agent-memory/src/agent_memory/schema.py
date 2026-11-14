@@ -28,6 +28,8 @@ KINDS = frozenset({
     "state_item",
     # Stage 2.10: the context manager's ledger (architecture revision 3, section 7).
     "context_load", "context_offload", "context_restore", "context_pin", "context_reset",
+    # Stage 2.11: the record of a purge (a keyed fingerprint, never the content).
+    "purge",
 })
 
 COMPLETENESS = ("captured", "partial", "unavailable", "imported")

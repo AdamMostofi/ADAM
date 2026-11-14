@@ -49,10 +49,18 @@ def create(conn) -> None:
 
 
 def _heads(conn, upto: int) -> dict[str, list]:
-    rows = conn.execute("""SELECT writer_id, writer_seq, record_hash FROM events e WHERE log_position <= ? AND
-                           writer_seq = (SELECT MAX(writer_seq) FROM events WHERE writer_id = e.writer_id
-                                         AND log_position <= ?)""", (upto, upto))
-    return {w: [seq, h] for w, seq, h in rows}
+    """Each writer's last (sequence, record hash) at or before a log position.
+
+    Walks each writer's chain backwards on the (writer_id, writer_seq) index, so
+    the cost is the events written after `upto`, not the whole log (#79).
+    """
+    heads = {}
+    for (writer,) in conn.execute("SELECT DISTINCT writer_id FROM events").fetchall():
+        row = conn.execute("SELECT writer_seq, record_hash FROM events WHERE writer_id = ? AND log_position <= ? "
+                           "ORDER BY writer_seq DESC LIMIT 1", (writer, upto)).fetchone()
+        if row:
+            heads[writer] = [row[0], row[1]]
+    return heads
 
 
 def _encode(snap: dict) -> bytes:
@@ -116,8 +124,10 @@ def checkpoints_report(store) -> list[dict]:
         out = []
         for row in conn.execute("SELECT * FROM checkpoints ORDER BY checkpoint_id").fetchall():
             ok, reason, _ = check_checkpoint(store, conn, row)
+            purged = conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'purged_objects'").fetchone() and \
+                conn.execute("SELECT 1 FROM purged_objects WHERE object_id = ?", (row[3],)).fetchone()
             out.append({"checkpoint_id": row[0], "log_position": row[1], "valid": ok, "problem": reason or None,
-                        "superseded": "older store format" in reason})
+                        "superseded": "older store format" in reason or bool(purged and not ok)})
         return out
     finally:
         conn.close()

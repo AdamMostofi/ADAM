@@ -288,6 +288,30 @@ Every piece of captured content is in exactly one class, and the class is record
 
 "Lossless" in this project means **lossless for permitted content**. Redacted, excluded and gap content is never presented as complete. That is how it works today; revision 3 only names it.
 
+### 5.1a As built (Stage 2.11, #76): storage
+- **Tiered lossless compression (D3),** in `storage.py` and `archive.py`.
+  - **Packs:** old objects that haven't been read recently are concatenated, compressed with lzma (preset 6) and encrypted as packs. lzma was chosen by measurement on the ADAM repository: 22.5% of raw size, against 30.9% for per-object zlib. On a store built from the repository, 0.96 MB of loose objects became one 0.70 MB pack in 1.0 s, and every payload read back from it in 0.17 s.
+  - **Safety:** object ids and content are unchanged, reads are transparent, each pack is read back and checked before loose copies go, and `cleanup` finishes anything a crash interrupted.
+  - **Automatic:** compression runs after a checkpoint once the store passes `storage.recommended_bytes`.
+  - **Explicit:** the agent tool `mem_storage` and `amem storage compress|decompress`, by session, by time, or by object.
+  - **Visits** are kept in a derived table, written with the next append.
+- **Purge** (`amem purge`; user only, never an agent tool).
+  - **What it covers:** a value, an object, or a session.
+  - **Objects:** each is replaced by a redacted copy or a marker, and reads of the old id are redirected to it. Originals are deleted, and packs holding any are rewritten.
+  - **Events:** summary fields are rewritten to a marker, with their hashes kept and the events listed, so `verify` reports them as purged and the chains stay intact.
+  - **Derived data:** the structure is rebuilt, and the full-text indexes are dropped and rebuilt, because their segment tables keep deleted words.
+  - **Checkpoints:** old ones become superseded, and a fresh one is taken.
+  - **Freed space:** pages are zeroed (`secure_delete`), the database is vacuumed, and the write-ahead log is truncated.
+  - **Key rotation** is optional, and readable at every step: the previous key is kept until every file is rewritten.
+  - **The record:** a `purge` event holds a keyed fingerprint, never the value.
+  - **Tested** with a raw byte search across every file in the store, and with everything decrypted.
+- **Reporting:** sizes, growth from samples taken at each checkpoint, and warnings at `recommended_bytes` and `warn_bytes`. Nothing is deleted.
+- **Backups:** `amem export` writes a consistent `tar.gz` (SQLite backup API, objects, packs and a manifest); the key is included only with `--include-key`. `amem import` unpacks into an empty store folder.
+- **Batch appends (#89):** `append_many` writes many events in one transaction, with one sync for all objects. The reconciler uses it.
+  - Two index fixes removed a cost that grew with the size of folders and sessions.
+  - A first reconcile of 20,000 files went from about 15 minutes (projected) to 10.5 s.
+- **Quick verify (#79):** `verify(full=False)`, the default for `amem verify`, checks the newest valid checkpoint and everything after it. On 20,200 events it takes 1.35 s against 18.6 s for `--full`. The full check itself fell from 108.6 s after chain-head lookups were changed to use the index.
+
 ### 5.2 Store format
 - One SQLite database plus the object store, in `<project>/.agent-memory/` (D3).
 - `nodes` gains `tree`, and edges gain `cross`, both derived.

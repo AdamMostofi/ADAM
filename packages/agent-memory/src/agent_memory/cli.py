@@ -22,6 +22,13 @@ The working session comes from `--session` (or `AMEM_SESSION`, default
 `amem-cli`).
 
 **`amem mcp`** serves the tools to an agent over stdio (MCP).
+
+**Storage (Stage 2.11):**
+- `amem storage report|compress|decompress`
+- `amem purge --value-stdin|--object ID|--session S [--rotate-key] --reason ...`: user only, never an agent tool
+- `amem export backup.tar.gz [--include-key]`
+- `amem import backup.tar.gz`
+- `amem verify [--full]`: by default, from the newest valid checkpoint on
 """
 from __future__ import annotations
 
@@ -38,7 +45,7 @@ CLI_SESSION = "amem-cli"
 TOOL_COMMANDS = {"state": "mem_state", "knowledge": "mem_knowledge", "artifacts": "mem_artifacts",
                  "history": "mem_history", "links": "mem_links", "get": "mem_get", "load": "mem_load",
                  "offload": "mem_offload", "restore": "mem_restore", "pin": "mem_pin", "context": "mem_context",
-                 "declare": "mem_declare"}
+                 "declare": "mem_declare", "storage": "mem_storage"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,8 +57,24 @@ def main(argv: list[str] | None = None) -> int:
                         help="the working session for tools and context (default: AMEM_SESSION or amem-cli)")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("where", help="print where this project's store lives")
-    sub.add_parser("verify", help="check the database, chains, objects, references, checkpoints, structure and "
-                                  "derived layer; reports, never repairs")
+    ver = sub.add_parser("verify", help="check the database, chains, objects, references, checkpoints, structure and "
+                                        "derived layer; reports, never repairs")
+    ver.add_argument("--full", action="store_true",
+                     help="re-check the whole history (default: from the newest valid checkpoint on)")
+    pur = sub.add_parser("purge", help="remove content for good (a leaked secret, an object, or a session); the "
+                                       "purge is recorded without the content")
+    what = pur.add_mutually_exclusive_group(required=True)
+    what.add_argument("--value-stdin", action="store_true", help="read the value to purge from stdin")
+    what.add_argument("--object", help="an archive object id")
+    what.add_argument("--session", dest="purge_session", help="a session id: all its content")
+    pur.add_argument("--reason", default="", help="why (recorded)")
+    pur.add_argument("--rotate-key", action="store_true", help="also re-encrypt everything under a new data key")
+    exp = sub.add_parser("export", help="write a consistent backup (tar.gz) of the store")
+    exp.add_argument("out", help="the backup file to write")
+    exp.add_argument("--include-key", action="store_true",
+                     help="include the key file (anyone with the backup can then read it)")
+    imp = sub.add_parser("import", help="unpack a backup into this project's (empty) store folder")
+    imp.add_argument("backup", help="the backup file to read")
     rec = sub.add_parser("reconcile", help="record every file change since the last reconcile")
     rec.add_argument("--full", action="store_true", help="rehash every file instead of asking git what changed")
     sub.add_parser("checkpoint", help="take a checkpoint now")
@@ -70,7 +93,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "where":
         print(path)
         return 0
+    if args.command == "import":
+        from agent_memory.storage import import_backup
+        _print(import_backup(args.backup, path))
+        return 0
     store = Store(path)
+    if args.command == "purge":
+        value = sys.stdin.buffer.read().rstrip(b"\r\n") if args.value_stdin else None
+        _print(store.purge(value=value, object_id=args.object, session_id=args.purge_session, reason=args.reason,
+                           rotate_key=args.rotate_key))
+        return 0
+    if args.command == "export":
+        _print(store.export(args.out, include_key=args.include_key))
+        return 0
     if args.command == "mcp":
         from agent_memory.mcp import serve
         serve(store, args.session)
@@ -96,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         return 0
     if args.command == "verify":
-        report = store.verify()
+        report = store.verify(full=args.full)
         _print(report)
         return 0 if report["ok"] else 1
     if args.command == "reconcile":

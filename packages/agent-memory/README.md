@@ -1,7 +1,7 @@
 # agent-memory
 
-**Status:** in development inside the ADAM repository (Phase 2). Stages 2.1 to
-2.10 are done; purge, storage and compression (2.11) remain. `agent-memory` is a working name; the final name is decision D8.
+**Status:** Phase 2 is complete (Stages 2.1 to 2.11) inside the ADAM
+repository. The agent plugins come next (Phase 3). `agent-memory` is a working name; the final name is decision D8.
 
 The Lossless Tree Memory Engine is a general-purpose, lossless memory for
 long-running AI agents, with software development as its primary use.
@@ -98,9 +98,14 @@ uv run amem --project /path/to/project reconcile    # also: where, verify, check
   - delivery for clients that build every request (`request_context`) or add context per prompt (`delta`).
 - **Agent tools:** `mem_state`, `mem_knowledge`, `mem_artifacts`, `mem_history`, `mem_links`, `mem_get`, `mem_load`, `mem_offload`, `mem_restore`, `mem_pin`, `mem_context`, `mem_declare`. They are served over MCP (`amem mcp`) and the CLI (`amem knowledge topics`, `amem offload handle=c3 keep=...`).
 
-## Not built yet
+- **Storage (Stage 2.11):**
+  - **Compression:** old, unvisited content is packed and compressed losslessly (lzma) once the store passes a recommended size, or whenever an agent or user asks (`mem_storage`, `amem storage compress|decompress`).
+  - **Purge** of a leaked secret, an object or a session leaves no byte behind, keeps history connected, and can rotate the data key (`amem purge`; user only).
+  - **Size and growth reporting,** with warnings.
+  - **Backups:** `amem export` / `amem import`.
+  - **Faster checks:** batch appends (a 20,000-file first scan in about 10 s), and a fast `amem verify` from the newest checkpoint (`--full` for everything).
 
-- **Stage 2.11:** purge, storage reporting and tiered compression.
+## Not built yet
 - **Phase 3:** the agent plugins and onboarding.
 
 Known problems are tracked as [follow-up issues](https://github.com/AdamMostofi/ADAM/issues?q=is%3Aissue+is%3Aopen+label%3Afollow-up).

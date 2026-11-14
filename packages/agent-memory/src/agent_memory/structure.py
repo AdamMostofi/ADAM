@@ -152,6 +152,8 @@ CREATE INDEX IF NOT EXISTS idx_vfiles_path ON verification_files(path);
 CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_id, type);
 CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id, type);
 CREATE INDEX IF NOT EXISTS idx_edges_cross ON edges(cross_tree, type);
+-- Stage 2.11: placing a child (MAX(ord) under its parent) stays fast when a folder or session holds thousands.
+CREATE INDEX IF NOT EXISTS idx_edges_ord ON edges(from_id, type, ord);
 CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(node_type);
 CREATE INDEX IF NOT EXISTS idx_nodes_tree ON nodes(tree, node_type);
 CREATE INDEX IF NOT EXISTS idx_statuses_node ON statuses(node_id);
@@ -255,8 +257,10 @@ def _next_ord(conn, parent: str) -> int:
 
 
 def _current_turn(conn, session: str) -> str | None:
-    row = conn.execute("SELECT to_id FROM edges WHERE from_id = ? AND type = 'contains' AND to_id LIKE 'turn:%' "
-                       "ORDER BY ord DESC LIMIT 1", (session,)).fetchone()
+    """The session's latest turn: read from its turn nodes (a range on the primary key), not all its children."""
+    prefix = "turn:" + session[len("session:"):] + ":"
+    row = conn.execute("SELECT node_id FROM nodes WHERE node_id >= ? AND node_id < ? AND node_type = 'turn' "
+                       "ORDER BY log_position DESC LIMIT 1", (prefix, prefix + "\U0010ffff")).fetchone()
     return row[0] if row else None
 
 

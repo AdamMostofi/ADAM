@@ -323,6 +323,9 @@ class Reconciler:
                 summary_fields={"reflog": fresh, "head": head, "count": len(git_changes),
                                 "files": [[c.path, c.kind] for c in git_changes]}))
             result.group_event = group.event_id
+        # Every change and conflict goes in one transaction (one fsync), so a first reconcile of a large
+        # project costs one commit, not one per file (#89).
+        batch = []
         for c in result.changes:
             summary = {"path": c.path, "change": c.kind, "attribution": c.attribution, "git_commit": head,
                        "old_path": c.old_path, "size": len(c.content) if c.content is not None else None}
@@ -330,16 +333,16 @@ class Reconciler:
                 summary["group"] = result.group_event
             if c.resolves_intent:
                 summary["resolves_intent"] = c.resolves_intent
-            ev = self.store.append(EventInput(kind="file_change", session_id=self.session_id,
-                                              writer_id=self.writer_id, payload=c.content,
-                                              summary_fields=summary, path=c.path,
-                                              completeness="captured"))
-            result.events.append(ev.event_id)
+            batch.append(EventInput(kind="file_change", session_id=self.session_id, writer_id=self.writer_id,
+                                    payload=c.content, summary_fields=summary, path=c.path,
+                                    completeness="captured"))
         for conflict in obs["conflicts"]:
             result.conflicts.append(conflict)
-            self.store.append(EventInput(kind="conflict", session_id=self.session_id, writer_id=self.writer_id,
-                                         summary_fields={"op": "create", "title": f"conflicting edits to {conflict['path']}",
-                                                         **conflict}))
+            batch.append(EventInput(kind="conflict", session_id=self.session_id, writer_id=self.writer_id,
+                                    summary_fields={"op": "create", "title": f"conflicting edits to {conflict['path']}",
+                                                    **conflict}))
+        stored = self.store.append_many(batch)
+        result.events.extend(ev.event_id for ev in stored if ev.kind == "file_change")
 
         # Remember what was seen.
         conn.execute("BEGIN IMMEDIATE")
