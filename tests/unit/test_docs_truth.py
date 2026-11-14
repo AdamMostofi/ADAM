@@ -40,6 +40,27 @@ def test_every_working_capability_names_existing_code_and_tests():
             assert (ROOT / path.rstrip("/")).exists(), f"{capability}: {path} doesn't exist"
 
 
+def test_every_memory_engine_capability_names_existing_code_and_tests():
+    section = README.split("## Memory engine", 1)[1].split("\n## ", 1)[0]
+    rows = [line for line in section.splitlines() if line.startswith("| ") and "`" in line.split("|")[2]]
+    assert len(rows) >= 8
+    package = ROOT / "packages" / "agent-memory"
+    for row in rows:
+        capability, where, tested = [c.strip() for c in row.strip("|").split("|")]
+        tests = re.findall(r"`(packages/agent-memory/tests/[^`]+\.py)`", tested)
+        assert tests, f"no test named for: {capability}"
+        for path in tests:
+            assert (ROOT / path).is_file(), f"{capability}: {path} doesn't exist"
+        for name in re.findall(r"`([a-z_]+\.(?:py|toml))`", where):
+            found = (package / "src" / "agent_memory" / name).is_file() or (package / name).is_file()
+            assert found, f"{capability}: {name} doesn't exist in the engine package"
+
+
+def test_the_readme_counts_the_roadmap_stages():
+    total = re.search(r"(\d+) stages", (ROOT / "docs" / "ROADMAP.md").read_text()).group(1)
+    assert f"{total}\nstages" in README or f"{total} stages" in README
+
+
 def test_the_roadmap_lists_every_stage_in_order():
     text = (ROOT / "docs" / "ROADMAP.md").read_text()
     stages = re.findall(r"^\| (\d)\.(\d+) \| \[#(\d+)\]", text, re.M)

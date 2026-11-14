@@ -18,6 +18,12 @@ Runtime inference stays on the machine, and nothing calls a cloud service.
 *Every conclusion ADAM draws can be walked back, step by step, to the facts
 it was given and where they came from.*
 
+The repository also holds a second, standalone product: the
+**[memory engine](#memory-engine)** (`packages/agent-memory/`). It is a lossless,
+tree-structured memory for long-running AI agents, with coding as the main
+use case. It is being built in Phase 2, never imports ADAM, and will become
+ADAM's memory in Phase 4.
+
 This README describes what runs today. Each capability below points to the
 test that shows it; anything without a test is listed under
 [Planned](#planned).
@@ -67,7 +73,8 @@ python -m interface.web.app             # web UI on http://localhost:7860
 | Memory budget: 400 MB while idle or chatting, measured | [memory-budget.md](docs/design/memory-budget.md) | `tests/unit/test_memory_probe.py` |
 | Tests can't touch the real stores, and the stores can be backed up, audited and reset | `tests/store_guard.py`, `scripts/` | `tests/unit/test_store_guard.py`, `tests/integration/test_reset_store.py` |
 
-CI runs the whole suite on Python 3.10 and 3.12.
+CI runs the whole suite on Python 3.10 and 3.12, plus the memory engine's own
+suite in an environment without ADAM.
 
 ### What it does not do yet
 
@@ -82,19 +89,84 @@ CI runs the whole suite on Python 3.10 and 3.12.
 - **EQ reads explicit wording only.** It misses sarcasm, questions and
   litotes; its accuracy is recorded in
   [eq-appraisal.md](docs/design/eq-appraisal.md). A revisit is Stage 4.4.
+- **ADAM doesn't use the memory engine yet.** Its facts still live in
+  `memory/`. Connecting the two is Stage 4.1.
+
+---
+
+## Memory engine
+
+`packages/agent-memory/` (working name; command `amem`) is the Lossless Tree
+Memory Engine.
+
+**The principle:** the entire history is kept permanently, but an agent loads
+only what it needs, from the right tree, at the right time.
+
+**Status:** Stages 2.1 to 2.9 are done. Still to build:
+- the context manager that loads and offloads context (Stage 2.10);
+- purge, storage reporting and tiered compression (Stage 2.11);
+- the agent plugins (Phase 3).
+
+Design documents:
+- [architecture revision 3](docs/design/2026-11-13-memory-architecture-rev3.md), the current architecture;
+- the [original design](docs/design/2026-11-06-agent-memory-engine.md).
+
+**Four trees over one shared store.** Each tree has its own root, rules and
+navigator, and links between trees are explicit.
+
+| Tree | Answers | Holds |
+|---|---|---|
+| History | What happened? | Sessions, turns and every event, in order |
+| Artifacts | What exists? | Files and other artifacts, every version, code symbols, document sections, dependencies |
+| Knowledge | What do we know? | A topic hierarchy of decisions, approaches, requirements, constraints, concepts, bugs and their solutions, and more |
+| Active State | What matters now? | Objectives, tasks, blockers, priorities, constraints, conflicts, focus, check status, next actions |
+
+Every record and link says how it is known:
+- **observed** by the engine;
+- **declared** by an agent or the user;
+- **inferred**, with the rule named.
+
+Nothing is ever deleted. Secrets are redacted before storage, with a record
+that they were.
+
+| Capability | Where | Tested by |
+|---|---|---|
+| Append-only event log with per-writer hash chains; a compressed, encrypted, content-addressed archive; secret redaction and exclusion records; gap records instead of silent loss | `store.py`, `archive.py`, `secrets.py`, `keys.py` | `packages/agent-memory/tests/test_archive_and_log.py` |
+| The store lives inside the project (`.agent-memory/`, ignored by git) | `location.py` | `packages/agent-memory/tests/test_archive_and_log.py` |
+| The four trees, cross-tree links, a basis on every record, domain profiles (generic, software, documents), and automatic format upgrades | `structure.py`, `trees.py`, `profiles.py` | `packages/agent-memory/tests/test_four_trees.py`, `packages/agent-memory/tests/test_structure.py` |
+| Artifact versions, Python and TypeScript symbols and imports (tsconfig aliases included), Markdown sections and links, metadata, full-text search | `codegraph.py` | `packages/agent-memory/tests/test_artifacts.py`, `packages/agent-memory/tests/test_code_and_verification.py` |
+| Test results recorded with their files and environment, and shown as verified, stale or unknown, with reasons | `verification.py` | `packages/agent-memory/tests/test_code_and_verification.py` |
+| Knowledge entries with statuses, topics, supersession chains, bug-to-solution links, and knowledge and conversation search | `structure.py`, `search.py` | `packages/agent-memory/tests/test_knowledge.py` |
+| Active state in ten sections, with staleness and token-budgeted levels; never injects raw tool output | `state.py` | `packages/agent-memory/tests/test_state.py` |
+| Reconciliation with the files and git (who changed what, with honest "unattributed"), conflict records for concurrent agents, checkpoints, and crash recovery that matches a clean replay | `reconcile.py`, `recovery.py` | `packages/agent-memory/tests/test_reconcile_and_recovery.py` |
+| The engine never imports ADAM | `pyproject.toml` | `packages/agent-memory/tests/test_boundary.py` |
+
+The "Where" files are in `packages/agent-memory/src/agent_memory/`.
+
+```bash
+cd packages/agent-memory
+uv sync --locked --extra dev
+uv run pytest -q
+uv run amem --project /path/to/project reconcile   # also: where, verify, checkpoint, recover, rebuild
+```
+
+Known open problems are tracked as
+[follow-up issues](https://github.com/AdamMostofi/ADAM/issues?q=is%3Aissue+is%3Aopen+label%3Afollow-up),
+ordered by severity.
 
 ---
 
 ## Planned
 
 The single order of work is [docs/ROADMAP.md](docs/ROADMAP.md): 10 phases and
-53 stages, done one at a time.
+57 stages, done one at a time.
 
 | Phase | Adds |
 |---|---|
 | 1 — Repair the Floor | The kernel and docs work listed above (Stages 1.1–1.8). |
-| 2–3 — Memory engine | A standalone, lossless memory engine for coding agents ([design](docs/design/2026-11-06-agent-memory-engine.md)), then plugins for Claude Code, OpenCode, Pi and others. |
-| 4 — The Citation Rite | Markdown sources with exact passages, answers only from evidence, the EQ revisit, citations in chat, and a thought trace. |
+| 2 — Forge the Memory Engine | The [memory engine](#memory-engine). Stages 2.1–2.9 are done; the context manager (2.10) and purge, storage and compression (2.11) remain. |
+| 3 — Carry the Memory | Plugins for Claude Code, OpenCode, Pi and others; a benchmark that decides whether to continue; a standalone release. |
+| 4 — The Citation Rite | ADAM's storage moved onto the memory engine, Markdown sources with exact passages, answers only from evidence, the EQ revisit, citations in chat, and a thought trace. |
 | 5 — The Book Study | Reading a real book into reviewed claims, measured against plain search, and a learning loop connected to chat. |
 | 6 — The Ontology Web | A shared vocabulary, concept hierarchies across sources, and checked analogies. |
 | 7 — The Tool Rites | Audited, approval-gated tools. |
@@ -300,6 +372,7 @@ locally within 400 MB, where every conclusion has a proof back to its sources.
 | Graph view | vendored `vis-network` |
 | Models | dataclasses, Pydantic |
 | Testing | pytest, hypothesis; CI on GitHub Actions |
+| Memory engine | SQLite (WAL) with FTS5, AES-256-GCM via `cryptography`, tree-sitter (Python, TypeScript) |
 
 ---
 
@@ -332,6 +405,10 @@ ADAM/
 │   ├── mouth.py
 │   └── web/
 ├── scripts/                # backup, audit, reset, measurements
+├── packages/
+│   └── agent-memory/       # the standalone memory engine (own lockfile, tests and CI job)
+│       ├── src/agent_memory/
+│       └── tests/
 ├── docs/
 │   ├── ROADMAP.md          # the order of work
 │   ├── DECISIONS.md        # every decision and where it lives
@@ -351,6 +428,7 @@ ADAM/
 ```bash
 uv run pytest -q                    # everything
 uv run pytest -m "not slow" -q      # what CI runs first
+(cd packages/agent-memory && uv run pytest -q)   # the memory engine, on its own
 ```
 
 ---
@@ -365,8 +443,12 @@ uv run pytest -m "not slow" -q      # what CI runs first
 - [Restart](docs/design/restart.md), [vector index](docs/design/vector-index.md),
   [memory budget](docs/design/memory-budget.md),
   [EQ appraisal](docs/design/eq-appraisal.md).
-- [Memory engine design](docs/design/2026-11-06-agent-memory-engine.md)
-  (Phases 2–3).
+- Memory engine (Phases 2–3):
+  [architecture revision 3](docs/design/2026-11-13-memory-architecture-rev3.md)
+  (current), the [original design](docs/design/2026-11-06-agent-memory-engine.md),
+  the [reconciler spike](docs/design/2026-11-13-reconciler-spike.md), and the
+  [four-trees review](docs/design/2026-11-13-four-trees-review.md) that led to
+  revision 3.
 - [OpenCog Hyperon analysis](docs/HYPERON_ANALYSIS.md),
   [thread safety](docs/design/thread-safety.md),
   [USB deployment](docs/design/usb-deployment.md),
