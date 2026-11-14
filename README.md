@@ -102,8 +102,8 @@ Memory Engine.
 **The principle:** the entire history is kept permanently, but an agent loads
 only what it needs, from the right tree, at the right time.
 
-**Status:** Stages 2.1 to 2.9 are done. Still to build:
-- the context manager that loads and offloads context (Stage 2.10);
+**Status:** Stages 2.1 to 2.10 are done, including the context manager that
+loads and offloads context within a token budget. Still to build:
 - purge, storage reporting and tiered compression (Stage 2.11);
 - the agent plugins (Phase 3).
 
@@ -139,6 +139,8 @@ that they were.
 | Knowledge entries with statuses, topics, supersession chains, bug-to-solution links, and knowledge and conversation search | `structure.py`, `search.py` | `packages/agent-memory/tests/test_knowledge.py` |
 | Active state in ten sections, with staleness and token-budgeted levels; never injects raw tool output | `state.py` | `packages/agent-memory/tests/test_state.py` |
 | Reconciliation with the files and git (who changed what, with honest "unattributed"), conflict records for concurrent agents, checkpoints, and crash recovery that matches a clean replay | `reconcile.py`, `recovery.py` | `packages/agent-memory/tests/test_reconcile_and_recovery.py` |
+| The context manager: a crash-safe ledger of what the agent has loaded, token budgets per tree, protected items, offload to one-line references with exact restore, prompt-driven offers, and recovery after compaction | `context.py` | `packages/agent-memory/tests/test_context.py` |
+| Twelve agent tools (one per tree, plus load, offload, restore, pin, context and declare) over MCP (stdio) and the `amem` CLI | `tools.py`, `mcp.py`, `cli.py` | `packages/agent-memory/tests/test_context.py` |
 | The engine never imports ADAM | `pyproject.toml` | `packages/agent-memory/tests/test_boundary.py` |
 
 The "Where" files are in `packages/agent-memory/src/agent_memory/`.
@@ -148,6 +150,8 @@ cd packages/agent-memory
 uv sync --locked --extra dev
 uv run pytest -q
 uv run amem --project /path/to/project reconcile   # also: where, verify, checkpoint, recover, rebuild
+uv run amem --project /path/to/project context assemble prompt="what broke?"
+uv run amem --project /path/to/project mcp          # serve the tools to an agent over stdio
 ```
 
 Known open problems are tracked as
@@ -164,7 +168,7 @@ The single order of work is [docs/ROADMAP.md](docs/ROADMAP.md): 10 phases and
 | Phase | Adds |
 |---|---|
 | 1 — Repair the Floor | The kernel and docs work listed above (Stages 1.1–1.8). |
-| 2 — Forge the Memory Engine | The [memory engine](#memory-engine). Stages 2.1–2.9 are done; the context manager (2.10) and purge, storage and compression (2.11) remain. |
+| 2 — Forge the Memory Engine | The [memory engine](#memory-engine). Stages 2.1–2.10 are done; purge, storage and compression (2.11) remain. |
 | 3 — Carry the Memory | Plugins for Claude Code, OpenCode, Pi and others; a benchmark that decides whether to continue; a standalone release. |
 | 4 — The Citation Rite | ADAM's storage moved onto the memory engine, Markdown sources with exact passages, answers only from evidence, the EQ revisit, citations in chat, and a thought trace. |
 | 5 — The Book Study | Reading a real book into reviewed claims, measured against plain search, and a learning loop connected to chat. |

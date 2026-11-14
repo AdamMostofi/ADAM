@@ -1,8 +1,7 @@
 # agent-memory
 
 **Status:** in development inside the ADAM repository (Phase 2). Stages 2.1 to
-2.9 are done; the context manager (2.10) and purge, storage and compression
-(2.11) remain. `agent-memory` is a working name; the final name is decision D8.
+2.10 are done; purge, storage and compression (2.11) remain. `agent-memory` is a working name; the final name is decision D8.
 
 The Lossless Tree Memory Engine is a general-purpose, lossless memory for
 long-running AI agents, with software development as its primary use.
@@ -78,6 +77,9 @@ store.declare_state("task", "fix the refresh race", "s1", "agent")
 store.knowledge.topics()                             # browse: listings only, no bodies
 store.artifacts.find_part("refresh")                 # where is it defined?
 store.state.overview()                               # level 0: what matters now, in about 200 tokens
+start = store.context.assemble("s2", prompt="why does refresh fail?")   # the session's starting context
+packet = store.context.load("s2", bug, level=2)      # then load, offload, restore by handle
+store.context.offload("s2", packet["handle"], keep="caused by a double rotate")
 ```
 
 ```bash
@@ -87,9 +89,17 @@ uv run pytest -q
 uv run amem --project /path/to/project reconcile    # also: where, verify, checkpoint, recover, rebuild
 ```
 
+- **The context manager (Stage 2.10):**
+  - a crash-safe ledger of what the agent has loaded, with token budgets per tree;
+  - protected items (constraints, objectives, open conflicts, active work, pins) that are never evicted automatically;
+  - offloading to one-line references, with exact restore;
+  - offers for what a prompt names but the context lacks;
+  - recovery after compaction;
+  - delivery for clients that build every request (`request_context`) or add context per prompt (`delta`).
+- **Agent tools:** `mem_state`, `mem_knowledge`, `mem_artifacts`, `mem_history`, `mem_links`, `mem_get`, `mem_load`, `mem_offload`, `mem_restore`, `mem_pin`, `mem_context`, `mem_declare`. They are served over MCP (`amem mcp`) and the CLI (`amem knowledge topics`, `amem offload handle=c3 keep=...`).
+
 ## Not built yet
 
-- **The context manager (Stage 2.10):** budgets, loading, offloading, restoring, and recovery after compaction, plus the tools agents call.
 - **Stage 2.11:** purge, storage reporting and tiered compression.
 - **Phase 3:** the agent plugins and onboarding.
 

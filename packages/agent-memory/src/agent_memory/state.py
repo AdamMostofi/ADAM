@@ -51,7 +51,10 @@ CLOSED = {"achieved", "dropped", "done", "cancelled", "resolved", "superseded", 
 LEVELS = {1: ("objectives", "constraints", "open_conflicts", "tasks", "blockers", "next_actions", "progress"),
           2: ("priorities", "working_context", "verification")}
 DEFAULT_SETTINGS = {"state_budgets": {"0": 200, "1": 1500, "2": 3000}, "stale_after_days": 14,
-                    "recent_changes": 20}
+                    "recent_changes": 20,
+                    # Stage 2.10: the context manager (context.py); shares are fractions of the budget.
+                    "context": {"budget": 12000, "packet_max": 2000,
+                                "shares": {"state": 0.30, "knowledge": 0.25, "artifacts": 0.25, "history": 0.20}}}
 TASK_ORDER = {"in_progress": 0, "blocked": 1, "open": 2}
 
 

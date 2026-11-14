@@ -339,3 +339,11 @@ def test_real_source_code_is_not_redacted(store):
     src = Path(__file__).resolve().parents[1] / "src" / "agent_memory"
     for path in sorted(src.glob("*.py")):
         assert store.append(ev(payload=path.read_bytes())).redactions == [], path.name
+
+
+def test_attribute_paths_are_code_but_dotted_secrets_are_still_caught(store):
+    code = b'packet = {"tokens": item.tokens, "secret": cfg.auth.api_key}\n'
+    assert store.append(ev(payload=code)).redactions == []
+    value = "Kx9" + "#mQ2$vL7@pR4!wT8z"
+    leaked = f'password = "{value}.v2"\n'.encode()    # not an attribute path: punctuation inside
+    assert [r["rule"] for r in store.append(ev(payload=leaked)).redactions] == ["generic-secret-assignment"]

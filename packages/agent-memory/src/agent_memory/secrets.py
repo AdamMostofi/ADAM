@@ -48,7 +48,9 @@ PLACEHOLDERS = re.compile(rb"(?i)^(\$\{?[A-Za-z_]+\}?|<[^>]+>|x+|\*+|changeme|ex
 # Code that reads a secret rather than containing one: os.environ['X'], getenv("X"), settings.API_KEY.
 CODE_REFERENCE = re.compile(rb"[\[\]\(\)<>{}]|\|\||&&"
                             rb"|^(?:os\.|process\.env|env\.|getenv|settings\.|config\.|self\.|this\.|args\.)"
-                            rb"|^[A-Za-z_]+$")   # a bare identifier ("max_tokens") is a name, not a secret
+                            rb"|^[A-Za-z_]+$"   # a bare identifier ("max_tokens") is a name, not a secret
+                            # an attribute path in code ("item.tokens", "cfg.auth.api_key"), not a secret
+                            rb"|^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+,?$")
 
 
 @dataclass(frozen=True)

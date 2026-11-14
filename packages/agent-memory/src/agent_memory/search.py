@@ -119,6 +119,21 @@ class SearchIndex:
         finally:
             conn.close()
 
+    def knowledge_any(self, terms, limit: int = 10) -> list[tuple[str, str, float]]:
+        """Knowledge nodes matching any of the terms (best first): for spotting what a prompt is about."""
+        terms = [t for t in terms if t.strip()]
+        if not terms:
+            return []
+        self.update()
+        conn = self._connect()
+        try:
+            query = " OR ".join(_quote(t) for t in dict.fromkeys(terms))
+            return conn.execute(
+                "SELECT node_id, snippet(knowledge_fts, -1, '[', ']', ' ... ', 8), rank FROM knowledge_fts "
+                "WHERE knowledge_fts MATCH ? ORDER BY rank LIMIT ?", (query, limit)).fetchall()
+        finally:
+            conn.close()
+
     def history(self, query: str, limit: int = 20, session_id: str | None = None) -> list[dict]:
         terms = _quote(query)
         if not terms:

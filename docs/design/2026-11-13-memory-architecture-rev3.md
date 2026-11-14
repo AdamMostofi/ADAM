@@ -401,6 +401,37 @@ So a **true** guarantee that memory never overfills the context is possible only
 
 ---
 
+### 7.6 As built (Stage 2.10, #88)
+- **`context.py`: the ledger.**
+  - It is rebuilt from the log's `context_*` events, so it survives crashes, is covered by checkpoints, and is readable in history.
+  - Each packet's exact text is archived, so `restore` returns exactly what was loaded, with a note if the record changed since.
+- **Packets:** a record at a level (0 reference, 1 summary, 2 full, 3 raw recorded data), a state view, or a tool query. Each packet's size counts its handle and separator.
+- **Budget:**
+  - `settings.context = {budget, packet_max, shares}`, with 40 tokens reserved for the bundle heading;
+  - eviction takes trees over their share first, then P3, P2 and P1, least recently used and largest first;
+  - P0 and pinned items are never evicted automatically, and an explicit forced offload is recorded;
+  - what can't fit is delivered as a reference line.
+- **Relevance**, deterministic, with reasons on every offer:
+  - named ids, file paths and symbol names;
+  - topic names;
+  - any-term knowledge search;
+  - one link away from a named record;
+  - open status.
+- **Operations:**
+  - `assemble`: the overview, every P0 record, level-1 state, the last session's working set as references, and offers for the prompt;
+  - `load`, `offload` (with `keep=`, saved as a finding note linked to the record), `restore` and `pin`;
+  - `detect`;
+  - `compacted`: a reset, then P0 back in full and every other item as a reference;
+  - `request_context` (tier A) and `delta` (tier B).
+- **`tools.py`:** twelve tools shared by MCP and the CLI. Tree tools return packets through the ledger.
+- **`mcp.py`:** a dependency-free MCP server over stdio (`initialize`, `tools/list`, `tools/call`, `ping`), run with `amem mcp`.
+- **CLI:** `amem <tool> [op] key=value ...`.
+- **Measured on the ADAM repository:**
+  - assemble: 0.29 s, 882 of 12,000 tokens;
+  - tool calls: 27–108 ms;
+  - recovery after a compaction: 0.12 s.
+- **Limits are unchanged** (section 11). Whether hooks for prompt-time context and compaction exist is verified per agent in Phase 3.
+
 ## 8. Domain neutrality: core and profiles
 
 - **The universal core:** the four trees, their generic node types, the cross-tree layer, the context manager, and the preservation classes.

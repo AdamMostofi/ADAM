@@ -85,6 +85,8 @@ class Store:
         self.artifacts = trees.Artifacts(self._connect, store=self)
         self.knowledge = trees.Knowledge(self._connect, store=self)
         self.state = trees.State(self._connect, store=self)
+        from agent_memory.context import ContextManager
+        self.context = ContextManager(self)   # the dynamic context manager (rev 3, section 7)
         if self._migrated_from is not None:
             self.append(EventInput(kind="recovery", session_id="engine", writer_id="engine-migration",
                                    summary_fields={"op": "migrate", "from_format": self._migrated_from,

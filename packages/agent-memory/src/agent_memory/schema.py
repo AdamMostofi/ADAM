@@ -26,6 +26,8 @@ KINDS = frozenset({
     "entry", "topic",
     # Stage 2.9: declared active-state items: progress, priorities, next actions, working-context focus.
     "state_item",
+    # Stage 2.10: the context manager's ledger (architecture revision 3, section 7).
+    "context_load", "context_offload", "context_restore", "context_pin", "context_reset",
 })
 
 COMPLETENESS = ("captured", "partial", "unavailable", "imported")
