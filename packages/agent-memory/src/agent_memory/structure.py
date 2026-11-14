@@ -12,7 +12,7 @@ and recovery use.
 |---|---|---|
 | history | `history:` | sessions, turns, events: what happened |
 | artifacts | `artifacts:` | collections (folders) and artifacts (any file or resource), with versions: what exists |
-| knowledge | `knowledge:` | groups of entries: approaches (development paths), decisions, notes: what is known |
+| knowledge | `knowledge:` | a topic hierarchy holding entries (decisions, approaches, requirements, bugs, solutions ...): what is known |
 | state | `state:` | sections of items: objectives, tasks, blockers, open conflicts: what matters now |
 
 * **Tree structure:** each tree's shape is made by `contains` edges inside
@@ -56,6 +56,7 @@ EDGE_TYPES = frozenset({
     "imports", "depends_on", "tests",                                                # code
     "blocks", "blocked_by", "advances",                                              # planning
     "related_to",                                                                    # general
+    "fixes", "fixed_by", "filed_under", "concerns", "discussed_in", "evidence_for",  # knowledge (Stage 2.8)
 })
 BASES = ("observed", "declared", "inferred")
 
@@ -64,13 +65,22 @@ TREES = ("history", "artifacts", "knowledge", "state")
 SCHEMAS = {
     "history": {"root": ("session",), "session": ("turn", "event"), "turn": ("event",), "event": ()},
     "artifacts": {"root": ("collection", "artifact"), "collection": ("collection", "artifact"), "artifact": ()},
-    "knowledge": {"root": ("group",), "group": ("approach", "decision", "note"),
-                  "approach": (), "decision": (), "note": ()},
+    # Stage 2.8: topics nest, and every entry has one home topic ("unfiled" when none was given).
+    "knowledge": {"root": ("topic",),
+                  "topic": ("topic", "decision", "approach", "note", "requirement", "constraint", "concept",
+                            "explanation", "discovery", "bug", "solution", "question", "reference"),
+                  **{k: () for k in ("decision", "approach", "note", "requirement", "constraint", "concept",
+                                     "explanation", "discovery", "bug", "solution", "question", "reference")}},
     "state": {"root": ("section",), "section": ("goal", "task", "blocker", "conflict"),
               "goal": (), "task": (), "blocker": (), "conflict": ()},
 }
 TREE_OF = {t: tree for tree, schema in SCHEMAS.items() for t in schema if t != "root"}
-GROUP_TYPES = {"group", "section"}
+GROUP_TYPES = {"topic", "section"}
+UNFILED = "unfiled"
+# Knowledge kinds declared through the `entry` event (decisions and paths keep their own event kinds).
+ENTRY_KINDS = ("requirement", "constraint", "concept", "explanation", "discovery", "bug", "solution", "question",
+               "reference")
+KNOWLEDGE_TYPES = ("decision", "approach", "note", *ENTRY_KINDS)
 
 STATUSES = {
     "path": ("proposed", "exploring", "selected", "abandoned", "superseded", "reconsidered"),
@@ -79,16 +89,27 @@ STATUSES = {
     "decision": ("proposed", "active", "superseded"),
     "blocker": ("open", "resolved"),
     "conflict": ("open", "resolved"),
+    "requirement": ("open", "met", "dropped"),
+    "constraint": ("active", "lifted"),
+    "concept": ("current", "superseded"),
+    "explanation": ("current", "superseded"),
+    "discovery": ("current", "superseded", "refuted"),
+    "bug": ("open", "fixed", "wontfix", "duplicate"),
+    "solution": ("proposed", "applied", "verified", "reverted", "superseded"),
+    "question": ("open", "answered", "dropped"),
+    "reference": ("current", "superseded"),
 }
 INITIAL = {"path": "proposed", "goal": "active", "task": "open", "decision": "proposed", "blocker": "open",
-           "conflict": "open"}
+           "conflict": "open", "requirement": "open", "constraint": "active", "concept": "current",
+           "explanation": "current", "discovery": "current", "bug": "open", "solution": "proposed",
+           "question": "open", "reference": "current"}
 PLANNING_KINDS = {"path", "goal", "task", "blocker", "decision", "conflict"}
+RECORD_KINDS = PLANNING_KINDS | set(ENTRY_KINDS)   # records with statuses: the log kind, or an entry's entry_kind
 # The log's event kind -> the node type it creates, and the group or section that holds it.
 KIND_NODE = {"path": "approach", "decision": "decision", "goal": "goal", "task": "task", "blocker": "blocker",
-             "conflict": "conflict", "note": "note"}
-CONTAINER = {"approach": "knowledge:approaches", "decision": "knowledge:decisions", "note": "knowledge:notes",
-             "goal": "state:objectives", "task": "state:tasks", "blocker": "state:blockers",
-             "conflict": "state:open_conflicts"}
+             "conflict": "conflict", "note": "note", **{k: k for k in ENTRY_KINDS}}
+CONTAINER = {"goal": "state:objectives", "task": "state:tasks", "blocker": "state:blockers",
+             "conflict": "state:open_conflicts"}   # knowledge entries live under topics instead
 PATH_ROLES = ("experiment", "accepted", "reverted")
 # How a reconciled file change was attributed -> how that attribution is known.
 ATTRIBUTION_BASIS = {"agent_tool": "observed", "baseline": "observed", "git_operation": "inferred",
@@ -247,10 +268,36 @@ def _roots(conn, ev: Event) -> None:
 
 
 def _container(conn, ev: Event, node_id: str) -> str:
-    """A knowledge group or state section, created under its tree's root on first use."""
+    """A state section, created under the state root on first use."""
     tree, name = node_id.split(":", 1)
-    _add_node(conn, node_id, "group" if tree == "knowledge" else "section", ev, label=name, parent=root(tree))
+    _add_node(conn, node_id, "section", ev, label=name, parent=root(tree))
     return node_id
+
+
+def topic_path(path: str) -> str:
+    """The canonical form of a topic path: lower case, '/' separated, no empty parts ("Auth / JWT" -> "auth/jwt")."""
+    return "/".join(p.strip().lower() for p in str(path).replace("\\", "/").split("/") if p.strip())
+
+
+def topic_node(path: str) -> str:
+    return f"topic:{topic_path(path)}"
+
+
+def _topic(conn, ev: Event, path: str, basis: str = "declared", **attrs) -> str:
+    """The node for a topic path, creating it and its parents under the knowledge root on first use."""
+    labels = [p.strip() for p in str(path).replace("\\", "/").split("/") if p.strip()]
+    canon = topic_path(path)
+    if not canon:
+        raise SchemaError("a topic needs a name")
+    parent = root("knowledge")
+    parts = canon.split("/")
+    for i in range(len(parts)):
+        node = "topic:" + "/".join(parts[: i + 1])
+        last = i == len(parts) - 1
+        _add_node(conn, node, "topic", ev, label=labels[i], parent=parent, basis=basis,
+                  path="/".join(parts[: i + 1]), **(attrs if last else {}))
+        parent = node
+    return parent
 
 
 def _session(conn, ev: Event, session_id: str, agent: str | None = None) -> str:
@@ -277,7 +324,15 @@ def _artifact(conn, ev: Event, path: str) -> str:
 def validate(conn, kind: str, summary: dict) -> None:
     """Reject a declared operation that can't be applied, so no event is stored for it."""
     op = summary.get("op")
-    if kind in PLANNING_KINDS:
+    if kind == "entry":
+        if summary.get("entry_kind") not in ENTRY_KINDS:
+            raise SchemaError(f"an entry's entry_kind must be one of {ENTRY_KINDS}")
+        kind = summary["entry_kind"]
+    if kind == "topic":
+        if op != "create" or not topic_path(summary.get("path") or ""):
+            raise SchemaError("a topic event needs op 'create' and a path")
+        return
+    if kind in RECORD_KINDS:
         node_type = KIND_NODE[kind]
         if op not in ("create", "status"):
             raise SchemaError(f"a {kind} event needs op 'create' or 'status'")
@@ -296,6 +351,12 @@ def validate(conn, kind: str, summary: dict) -> None:
             for target in _ids(summary.get(ref)):
                 if _node_type(conn, target) != node_type:
                     raise SchemaError(f"{ref} must name existing {kind} records; {target!r} isn't one")
+        for target in _ids(summary.get("fixes")):
+            if _node_type(conn, target) != "bug":
+                raise SchemaError(f"fixes must name existing bug records; {target!r} isn't one")
+        for topic in [summary.get("topic"), *_ids(summary.get("filed_under"))]:
+            if topic is not None and not topic_path(topic):
+                raise SchemaError("a topic needs a name")
     elif kind == "relation":
         if summary.get("type") not in EDGE_TYPES or summary.get("type") == "contains":
             raise SchemaError(f"relation type must be one of {sorted(EDGE_TYPES - {'contains'})}")
@@ -378,13 +439,15 @@ def _by_kind(conn, ev: Event, s: dict, session: str) -> None:
     if s.get("group") and _node_exists(conn, s["group"]):
         _add_edge(conn, ev.event_id, s["group"], "part_of", "observed", ev)
 
-    if ev.kind in PLANNING_KINDS:
+    if ev.kind in PLANNING_KINDS or ev.kind == "entry":
         _planning(conn, ev, s)
+    elif ev.kind == "topic":
+        _topic(conn, ev, s["path"], description=s.get("description"))
     elif ev.kind == "note":
         node = f"note:{ev.event_id}"
         _add_node(conn, node, "note", ev, label=s.get("title") or s.get("text", "")[:80],
-                  parent=_container(conn, ev, CONTAINER["note"]), basis="declared",
-                  note_type=s.get("note_type", "note"))
+                  parent=_topic(conn, ev, s.get("topic") or UNFILED, "declared" if s.get("topic") else "observed"),
+                  basis="declared", note_type=s.get("note_type", "note"), body=s.get("text"))
         _add_edge(conn, node, ev.event_id, "references", "observed", ev)
         _declared_links(conn, ev, node, s)
     elif ev.kind == "relation":
@@ -445,7 +508,7 @@ def _propose_path(conn, ev: Event, description: str, signal: str, evidence: list
                   session: str | None = None, **attrs) -> None:
     """A structural signal proposes an approach, inferred by a named rule; it doesn't name its topic."""
     node = f"path:{ev.event_id}:{signal}"
-    _add_node(conn, node, "approach", ev, label=description, parent=_container(conn, ev, CONTAINER["approach"]),
+    _add_node(conn, node, "approach", ev, label=description, parent=_topic(conn, ev, UNFILED, "observed"),
               basis="inferred", topic=None, description=description, signal=signal, source="inferred",
               rule=f"structural signal: {signal}", **attrs)
     _add_status(conn, node, "proposed", f"structural signal: {signal}", "inferred", ev)
@@ -456,16 +519,22 @@ def _propose_path(conn, ev: Event, description: str, signal: str, evidence: list
 
 
 def _planning(conn, ev: Event, s: dict) -> None:
-    kind = ev.kind
+    kind = s["entry_kind"] if ev.kind == "entry" else ev.kind
     node_type = KIND_NODE[kind]
     if s["op"] == "create":
         node = f"{kind}:{ev.event_id}"
         title = s.get("title") or s.get("topic")
         # A conflict is observed by the engine (reconciliation); everything else here is declared.
         basis = "observed" if kind == "conflict" else "declared"
-        _add_node(conn, node, node_type, ev, label=title, parent=_container(conn, ev, CONTAINER[node_type]),
+        if node_type in KNOWLEDGE_TYPES:
+            home = _topic(conn, ev, s["topic"], "declared") if s.get("topic") else _topic(conn, ev, UNFILED, "observed")
+        else:
+            home = _container(conn, ev, CONTAINER[node_type])
+        _add_node(conn, node, node_type, ev, label=title, parent=home,
                   basis=basis, title=title, topic=s.get("topic"), description=s.get("description"),
-                  source=basis)
+                  body=s.get("body"), source=basis)
+        if node_type in KNOWLEDGE_TYPES and not s.get("topic"):
+            _propose_topic(conn, ev, node, s)
         status = s.get("status") or INITIAL[kind]
         if kind == "decision" and s.get("status") is None and s.get("from_user_message"):
             status = "active"   # agent-declared decisions start as proposed; a user's are active
@@ -478,6 +547,10 @@ def _planning(conn, ev: Event, s: dict) -> None:
         node = s["id"]
         _add_status(conn, node, s["status"], s.get("reason"), "declared", ev)
         _add_edge(conn, node, ev.event_id, "references", "observed", ev)
+        if kind == "bug" and s["status"] == "fixed":
+            for solution in _ids(s.get("fixed_by")):
+                if _node_type(conn, solution) == "solution":
+                    _add_edge(conn, solution, node, "fixes", "declared", ev)
         if kind == "path":
             if s["status"] == "abandoned":
                 for e in _ids(s.get("evidence")):
@@ -502,10 +575,29 @@ def _declared_links(conn, ev: Event, node: str, s: dict, statuses_only: bool = F
     for old in _ids(s.get("supersedes")):
         _add_edge(conn, node, old, "supersedes", "declared", ev)
         _add_status(conn, old, "superseded", f"superseded by {node}", "declared", ev)
-    for etype in ("advances", "blocks", "blocked_by", "caused_by"):
+    for etype in ("advances", "blocks", "blocked_by", "caused_by", "fixes", "discussed_in", "evidence_for"):
         for other in _ids(s.get(etype)):
             if _node_exists(conn, other):
                 _add_edge(conn, node, other, etype, "declared", ev)
+    for path in _ids(s.get("concerns")):
+        target = path if path.startswith("artifact:") else artifact_node(path)
+        if _node_exists(conn, target):
+            _add_edge(conn, node, target, "concerns", "declared", ev)
+    for topic in _ids(s.get("filed_under")):
+        _add_edge(conn, node, _topic(conn, ev, topic, "declared"), "filed_under", "declared", ev)
+
+
+def _propose_topic(conn, ev: Event, node: str, s: dict) -> None:
+    """An unfiled entry about an artifact is proposed for the topic named by the artifact's top folder (inferred)."""
+    for path in _ids(s.get("concerns")):
+        path = path[len("artifact:"):] if path.startswith("artifact:") else path
+        first = path.split("/", 1)[0]
+        name = first if "/" in path else first.rsplit(".", 1)[0]
+        if name and topic_path(name) != UNFILED:
+            rule = f"inferred from the artifact {path}"
+            _add_edge(conn, node, _topic(conn, ev, name, "inferred", rule=rule), "filed_under", "inferred", ev,
+                      rule=rule)
+            return
 
 
 def _alternatives(conn, node: str) -> list[str]:

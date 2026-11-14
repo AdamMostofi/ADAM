@@ -174,7 +174,7 @@ def recover(store, reconciler=None) -> dict:
             _replace_tables(conn, {t: recovered[t] for t in repaired})
         finally:
             conn.close()
-    derived = store.codegraph.rebuild(store.archive)
+    derived = store.rebuild_derived()
     reconciled = None
     if reconciler is not None:
         result = reconciler.run()

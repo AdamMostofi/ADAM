@@ -22,6 +22,8 @@ KINDS = frozenset({
     "path", "blocker", "relation", "retraction",
     # Stage 2.5: conflicting concurrent changes, grouped git operations, and recoveries (design 8).
     "conflict", "change_group", "recovery",
+    # Stage 2.8: knowledge entries (requirements, bugs, solutions ...) and topics (architecture revision 3, 4.3).
+    "entry", "topic",
 })
 
 COMPLETENESS = ("captured", "partial", "unavailable", "imported")

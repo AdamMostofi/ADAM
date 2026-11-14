@@ -50,8 +50,10 @@ def test_each_tree_holds_its_own_kind_of_record(store, history):
     assert sorted(i["label"] for i in api["items"]) == ["cache.py", "pool.py"]
     assert store.artifacts.open_path("api/cache.py")["attrs"]["path"] == "api/cache.py"
 
-    groups = {g["label"]: g["children"] for g in store.knowledge.root()["items"]}
-    assert groups["approaches"] >= 2 and groups["decisions"] == 2 and groups["notes"] == 1
+    topics = {g["label"]: g["children"] for g in store.knowledge.topics()["items"]}
+    assert topics["database"] == 2                  # the two declared approaches, filed under their topic
+    unfiled = {e["type"] for e in store.knowledge.topic("unfiled")["items"]}
+    assert unfiled == {"note", "decision", "approach"}   # no topic given; structural proposals too
     assert {e["label"] for e in store.knowledge.find("decision", "active")} == {"cache for 30 seconds"}
 
     sections = [s["label"] for s in store.state.root()["items"]]

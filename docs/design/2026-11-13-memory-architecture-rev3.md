@@ -181,6 +181,25 @@ Code references are to `packages/agent-memory/src/agent_memory/`.
 | **Navigator** | `knowledge.topics(depth)`, `knowledge.open(topic_or_entry)`, `knowledge.find(q, kind, status)`, `knowledge.history_of(entry)` (supersessions and evidence) |
 | **Built today** | decision and path records (now `approach`), notes, typed edges |
 
+**As built (Stage 2.8, #87):** store format 3.
+- **The knowledge tree is a topic hierarchy:** root, then topics, then subtopics and entries.
+  - Topic paths are case-insensitive and slash-separated (`topic:auth/jwt`), and parents are created on first use.
+  - Entries without a topic live in `unfiled`.
+- **Entry kinds:** requirement, constraint, concept, explanation, discovery, bug, solution, question and reference use one `entry` event (`entry_kind`), with statuses per kind. Decisions and approaches keep their own event kinds, so old logs replay unchanged.
+- **One declaration path:** `store.declare_entry(kind, title, ...)`, `store.set_entry_status(id, status, ...)` and `store.declare_topic(path, ...)`.
+- **New link types:**
+  - `fixes` (only a bug may be fixed);
+  - `concerns` (to artifacts);
+  - `discussed_in`;
+  - `filed_under` (more topics);
+  - `evidence_for`.
+- **Inferred topics:** an unfiled entry that concerns an artifact gets an **inferred** `filed_under` link to a topic named after the artifact's top folder, with the rule named.
+- **Search:** `search.py` is a derived, incremental FTS5 index over knowledge titles and bodies, and over conversation text (messages, compactions; redacted payloads only).
+- **Navigators:**
+  - `store.knowledge`: `topics`, `topic`, `find(kind, status, topic, text)` (a topic includes its subtopics and filed entries), and `history_of(entry)` (statuses, supersession both ways, evidence, fixes and fixed-by, discussion, concerns, topics, and the declaring events);
+  - `store.history.search(query, session_id)`.
+- **Browsing returns listings only:** an entry's body appears only when the entry is opened.
+
 ### 4.4 Active State Tree: what matters now
 
 | | |

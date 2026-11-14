@@ -34,13 +34,14 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from agent_memory import keys, navigate, profiles as _profiles, recovery, structure, trees, verification
+from agent_memory.search import SearchIndex
 from agent_memory.codegraph import ArtifactIndex, supported
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
 from agent_memory.location import default_project_id, ignore_in_git, synced_folder_warnings
-from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, canonical_json
+from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, SchemaError, canonical_json
 from agent_memory.secrets import SecretScanner
 
-STORE_FORMAT = 2   # 2: four trees, cross-tree flags, a basis on every node, attribution bases (Stage 2.6)
+STORE_FORMAT = 3   # 2: four trees, bases (Stage 2.6). 3: knowledge topic hierarchy and entry kinds (Stage 2.8)
 DEFAULT_EXCLUSIONS = (".env", ".env.*", "*.pem", "*.key", "id_rsa", "id_ed25519", "*.p12", "*.pfx",
                       ".netrc", ".npmrc", ".pypirc", "credentials.json")
 
@@ -76,11 +77,12 @@ class Store:
         self.scanner = SecretScanner(fp_key)
         self.codegraph = ArtifactIndex(self._connect, self.profiles)   # the derived artifact index (rev 3, 4.2)
         self.index = self.codegraph
+        self.search_index = SearchIndex(self._connect, self.archive)   # derived: knowledge and history text
         self.checkpoint_every = recovery.CHECKPOINT_EVERY
         # The four trees (architecture revision 3, section 4).
-        self.history = trees.History(self._connect)
+        self.history = trees.History(self._connect, store=self)
         self.artifacts = trees.Artifacts(self._connect, store=self)
-        self.knowledge = trees.Knowledge(self._connect)
+        self.knowledge = trees.Knowledge(self._connect, store=self)
         self.state = trees.State(self._connect)
         if self._migrated_from is not None:
             self.append(EventInput(kind="recovery", session_id="engine", writer_id="engine-migration",
@@ -445,8 +447,10 @@ class Store:
         return recovery.recover(self, self.reconciler(project_root, session_id) if project_root else None)
 
     def rebuild_derived(self) -> dict:
-        """Regenerate the derived layer (the code graph) from the core."""
-        return self.codegraph.rebuild(self.archive)
+        """Regenerate the derived layer (the artifact index and the search index) from the core."""
+        counts = self.codegraph.rebuild(self.archive)
+        counts["searched"] = self.search_index.rebuild()
+        return counts
 
     # ------------------------------------------------------------ integrity
     def verify(self) -> dict:
@@ -530,6 +534,36 @@ class Store:
                basis: str = "declared", reason: str | None = None) -> Event:
         return self.declare("relation", session_id, writer_id, **{"from": src, "to": dst, "type": type,
                                                                   "basis": basis, "reason": reason})
+
+    def declare_entry(self, kind: str, title: str, session_id: str, writer_id: str, **fields) -> str:
+        """One declaration path for every knowledge kind. Returns the new entry's id.
+
+        `kind`: decision, approach, or an entry kind (requirement, constraint, concept, explanation, discovery,
+        bug, solution, question, reference). Optional fields: topic (its home, a path such as "auth/jwt"),
+        body, status, evidence, supersedes, based_on, alternative_to, fixes (bug ids), concerns (artifact
+        paths), discussed_in (history ids), filed_under (more topics), evidence_for.
+        """
+        if kind == "approach":
+            return self.create("path", session_id, writer_id, title=title, **fields)
+        if kind == "decision":
+            return self.create("decision", session_id, writer_id, title=title, **fields)
+        if kind not in structure.ENTRY_KINDS:
+            raise SchemaError(f"knowledge kind must be decision, approach or one of {structure.ENTRY_KINDS}")
+        ev = self.declare("entry", session_id, writer_id, op="create", entry_kind=kind, title=title, **fields)
+        return f"{kind}:{ev.event_id}"
+
+    def set_entry_status(self, entry_id: str, status: str, session_id: str, writer_id: str, **fields) -> Event:
+        """Change the status of any knowledge or state record by id ("bug:...", "path:...", "task:...")."""
+        kind = entry_id.split(":", 1)[0]
+        if kind in structure.ENTRY_KINDS:
+            return self.declare("entry", session_id, writer_id, op="status", entry_kind=kind, id=entry_id,
+                                status=status, **fields)
+        return self.set_status(kind, entry_id, status, session_id, writer_id, **fields)
+
+    def declare_topic(self, path: str, session_id: str, writer_id: str, description: str | None = None) -> str:
+        """Create a topic (and its parents) in the knowledge tree. Returns its id ("topic:auth/jwt")."""
+        self.declare("topic", session_id, writer_id, op="create", path=path, description=description)
+        return structure.topic_node(path)
 
     def retract(self, edge_id: int, session_id: str, writer_id: str, reason: str | None = None) -> Event:
         return self.declare("retraction", session_id, writer_id, edge_id=edge_id, reason=reason)

@@ -14,10 +14,8 @@ from __future__ import annotations
 
 import json
 
-from agent_memory.structure import SCHEMAS, TREES, artifact_node, current_status, resolve, root
-
-GROUPS = {"knowledge": {"approach": "approaches", "decision": "decisions", "note": "notes"},
-          "state": {"goal": "objectives", "task": "tasks", "blocker": "blockers", "conflict": "open_conflicts"}}
+from agent_memory.structure import (KNOWLEDGE_TYPES, SCHEMAS, TREES, artifact_node, current_status, resolve, root,
+                                     topic_node, topic_path)
 
 
 def _row(conn, node_id: str):
@@ -122,6 +120,14 @@ class History(Tree):
 
     name = "history"
 
+    def __init__(self, connect, store=None):
+        super().__init__(connect)
+        self._store = store
+
+    def search(self, query: str, limit: int = 20, session_id: str | None = None) -> list[dict]:
+        """Full-text search over conversation text (messages and compactions), newest index first by rank."""
+        return self._store.search_index.history(query, limit, session_id)
+
     def sessions(self) -> list[dict]:
         return self.root()["items"]
 
@@ -225,20 +231,93 @@ class Artifacts(Tree):
 
 
 class Knowledge(Tree):
-    """What is known: approaches (development paths), decisions, notes."""
+    """What is known: a topic hierarchy of entries (decisions, approaches, requirements, bugs, solutions ...).
+
+    Browsing returns listings only: an entry's body appears only when the
+    entry itself is opened.
+    """
 
     name = "knowledge"
 
-    def find(self, kind: str | None = None, status: str | None = None) -> list[dict]:
+    def __init__(self, connect, store=None):
+        super().__init__(connect)
+        self._store = store
+
+    def topics(self, depth: int = 1) -> dict:
+        """The topic hierarchy from the root, `depth` levels down."""
+        return self.root(depth)
+
+    def topic(self, path: str, depth: int = 1) -> dict | None:
+        return self.open(topic_node(path), depth)
+
+    def find(self, kind: str | None = None, status: str | None = None, topic: str | None = None,
+             text: str | None = None, limit: int = 100) -> list[dict]:
+        """Entries by kind, status, topic (home or filed under, subtopics included) and text, as listings."""
         def run(conn):
-            types = [kind] if kind else list(GROUPS["knowledge"])
+            types = [kind] if kind else list(KNOWLEDGE_TYPES)
+            sql = (f"SELECT node_id FROM nodes WHERE tree = 'knowledge' AND node_type IN "
+                   f"({','.join('?' * len(types))})")
+            args: list = list(types)
+            if topic:
+                within = _topics_within(conn, topic)
+                if not within:
+                    return []
+                marks = ",".join("?" * len(within))
+                sql += (f" AND node_id IN (SELECT e.to_id FROM edges e WHERE e.type = 'contains' AND e.from_id IN "
+                        f"({marks}) UNION SELECT e.from_id FROM edges e LEFT JOIN retractions r ON "
+                        f"r.edge_id = e.edge_id WHERE e.type = 'filed_under' AND r.retracted_by IS NULL "
+                        f"AND e.to_id IN ({marks}))")
+                args += within + within
+            ids = [r[0] for r in conn.execute(sql + " ORDER BY log_position", args)]
+            if text:
+                ranked = [r[0] for r in self._store.search_index.knowledge(text, limit=10_000)]
+                keep = set(ids)
+                ids = [i for i in ranked if i in keep]
             out = []
-            for t in types:
-                for c in _children(conn, f"knowledge:{GROUPS['knowledge'][t]}"):
-                    e = entry(conn, c)
-                    if status is None or e["status"] == status:
-                        out.append(e)
+            for node_id in ids:
+                e = entry(conn, node_id)
+                if status is None or e["status"] == status:
+                    out.append(e)
+                if len(out) >= limit:
+                    break
             return out
+        return self._run(run)
+
+    def history_of(self, entry_id: str) -> dict | None:
+        """An entry's whole story: statuses, what it replaced and what replaced it, evidence, fixes, and origins."""
+        def run(conn):
+            from agent_memory.navigate import node as full
+            n = full(conn, entry_id)
+            if n is None or n["tree"] != "knowledge":
+                return None
+
+            def chain(start: str, etype: str, direction: str) -> list[str]:
+                out, current = [], start
+                while True:
+                    nxt = [e["to"] if direction == "out" else e["from"]
+                           for e in (full(conn, current)["out"] if direction == "out" else full(conn, current)["in"])
+                           if e["type"] == etype]
+                    nxt = [x for x in nxt if x not in out and x != start]
+                    if not nxt:
+                        return out
+                    out.append(nxt[0])
+                    current = nxt[0]
+
+            def ends(edges, etype, key):
+                return [{"id": e[key], "basis": e["basis"], "tree": _row(conn, e[key])[2] if _row(conn, e[key]) else None}
+                        for e in edges if e["type"] == etype]
+            return {"id": n["id"], "kind": n["type"], "title": n["label"], "body": n["attrs"].get("body"),
+                    "status": n["status"], "status_history": n["status_history"], "basis": n["basis"],
+                    "replaces": chain(entry_id, "supersedes", "out"),
+                    "replaced_by": chain(entry_id, "supersedes", "in"),
+                    "evidence": ends(n["in"], "supports", "from"),
+                    "fixes": ends(n["out"], "fixes", "to"), "fixed_by": ends(n["in"], "fixes", "from"),
+                    "based_on": ends(n["out"], "based_on", "to"),
+                    "discussed_in": ends(n["out"], "discussed_in", "to"),
+                    "concerns": ends(n["out"], "concerns", "to"),
+                    "topics": [e["from"] for e in n["in"] if e["type"] == "contains"]
+                              + [e["to"] for e in n["out"] if e["type"] == "filed_under"],
+                    "declared_in": [e["to"] for e in n["out"] if e["type"] == "references"]}
         return self._run(run)
 
 
@@ -254,6 +333,14 @@ class State(Tree):
             items = [entry(conn, c) for c in _children(conn, f"state:{name}")]
             return [i for i in items if include_closed or i["status"] not in closed]
         return self._run(run)
+
+
+def _topics_within(conn, topic: str) -> list[str]:
+    """A topic and all its subtopics."""
+    canon = topic_path(topic)
+    return [r[0] for r in conn.execute(
+        "SELECT node_id FROM nodes WHERE node_type = 'topic' AND (node_id = ? OR node_id LIKE ? ESCAPE '\\')",
+        (f"topic:{canon}", "topic:" + canon.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "/%"))]
 
 
 NAVIGATORS = {"history": History, "artifacts": Artifacts, "knowledge": Knowledge, "state": State}
