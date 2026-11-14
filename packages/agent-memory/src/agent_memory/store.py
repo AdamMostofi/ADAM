@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from agent_memory import keys, navigate, profiles as _profiles, recovery, structure, trees, verification
-from agent_memory.codegraph import CodeGraph, supported
+from agent_memory.codegraph import ArtifactIndex, supported
 from agent_memory.archive import Archive, ArchiveError, CorruptObject
 from agent_memory.location import default_project_id, ignore_in_git, synced_folder_warnings
 from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, canonical_json
@@ -74,11 +74,12 @@ class Store:
         kwargs = {} if min_free_bytes is None else {"min_free_bytes": min_free_bytes}
         self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes, **kwargs)
         self.scanner = SecretScanner(fp_key)
-        self.codegraph = CodeGraph(self._connect)   # derived layer (design 7.2)
+        self.codegraph = ArtifactIndex(self._connect, self.profiles)   # the derived artifact index (rev 3, 4.2)
+        self.index = self.codegraph
         self.checkpoint_every = recovery.CHECKPOINT_EVERY
         # The four trees (architecture revision 3, section 4).
         self.history = trees.History(self._connect)
-        self.artifacts = trees.Artifacts(self._connect)
+        self.artifacts = trees.Artifacts(self._connect, store=self)
         self.knowledge = trees.Knowledge(self._connect)
         self.state = trees.State(self._connect)
         if self._migrated_from is not None:
@@ -504,9 +505,9 @@ class Store:
                     "SELECT source_event, object_id FROM file_versions WHERE object_id IS NOT NULL"):
                 if object_id not in referenced:
                     problems.append({"type": "dangling_reference", "event_id": event_id, "object_id": object_id})
-            for (oid,) in conn.execute("SELECT object_id FROM code_parse"):
+            for (oid,) in conn.execute("SELECT object_id FROM artifact_parse UNION SELECT object_id FROM artifact_meta"):
                 if not self.archive.path(oid).exists():
-                    problems.append({"type": "derived_problem", "detail": f"code graph parse for missing object {oid}"})
+                    problems.append({"type": "derived_problem", "detail": f"artifact index entry for missing object {oid}"})
         finally:
             conn.close()
         return {"ok": not problems, "events": len(positions), "writers": len(chains),
@@ -574,13 +575,13 @@ class Store:
     # ------------------------------------------------------------ file history and verification (design 7)
     def current_files(self) -> dict[str, tuple[str, str]]:
         """The latest version of every path that exists: {path: (content id, event that produced it)}."""
-        return self._nav(CodeGraph.current_files)
+        return self._nav(ArtifactIndex.current_files)
 
-    def update_code_graph(self) -> dict:
-        """Re-parse changed files and refresh the derived dependency graph. Returns parse counts."""
-        if "software" not in self.profiles:
-            return {"skipped": "the software profile is off"}
+    def update_artifacts(self) -> dict:
+        """Bring the derived artifact index up to date (incremental). Returns counts."""
         return self.codegraph.update(self.archive)
+
+    update_code_graph = update_artifacts   # the name used before Stage 2.7
 
     def links(self, node_id: str, to_tree: str | None = None, types=None) -> list[dict]:
         """Cross-tree links of a record (architecture revision 3, section 4.5)."""
@@ -595,14 +596,21 @@ class Store:
         self._require("software", "recording a verification")
         current = {path: oid for path, (oid, _) in self.current_files().items()}
         targets = list(targets)
+        unresolved = None
         if coverage_files is not None:
             relevant = {p: current[p] for p in coverage_files if p in current}
             method = "coverage"
         elif targets and all(t in current and supported(t) for t in targets):
-            self.update_code_graph()
+            self.update_artifacts()
             closure = self.codegraph.closure(targets, "dependencies")
-            relevant = {p: current[p] for p in sorted(closure) if p in current}
-            method = "import_closure"
+            gaps = self.codegraph.unresolved(closure)
+            if gaps:
+                # A local import that names no file could hide a dependency: never risk a false "verified" (#78).
+                relevant, method = dict(current), "whole_tree"
+                unresolved = gaps
+            else:
+                relevant = {p: current[p] for p in sorted(closure) if p in current}
+                method = "import_closure"
         else:
             relevant, method = dict(current), "whole_tree"
         summary = {"command": command, "result": result, "exit_code": exit_code, "check_type": check_type,
@@ -610,6 +618,8 @@ class Store:
                    "tree_hash": verification.tree_hash(current), "relevant_files": relevant,
                    "relevance_method": method, "targets": targets, "environment": environment or {},
                    "verifies": list(verifies)}
+        if unresolved:
+            summary["unresolved_imports"] = unresolved
         return self.append(EventInput(kind="verification", session_id=session_id, writer_id=writer_id,
                                       payload=output, summary_fields=summary, parent_id=parent_id))
 

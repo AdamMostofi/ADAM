@@ -158,10 +158,13 @@ def test_profiles_are_remembered_and_gate_their_features(tmp_path):
     assert Store(path, project_id="p", min_free_bytes=0).profiles == ("generic",)
     with pytest.raises(ProfileError):
         store.record_verification("s", "w", "pytest", "passed")
-    assert store.update_code_graph() == {"skipped": "the software profile is off"}
+    store.append(EventInput(kind="file_change", session_id="s", writer_id="w", payload=b"import os\n",
+                            summary_fields={"path": "a.py"}, path="a.py"))
+    counts = store.update_artifacts()
+    assert counts["parsed"] == 0 and counts["described"] == 1   # metadata and search only: no code parser
     with pytest.raises(ProfileError):
         Store(tmp_path / "x", project_id="p", min_free_bytes=0, profiles=("spaceships",))
-    assert Store(tmp_path / "y", project_id="p", min_free_bytes=0).profiles == ("generic", "software")
+    assert Store(tmp_path / "y", project_id="p", min_free_bytes=0).profiles == ("generic", "software", "documents")
 
 
 def test_without_the_software_profile_a_git_repo_is_reconciled_by_walking(tmp_path):

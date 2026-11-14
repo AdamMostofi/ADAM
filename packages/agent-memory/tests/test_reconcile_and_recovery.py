@@ -312,7 +312,7 @@ def test_a_corrupted_index_is_detected_and_rebuilt_from_the_core(tmp_path):
     conn = store._connect()
     conn.execute("DROP TRIGGER IF EXISTS edges_append_only_delete")
     conn.execute("DELETE FROM edges WHERE rowid IN (SELECT rowid FROM edges LIMIT 3)")
-    conn.execute("DELETE FROM code_parse")
+    conn.execute("DELETE FROM artifact_parse")
     conn.commit()
     conn.close()
     problems = store.verify()["problems"]

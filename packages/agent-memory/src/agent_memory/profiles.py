@@ -6,10 +6,12 @@ same for every project. A profile adds what one kind of work needs:
 | Profile | Adds |
 |---|---|
 | `generic` (always on) | versions and metadata for any artifact; the core knowledge and state kinds; a plain folder walk for reconciliation |
-| `software` | the code dependency graph, git-accelerated reconciliation and attribution, verification records |
+| `software` | code imports (tsconfig aliases included) and symbols, git-accelerated reconciliation and attribution, verification records |
+| `documents` | Markdown and reStructuredText sections as artifact parts, and links between documents |
 
-`documents` arrives in Stage 2.7. Creative, research, business and ADAM
-profiles come later, on demand (decision D13).
+Every profile gets artifact metadata and full-text search over text
+artifacts. Creative, research, business and ADAM profiles come later, on
+demand (decision D13).
 
 A store remembers its profiles. Opening it with an explicit list changes
 them, and the change applies from then on; history is never rewritten.
@@ -18,9 +20,10 @@ from __future__ import annotations
 
 PROFILES = {
     "generic": "versions and metadata for any artifact, the core knowledge and state kinds, a folder walk",
-    "software": "code dependency graph, git-accelerated reconciliation, verification records",
+    "software": "code imports and symbols, git-accelerated reconciliation, verification records",
+    "documents": "Markdown and reStructuredText sections, and links between documents",
 }
-DEFAULT = ("generic", "software")
+DEFAULT = ("generic", "software", "documents")
 
 
 class ProfileError(ValueError):

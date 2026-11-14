@@ -151,6 +151,23 @@ Code references are to `packages/agent-memory/src/agent_memory/`.
 | **Parsers** | from profiles. Software: tree-sitter Python and TypeScript (imports today, symbols next). Documents: Markdown and plain-text headings and sections, and links. Generic: metadata only (type, size, versions), so a video or spreadsheet is still versioned and linkable without a parser |
 | **Built today** | file nodes, `file_versions`, rename and revert detection, the code import graph, verification relevance |
 
+**As built (Stage 2.7, #86):** `codegraph.py` is now the derived **artifact index** (`ArtifactIndex`; `store.index`).
+- **Contents:** cached by content id and rebuildable:
+  - metadata for every artifact (media type, size, text or binary, lines);
+  - FTS5 search over current text artifacts up to 2 MB, holding redacted content only;
+  - Python and TypeScript imports and symbols (software profile);
+  - Markdown and reStructuredText sections, and links between documents (documents profile).
+- **Resolution:**
+  - TypeScript `tsconfig.json` `baseUrl` and `paths` are resolved, with `extends` and JSON-with-comments;
+  - Python source roots include the parent of every outermost package, for monorepos.
+- **Unresolved local imports** (relative, tsconfig-alias, or Python relative) are `unresolved` edges. A verification whose import closure contains one falls back to whole-tree relevance and records `unresolved_imports` (#78).
+- **Navigator:** `store.artifacts` adds `parts`, `find_part`, `depends` (direct or closure, both directions, imports and links), `metadata`, `at(path, version, max_bytes)` and `search`. `open()` on an artifact adds `present`, `metadata` and a part count.
+- **Parts are derived:** they are not core nodes. The core structure stays a pure function of the log.
+- **Measured on the ADAM repository (242 files):**
+  - indexing: 1.3 s;
+  - a warm update: 0.07 s;
+  - the first reconcile: about 11 s, slow because of one fsync per event (#89).
+
 ### 4.3 Knowledge Tree: what is known
 
 | | |

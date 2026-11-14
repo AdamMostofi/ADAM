@@ -130,9 +130,84 @@ class History(Tree):
 
 
 class Artifacts(Tree):
-    """What exists or has existed: collections and artifacts, with versions."""
+    """What exists or has existed: collections and artifacts, with versions, parts and dependencies.
+
+    Parts (code symbols, document sections), dependencies, metadata and search
+    come from the derived artifact index, which is brought up to date
+    (incrementally) before each lookup that needs it.
+    """
 
     name = "artifacts"
+
+    def __init__(self, connect, store=None):
+        super().__init__(connect)
+        self._store = store
+
+    def _index(self):
+        self._store.update_artifacts()
+        return self._store.codegraph
+
+    def _current(self, path: str) -> str | None:
+        found = self._store.current_files().get(path)
+        return found[0] if found else None
+
+    def open(self, node_id: str, depth: int = 1) -> dict | None:
+        node = super().open(node_id, depth)
+        if node and node["type"] == "artifact" and self._store is not None:
+            path = node["attrs"]["path"]
+            oid = self._current(path)
+            index = self._index()
+            node["present"] = oid is not None
+            node["metadata"] = index.metadata(oid) if oid else None
+            node["parts"] = len(index.parts(path))
+        return node
+
+    def parts(self, path: str) -> list[dict]:
+        """Symbols or sections of an artifact, in order, with line ranges and parents."""
+        return self._index().parts(path)
+
+    def find_part(self, name: str, kind: str | None = None) -> list[dict]:
+        """Where is it? Parts by name or qualified name ("append", "Store.append", "Usage"), in every artifact."""
+        return self._index().find_part(name, kind)
+
+    def depends(self, path: str, direction: str = "dependencies", closure: bool = False) -> dict:
+        """What an artifact uses (imports, links), or what uses it, with external and unresolved references."""
+        index = self._index()
+        types = ("imports", "links")
+        if closure:
+            found = sorted(index.closure([path], direction, types) - {path})
+        elif direction == "dependencies":
+            found = sorted(set(index.imports_of(path)) | set(index.links_of(path)))
+        else:
+            found = sorted(set(index.importers_of(path)) | set(index.linked_from(path)))
+        out = {"path": path, "direction": direction, "artifacts": found}
+        if direction == "dependencies" and not closure:
+            out["external"] = index.external_imports(path)
+            out["unresolved"] = index.unresolved([path]).get(path, [])
+        return out
+
+    def metadata(self, path: str) -> dict | None:
+        oid = self._current(path)
+        return self._index().metadata(oid) if oid else None
+
+    def at(self, path: str, version=-1, max_bytes: int | None = None) -> dict:
+        """The content of one version: by index (-1 is the latest) or by version id. Bounded by `max_bytes`."""
+        versions = self.versions(path)
+        if not versions:
+            raise KeyError(f"no versions of {path}")
+        chosen = versions[version] if isinstance(version, int) else \
+            next((v for v in versions if v["version_id"] == version), None)
+        if chosen is None:
+            raise KeyError(f"{path} has no version {version!r}")
+        if chosen["object_id"] is None:
+            return {**chosen, "content": None, "truncated": False}
+        data = self._store.archive.get(chosen["object_id"])
+        cut = max_bytes is not None and len(data) > max_bytes
+        return {**chosen, "content": data[:max_bytes] if cut else data, "truncated": cut}
+
+    def search(self, query: str, limit: int = 20) -> list[dict]:
+        """Full-text search over current text artifacts (permitted content only)."""
+        return self._index().search(query, limit)
 
     def open_path(self, path: str, depth: int = 1) -> dict | None:
         """An artifact by its path, or a collection (folder) by its path."""
