@@ -41,7 +41,7 @@ from agent_memory.location import default_project_id, ignore_in_git, synced_fold
 from agent_memory.schema import SCHEMA_VERSION, Event, EventInput, SchemaError, canonical_json
 from agent_memory.secrets import SecretScanner
 
-STORE_FORMAT = 3   # 2: four trees, bases (Stage 2.6). 3: knowledge topic hierarchy and entry kinds (Stage 2.8)
+STORE_FORMAT = 4   # 2: four trees, bases (2.6). 3: knowledge topics, entry kinds (2.8). 4: state items (2.9)
 DEFAULT_EXCLUSIONS = (".env", ".env.*", "*.pem", "*.key", "id_rsa", "id_ed25519", "*.p12", "*.pfx",
                       ".netrc", ".npmrc", ".pypirc", "credentials.json")
 
@@ -71,6 +71,7 @@ class Store:
         self._migrated_from = None
         self._init_db()
         self.profiles = self._init_profiles(profiles)
+        self.settings = self._load_settings()
         data_key, id_key, fp_key = self._unlock(key_dir)
         kwargs = {} if min_free_bytes is None else {"min_free_bytes": min_free_bytes}
         self.archive = Archive(self.path, data_key, id_key, quota_bytes=quota_bytes, **kwargs)
@@ -83,7 +84,7 @@ class Store:
         self.history = trees.History(self._connect, store=self)
         self.artifacts = trees.Artifacts(self._connect, store=self)
         self.knowledge = trees.Knowledge(self._connect, store=self)
-        self.state = trees.State(self._connect)
+        self.state = trees.State(self._connect, store=self)
         if self._migrated_from is not None:
             self.append(EventInput(kind="recovery", session_id="engine", writer_id="engine-migration",
                                    summary_fields={"op": "migrate", "from_format": self._migrated_from,
@@ -163,6 +164,41 @@ class Store:
             return self._save_profiles(conn, _profiles.normalize(chosen))
         finally:
             conn.close()
+
+    def _load_settings(self) -> dict:
+        from agent_memory.state import DEFAULT_SETTINGS
+        conn = self._connect()
+        try:
+            stored = json.loads(self._meta(conn, "settings") or "{}")
+        finally:
+            conn.close()
+        merged = json.loads(json.dumps(DEFAULT_SETTINGS))
+        for key, value in stored.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key].update({str(k): v for k, v in value.items()})
+            else:
+                merged[key] = value
+        return merged
+
+    def configure(self, **settings) -> dict:
+        """Change settings (for example state_budgets={"1": 800}, stale_after_days=7). They persist in the store."""
+        from agent_memory.state import DEFAULT_SETTINGS
+        unknown = sorted(set(settings) - set(DEFAULT_SETTINGS))
+        if unknown:
+            raise ValueError(f"unknown settings {unknown}; known: {sorted(DEFAULT_SETTINGS)}")
+        conn = self._connect()
+        try:
+            stored = json.loads(self._meta(conn, "settings") or "{}")
+            for key, value in settings.items():
+                if isinstance(value, dict):
+                    stored.setdefault(key, {}).update({str(k): v for k, v in value.items()})
+                else:
+                    stored[key] = value
+            conn.execute("INSERT OR REPLACE INTO meta VALUES ('settings', ?)", (json.dumps(stored),))
+        finally:
+            conn.close()
+        self.settings = self._load_settings()
+        return self.settings
 
     @staticmethod
     def _save_profiles(conn, names) -> tuple[str, ...]:
@@ -558,7 +594,24 @@ class Store:
         if kind in structure.ENTRY_KINDS:
             return self.declare("entry", session_id, writer_id, op="status", entry_kind=kind, id=entry_id,
                                 status=status, **fields)
+        if kind in structure.STATE_ITEM_KINDS:
+            return self.declare("state_item", session_id, writer_id, op="status", item_kind=kind, id=entry_id,
+                                status=status, **fields)
         return self.set_status(kind, entry_id, status, session_id, writer_id, **fields)
+
+    def declare_state(self, kind: str, title: str, session_id: str, writer_id: str, **fields) -> str:
+        """One declaration path for the Active State tree. Returns the new item's id.
+
+        `kind`: goal, task, blocker, progress, priority (with `rank`, 1 highest), next_action, or focus (the
+        working context: `concerns` artifact paths and/or `filed_under` topics). Optional fields: concerns,
+        status, reason, advances, blocks, blocked_by, evidence.
+        """
+        if kind in ("goal", "task", "blocker"):
+            return self.create(kind, session_id, writer_id, title=title, **fields)
+        if kind not in structure.STATE_ITEM_KINDS:
+            raise SchemaError(f"state kind must be goal, task, blocker or one of {structure.STATE_ITEM_KINDS}")
+        ev = self.declare("state_item", session_id, writer_id, op="create", item_kind=kind, title=title, **fields)
+        return f"{kind}:{ev.event_id}"
 
     def declare_topic(self, path: str, session_id: str, writer_id: str, description: str | None = None) -> str:
         """Create a topic (and its parents) in the knowledge tree. Returns its id ("topic:auth/jwt")."""

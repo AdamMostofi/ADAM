@@ -322,17 +322,37 @@ class Knowledge(Tree):
 
 
 class State(Tree):
-    """What matters now: objectives, tasks, blockers, open conflicts (sections grow in Stage 2.9)."""
+    """What matters now: declared and generated items in ten sections, delivered in levels (see state.py)."""
 
     name = "state"
 
-    def section(self, name: str, include_closed: bool = False) -> list[dict]:
-        closed = {"achieved", "dropped", "done", "cancelled", "resolved"}
+    def __init__(self, connect, store=None):
+        super().__init__(connect)
+        self._store = store
 
-        def run(conn):
-            items = [entry(conn, c) for c in _children(conn, f"state:{name}")]
-            return [i for i in items if include_closed or i["status"] not in closed]
-        return self._run(run)
+    def _active(self, environment=None, now=None):
+        from agent_memory.state import ActiveState
+        return ActiveState(self._store, now=now, environment=environment)
+
+    def sections(self) -> tuple[str, ...]:
+        from agent_memory.state import SECTIONS
+        return SECTIONS
+
+    def section(self, name: str, include_closed: bool = False, environment: dict | None = None, now=None) -> list[dict]:
+        """One section's items: id, label, status, source, basis, age, and staleness with reasons."""
+        return self._active(environment, now).section(name, include_closed)
+
+    def item(self, item_id: str, environment: dict | None = None) -> dict | None:
+        """One item expanded to its record and its evidence in every tree."""
+        return self._active(environment).item(item_id)
+
+    def overview(self, budget: int | None = None, environment: dict | None = None, now=None) -> dict:
+        """Level 0: a short overview within its token budget."""
+        return self._active(environment, now).overview(budget)
+
+    def level(self, n: int, budget: int | None = None, environment: dict | None = None, now=None) -> dict:
+        """Levels 0 to 2, each within its token budget (a store setting)."""
+        return self._active(environment, now).level(n, budget)
 
 
 def _topics_within(conn, topic: str) -> list[str]:

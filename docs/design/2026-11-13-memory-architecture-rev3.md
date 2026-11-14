@@ -242,6 +242,29 @@ Code references are to `packages/agent-memory/src/agent_memory/`.
   - older checkpoints are reported as superseded, not corrupt, and a fresh checkpoint is taken;
   - tested with a store written by the real Stage 2.5 code.
 
+**As built (Stage 2.9, #55):** `state.py` (store format 4).
+- **Declared items:**
+  - goals, tasks and blockers, as before;
+  - a new `state_item` event for `progress`, `priority` (with an integer `rank`), `next_action` and `focus` (the working context), with statuses per kind;
+  - constraints, which are knowledge entries surfaced here.
+- **Generated items**, computed now and never stored:
+  - open conflicts;
+  - verification status (latest per command and targets; never `verified` without the environment);
+  - active decisions that concern a focused artifact or sit under a focused topic;
+  - artifacts changed since the last `session_end`.
+- **Every item** has source, basis, age, and staleness with reasons. A declared item is stale when an artifact it `concerns` changed after its last declaration, or after `stale_after_days`. Re-declaring its status clears it.
+- **Levels:**
+  - 0: one paragraph;
+  - 1: objectives, constraints, open conflicts, tasks, blockers, next actions, progress;
+  - 2: priorities, working context, verification.
+
+  Each level fits a token budget. Budgets are store settings (`store.configure(state_budgets=..., stale_after_days=...)`), and items that don't fit become "+N more".
+- **Item text** comes only from declared titles and engine fields. Payloads and tool output are never read (tested with an injection string in a tool result).
+- **API:**
+  - `store.declare_state(kind, title, ...)`;
+  - `store.set_entry_status(id, ...)` for any record;
+  - `store.state`: `sections`, `section`, `item` (the record plus its cross-tree evidence), `overview`, `level`.
+
 ### 4.5 Cross-tree relationship layer
 
 - **What it is:** a link whose ends are in different trees. It is stored in the shared edge table and marked `cross`, with its own index: from-tree, to-tree, type, basis.

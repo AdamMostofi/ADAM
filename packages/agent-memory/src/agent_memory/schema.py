@@ -24,6 +24,8 @@ KINDS = frozenset({
     "conflict", "change_group", "recovery",
     # Stage 2.8: knowledge entries (requirements, bugs, solutions ...) and topics (architecture revision 3, 4.3).
     "entry", "topic",
+    # Stage 2.9: declared active-state items: progress, priorities, next actions, working-context focus.
+    "state_item",
 })
 
 COMPLETENESS = ("captured", "partial", "unavailable", "imported")

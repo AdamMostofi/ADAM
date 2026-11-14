@@ -71,8 +71,10 @@ SCHEMAS = {
                             "explanation", "discovery", "bug", "solution", "question", "reference"),
                   **{k: () for k in ("decision", "approach", "note", "requirement", "constraint", "concept",
                                      "explanation", "discovery", "bug", "solution", "question", "reference")}},
-    "state": {"root": ("section",), "section": ("goal", "task", "blocker", "conflict"),
-              "goal": (), "task": (), "blocker": (), "conflict": ()},
+    "state": {"root": ("section",),
+              "section": ("goal", "task", "blocker", "conflict", "progress", "priority", "next_action", "focus"),
+              **{k: () for k in ("goal", "task", "blocker", "conflict", "progress", "priority", "next_action",
+                                 "focus")}},
 }
 TREE_OF = {t: tree for tree, schema in SCHEMAS.items() for t in schema if t != "root"}
 GROUP_TYPES = {"topic", "section"}
@@ -103,13 +105,22 @@ INITIAL = {"path": "proposed", "goal": "active", "task": "open", "decision": "pr
            "conflict": "open", "requirement": "open", "constraint": "active", "concept": "current",
            "explanation": "current", "discovery": "current", "bug": "open", "solution": "proposed",
            "question": "open", "reference": "current"}
+# Stage 2.9: state items declared through the `state_item` event (goals, tasks and blockers keep their own kinds).
+STATE_ITEM_KINDS = ("progress", "priority", "next_action", "focus")
+STATUSES.update({"progress": ("current", "superseded"), "priority": ("active", "done", "dropped"),
+                 "next_action": ("open", "done", "dropped"), "focus": ("active", "cleared")})
+INITIAL.update({"progress": "current", "priority": "active", "next_action": "open", "focus": "active"})
 PLANNING_KINDS = {"path", "goal", "task", "blocker", "decision", "conflict"}
-RECORD_KINDS = PLANNING_KINDS | set(ENTRY_KINDS)   # records with statuses: the log kind, or an entry's entry_kind
+# Records with statuses: the log kind, an entry's entry_kind, or a state item's item_kind.
+RECORD_KINDS = PLANNING_KINDS | set(ENTRY_KINDS) | set(STATE_ITEM_KINDS)
 # The log's event kind -> the node type it creates, and the group or section that holds it.
 KIND_NODE = {"path": "approach", "decision": "decision", "goal": "goal", "task": "task", "blocker": "blocker",
-             "conflict": "conflict", "note": "note", **{k: k for k in ENTRY_KINDS}}
+             "conflict": "conflict", "note": "note", **{k: k for k in ENTRY_KINDS},
+             **{k: k for k in STATE_ITEM_KINDS}}
 CONTAINER = {"goal": "state:objectives", "task": "state:tasks", "blocker": "state:blockers",
-             "conflict": "state:open_conflicts"}   # knowledge entries live under topics instead
+             "conflict": "state:open_conflicts", "progress": "state:progress", "priority": "state:priorities",
+             "next_action": "state:next_actions",
+             "focus": "state:working_context"}   # knowledge entries live under topics instead
 PATH_ROLES = ("experiment", "accepted", "reverted")
 # How a reconciled file change was attributed -> how that attribution is known.
 ATTRIBUTION_BASIS = {"agent_tool": "observed", "baseline": "observed", "git_operation": "inferred",
@@ -328,6 +339,12 @@ def validate(conn, kind: str, summary: dict) -> None:
         if summary.get("entry_kind") not in ENTRY_KINDS:
             raise SchemaError(f"an entry's entry_kind must be one of {ENTRY_KINDS}")
         kind = summary["entry_kind"]
+    if kind == "state_item":
+        if summary.get("item_kind") not in STATE_ITEM_KINDS:
+            raise SchemaError(f"a state item's item_kind must be one of {STATE_ITEM_KINDS}")
+        kind = summary["item_kind"]
+        if summary.get("rank") is not None and not isinstance(summary["rank"], int):
+            raise SchemaError("a priority's rank is an integer (1 is highest)")
     if kind == "topic":
         if op != "create" or not topic_path(summary.get("path") or ""):
             raise SchemaError("a topic event needs op 'create' and a path")
@@ -439,7 +456,7 @@ def _by_kind(conn, ev: Event, s: dict, session: str) -> None:
     if s.get("group") and _node_exists(conn, s["group"]):
         _add_edge(conn, ev.event_id, s["group"], "part_of", "observed", ev)
 
-    if ev.kind in PLANNING_KINDS or ev.kind == "entry":
+    if ev.kind in PLANNING_KINDS or ev.kind in ("entry", "state_item"):
         _planning(conn, ev, s)
     elif ev.kind == "topic":
         _topic(conn, ev, s["path"], description=s.get("description"))
@@ -519,7 +536,7 @@ def _propose_path(conn, ev: Event, description: str, signal: str, evidence: list
 
 
 def _planning(conn, ev: Event, s: dict) -> None:
-    kind = s["entry_kind"] if ev.kind == "entry" else ev.kind
+    kind = s["entry_kind"] if ev.kind == "entry" else s["item_kind"] if ev.kind == "state_item" else ev.kind
     node_type = KIND_NODE[kind]
     if s["op"] == "create":
         node = f"{kind}:{ev.event_id}"
@@ -532,7 +549,8 @@ def _planning(conn, ev: Event, s: dict) -> None:
             home = _container(conn, ev, CONTAINER[node_type])
         _add_node(conn, node, node_type, ev, label=title, parent=home,
                   basis=basis, title=title, topic=s.get("topic"), description=s.get("description"),
-                  body=s.get("body"), source=basis)
+                  body=s.get("body"), source=basis, rank=s.get("rank"),
+                  concerns=sorted(_ids(s.get("concerns"))) or None)
         if node_type in KNOWLEDGE_TYPES and not s.get("topic"):
             _propose_topic(conn, ev, node, s)
         status = s.get("status") or INITIAL[kind]
