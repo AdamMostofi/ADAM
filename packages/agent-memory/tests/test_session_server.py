@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import statistics
 import subprocess
@@ -298,4 +299,5 @@ def test_the_fast_path_starts_no_process():
     text = LAUNCHER.read_text()
     fast = text[text.index("# Fast path"):text.index("# Direct path")]
     code = "\n".join(line for line in fast.splitlines() if not line.lstrip().startswith("#"))
-    assert "$(" not in code and "cat " not in code and "| " not in code
+    assert "$(" not in code and "`" not in code and "cat " not in code
+    assert not re.search(r"(?<!\|)\|(?!\|)", code)   # no pipe (\"||\" is fine)
