@@ -117,9 +117,8 @@ class Hook:
         self.session = str(payload.get("session_id") or "unknown")
         self.writer = f"{AGENT}:{self.session}"
         self.state = _State(store)
-        env = self.state.get("session", f"env:{self.session}")
-        if env is not None:
-            store.environment = env
+        # Always assigned: a long-lived store (the session server's) serves many sessions.
+        store.environment = self.state.get("session", f"env:{self.session}")
 
     def append(self, kind: str, summary: dict, payload: bytes | str | None = None, part: str = "",
                completeness: str = "captured", key: str | None = None, path: str | None = None):
@@ -390,8 +389,11 @@ HANDLERS = {
 
 
 # ------------------------------------------------------------ entry point
-def handle(event: str, stdin: bytes, environ: dict) -> tuple[str, int]:
-    """One hook. Never raises and always exits 0: Claude Code is never blocked by memory."""
+def handle(event: str, stdin: bytes, environ: dict, store=None) -> tuple[str, int]:
+    """One hook. Never raises and always exits 0: Claude Code is never blocked by memory.
+
+    `store`: an open store to use (the session server's); otherwise the hook opens one.
+    """
     from agent_memory.location import store_path
     started = time.perf_counter()
     try:
@@ -405,7 +407,7 @@ def handle(event: str, stdin: bytes, environ: dict) -> tuple[str, int]:
     if handler is None:
         return "", 0
     try:
-        store = _open(store_dir, environ)
+        store = store if store is not None else _open(store_dir, environ)
     except Exception as err:
         _spool(store_dir, event, payload, err)
         _log(store_dir, event, f"store unavailable: {type(err).__name__}: {err}")

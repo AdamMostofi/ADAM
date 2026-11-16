@@ -32,6 +32,7 @@ contains one, so a missed edge can never produce a false "verified" (#78).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import mimetypes
 import posixpath
@@ -105,6 +106,7 @@ CREATE TABLE IF NOT EXISTS code_edges (
 CREATE INDEX IF NOT EXISTS idx_code_edges_from ON code_edges(from_path);
 CREATE INDEX IF NOT EXISTS idx_code_edges_to ON code_edges(to_path);
 CREATE VIRTUAL TABLE IF NOT EXISTS artifact_fts USING fts5(path UNINDEXED, object_id UNINDEXED, body);
+CREATE TABLE IF NOT EXISTS artifact_refreshed (fingerprint TEXT NOT NULL);
 """
 # code_edges.type: imports | links (to an artifact) | external (a package) | unresolved (local, but no file found)
 
@@ -413,6 +415,14 @@ class ArtifactIndex:
         conn = self._connect()
         try:
             current = self.current_files(conn)
+            # Nothing changed since the last refresh (same versions, parser and profiles): nothing to do. This
+            # runs on every prompt, so a no-op must be cheap.
+            fingerprint = hashlib.sha256(json.dumps([PARSER_VERSION, self.profiles, sorted(
+                (p, oid) for p, (oid, _) in current.items())]).encode()).hexdigest()
+            row = conn.execute("SELECT fingerprint FROM artifact_refreshed").fetchone()
+            if row and row[0] == fingerprint:
+                self.last_update = {"parsed": 0, "reused": len(current), "unsupported": 0, "described": 0}
+                return self.last_update
             parsed = reused = unsupported = described = 0
             conn.execute("BEGIN IMMEDIATE")
             for path, (oid, _) in sorted(current.items()):
@@ -445,6 +455,8 @@ class ArtifactIndex:
                               datetime.now(timezone.utc).isoformat()))
                 parsed += 1
             self._refresh(conn, archive, current)
+            conn.execute("DELETE FROM artifact_refreshed")
+            conn.execute("INSERT INTO artifact_refreshed VALUES (?)", (fingerprint,))
             conn.execute("COMMIT")
             self.last_update = {"parsed": parsed, "reused": reused, "unsupported": unsupported,
                                 "described": described}
@@ -491,7 +503,8 @@ class ArtifactIndex:
     def rebuild(self, archive) -> dict:
         conn = self._connect()
         try:
-            for table in ("artifact_parse", "artifact_meta", "artifact_parts", "code_edges", "artifact_fts"):
+            for table in ("artifact_parse", "artifact_meta", "artifact_parts", "code_edges", "artifact_fts",
+                          "artifact_refreshed"):
                 conn.execute(f"DELETE FROM {table}")
             conn.commit()
         finally:
@@ -622,6 +635,22 @@ class ArtifactIndex:
             return [dict(zip(("name", "qualified", "kind", "line", "end_line", "parent"), r)) for r in conn.execute(
                 "SELECT name, qualified, kind, line, end_line, parent FROM artifact_parts WHERE path = ? "
                 "ORDER BY line, rowid", (path,))]
+        finally:
+            conn.close()
+
+    def find_parts(self, names, per_name: int = 3) -> dict[str, list[dict]]:
+        """`find_part` for many names over one connection: {name: its first `per_name` parts}."""
+        conn = self._connect()
+        try:
+            out = {}
+            keys = ("path", "name", "qualified", "kind", "line", "end_line", "parent")
+            for name in names:
+                like = "%." + name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                rows = conn.execute("SELECT path, name, qualified, kind, line, end_line, parent FROM artifact_parts "
+                                    "WHERE (name = ? OR qualified = ? OR qualified LIKE ? ESCAPE '\\') "
+                                    "ORDER BY path, line LIMIT ?", (name, name, like, per_name)).fetchall()
+                out[name] = [dict(zip(keys, r)) for r in rows]
+            return out
         finally:
             conn.close()
 

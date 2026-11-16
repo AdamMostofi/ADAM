@@ -20,6 +20,34 @@ mode="$1"; shift
 [ -n "${CLAUDE_PLUGIN_OPTION_PROFILES:-}" ] && export AMEM_PROFILES="$CLAUDE_PLUGIN_OPTION_PROFILES"
 
 project="${CLAUDE_PROJECT_DIR:-$PWD}"
+
+# Fast path (decision D14, #90): hand the hook to the project's session server, which `amem mcp` runs with
+# the store already open. Pure bash builtins: no new process at all (each one costs about 50 ms in Git Bash on
+# Windows). Anything unexpected falls back to the direct path below; the engine's idempotency keys make that
+# retry safe.
+#   AMEM_SERVER=0 turns it off. A custom store location (AMEM_HOME) always uses the direct path.
+if [ "$mode" = "hook" ] && [ "${AMEM_SERVER:-1}" != "0" ] && [ -z "${AMEM_HOME:-}" ]; then
+  IFS= read -r -d '' payload || true   # all of stdin (JSON has no NUL bytes)
+  file="${project//\\//}/.agent-memory/run/server"
+  if [ -r "$file" ] && read -r port sid token _ < "$file" 2>/dev/null && [ -n "$token" ] &&
+     { exec 3<>"/dev/tcp/127.0.0.1/$port"; } 2>/dev/null; then
+    if IFS= read -r -t 2 hello <&3 && [ "${hello%$'\r'}" = "AMEM1 $sid" ]; then
+      saved_lc="${LC_ALL-}"; LC_ALL=C
+      size="${#payload}"   # bytes, not characters
+      printf 'AMEM1 %s claude-code %s %s\n%s' "$token" "$1" "$size" "$payload" >&3 2>/dev/null
+      if [ -n "$saved_lc" ]; then LC_ALL="$saved_lc"; else unset LC_ALL; fi
+      if IFS= read -r -t 120 status <&3 && [ "$status" = "OK" ]; then
+        IFS= read -r -d '' reply <&3 || true
+        printf '%s' "$reply"
+        exit 0
+      fi
+    fi
+    exec 3>&- 3<&-
+  fi
+  # Direct path, with the payload already read.
+  exec 0< <(printf '%s' "$payload")
+fi
+
 if [ "$mode" = "mcp" ]; then
   args=(--project "$project" --session auto mcp)
 else
@@ -40,11 +68,16 @@ case "$project" in
     distro="${rest%%/*}"; linux="/${rest#*/}"
     [ "$linux" = "/$distro" ] && linux="/"
     if command -v wsl.exe >/dev/null 2>&1; then
-      export WSLENV="${WSLENV:+$WSLENV:}AMEM_KEY_SOURCE/u:AMEM_PASSPHRASE/u:AMEM_PROFILES/u"
+      export WSLENV="${WSLENV:+$WSLENV:}AMEM_KEY_SOURCE/u:AMEM_PASSPHRASE/u:AMEM_PROFILES/u:AMEM_SERVER/u"
+      # Git Bash rewrites arguments that look like POSIX paths (/home/x becomes C:/Program Files/Git/home/x)
+      # before starting a Windows program; the Linux path must reach WSL as it is.
+      export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
+      find='a="$(command -v amem)"; [ -z "$a" ] && [ -x "$HOME/.local/bin/amem" ] && a="$HOME/.local/bin/amem"'
       if [ "$mode" = "mcp" ]; then
-        exec wsl.exe -d "$distro" --exec bash -lc 'exec amem --project "$0" --session auto mcp' "$linux"
+        exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" --session auto mcp' "$linux"
       fi
-      exec wsl.exe -d "$distro" --exec bash -lc 'exec amem --project "$0" hook claude-code "$1"' "$linux" "$1"
+      exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" hook claude-code "$1"' \
+        "$linux" "$1"
     fi
     ;;
 esac

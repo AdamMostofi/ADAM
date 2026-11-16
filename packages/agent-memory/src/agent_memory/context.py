@@ -417,8 +417,9 @@ class ContextManager:
             for path in current:
                 if path == raw or path.endswith("/" + raw):
                     offer(f"artifact:{path}", 1.0, f"mentions the file {raw}")
-        for word in {w for w in WORD_PATTERN.findall(prompt) if len(w) >= 3 and w.lower() not in STOPWORDS}:
-            for part in self.store.codegraph.find_part(word)[:3]:
+        words = sorted({w for w in WORD_PATTERN.findall(prompt) if len(w) >= 3 and w.lower() not in STOPWORDS})
+        for word, parts in self.store.codegraph.find_parts(words, per_name=3).items():
+            for part in parts:
                 offer(f"artifact:{part['path']}", 0.8, f"mentions {part['kind']} {part['qualified']}")
         conn = self.store._connect()
         try:

@@ -16,6 +16,7 @@ import json
 import sys
 
 from agent_memory import tools
+from agent_memory.server import LOCK
 
 PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 SERVER_INFO = {"name": "agent-memory", "version": "0.1.0.dev0"}
@@ -35,7 +36,8 @@ def resolve_session(store, session_id: str) -> str:
 
 def handle(store, session_id: str, message: dict) -> dict | None:
     """One JSON-RPC message in, one response out (None for notifications)."""
-    session_id = resolve_session(store, session_id)
+    with LOCK:
+        session_id = resolve_session(store, session_id)
     method, msg_id = message.get("method"), message.get("id")
     if msg_id is None:   # a notification: nothing to answer
         return None
@@ -56,7 +58,8 @@ def handle(store, session_id: str, message: dict) -> dict | None:
             if name not in tools.TOOLS:
                 return _error(msg_id, -32602, f"unknown tool {name!r}")
             try:
-                text = tools.call(store, session_id, name, params.get("arguments") or {})
+                with LOCK:   # the session server's hooks share this process (#90)
+                    text = tools.call(store, session_id, name, params.get("arguments") or {})
                 result = {"content": [{"type": "text", "text": text}], "isError": False}
             except (ValueError, KeyError, TypeError) as err:
                 result = {"content": [{"type": "text", "text": f"{type(err).__name__}: {err}"}], "isError": True}

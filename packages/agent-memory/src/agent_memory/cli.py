@@ -21,7 +21,8 @@ amem declare create kind=task title="add rotation"
 The working session comes from `--session` (or `AMEM_SESSION`, default
 `amem-cli`).
 
-**`amem mcp`** serves the tools to an agent over stdio (MCP).
+**`amem mcp`** serves the tools to an agent over stdio (MCP), and starts the session server that hooks hand
+their payload to (#90). **`amem serve`** runs only the session server, for agents whose plugins run in-process.
 
 **Storage (Stage 2.11):**
 - `amem storage report|compress|decompress`
@@ -80,8 +81,10 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("checkpoint", help="take a checkpoint now")
     sub.add_parser("recover", help="rebuild state from the newest valid checkpoint, replay, and reconcile")
     sub.add_parser("rebuild", help="regenerate the derived layer (artifact and search indexes) from the core")
-    sub.add_parser("mcp", help="serve the agent tools over stdio (Model Context Protocol); --session auto follows "
-                              "the agent session the hooks started")
+    mcp = sub.add_parser("mcp", help="serve the agent tools over stdio (Model Context Protocol); --session auto "
+                                    "follows the agent session the hooks started. Also starts the session server")
+    mcp.add_argument("--no-server", action="store_true", help="don't start the session server for hooks")
+    sub.add_parser("serve", help="run only the session server (hooks hand it their payload) until stdin closes")
     hk = sub.add_parser("hook", help="run one agent hook: the agent's JSON on stdin, its hook output on stdout "
                                      "(always exits 0)")
     hk.add_argument("agent", choices=["claude-code"])
@@ -94,12 +97,12 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("pairs", nargs="*", metavar="key=value")
     args = parser.parse_args(argv)
 
+    if args.command == "serve":   # the session server opens the store itself, as hooks would
+        from agent_memory.server import serve_until_stdin_closes
+        return serve_until_stdin_closes(store_path(args.project, args.home), _hook_environ(args))
     if args.command == "hook":   # before opening the store: the adapter handles a broken store itself
         from agent_memory.adapters import run
-        environ = dict(os.environ, AMEM_PROJECT=os.path.abspath(args.project) if args.project != "." else
-                       os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
-        if args.home:
-            environ["AMEM_HOME"] = args.home
+        environ = _hook_environ(args)
         out, code = run(args.agent, args.event, sys.stdin.buffer.read(), environ)
         if out:
             sys.stdout.write(out)
@@ -124,7 +127,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "mcp":
         from agent_memory.mcp import serve
-        serve(store, args.session)   # "auto": the session the agent's hooks most recently started
+        server = None
+        if not args.no_server and os.environ.get("AMEM_SERVER", "1") != "0":
+            from agent_memory.server import SessionServer
+            try:
+                server = SessionServer(path, _hook_environ(args)).start()
+            except OSError as err:   # hooks fall back to the direct path
+                print(f"agent-memory: session server not started: {err}", file=sys.stderr)
+        try:
+            serve(store, args.session)   # "auto": the session the agent's hooks most recently started
+        finally:
+            if server is not None:
+                server.stop()
         return 0
     if args.command in TOOL_COMMANDS:
         from agent_memory.context import ContextError
@@ -164,6 +178,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     _print(store.rebuild_derived())
     return 0
+
+
+def _hook_environ(args) -> dict:
+    """The environment a hook runs with: the project (and store home) made explicit."""
+    environ = dict(os.environ, AMEM_PROJECT=os.path.abspath(args.project) if args.project != "." else
+                   os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    if args.home:
+        environ["AMEM_HOME"] = args.home
+    return environ
 
 
 def _print(value) -> None:

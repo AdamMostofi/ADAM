@@ -14,7 +14,12 @@
 
 Entry points:
 - `amem hook <agent> <event>` reads the agent's JSON on stdin and prints the agent's hook output;
-- `amem mcp` serves the tools.
+- `amem mcp` serves the tools, and starts the session server beside them;
+- `amem serve` runs the session server alone, for agents whose plugins run in-process.
+
+**Fast path (#90).** A hook first offers its payload to the project's session server (`server.py`), which has the
+store open already. With no server, or a failed hand-off, it runs `amem hook` directly; idempotency keys make
+that retry safe.
 """
 from __future__ import annotations
 
@@ -34,11 +39,14 @@ def idempotency(agent: str, event: str, payload: dict, part: str = "") -> str:
     return f"{agent}:{digest[:40]}"
 
 
-def run(agent: str, event: str, stdin: bytes, environ: dict) -> tuple[str, int]:
-    """Run one hook. Returns (stdout, exit code); the exit code is always 0."""
+def run(agent: str, event: str, stdin: bytes, environ: dict, store=None) -> tuple[str, int]:
+    """Run one hook. Returns (stdout, exit code); the exit code is always 0.
+
+    `store` is an already open store (the session server's, #90); without one the adapter opens its own.
+    """
     if agent == "claude-code":
         from agent_memory.adapters import claude_code
-        return claude_code.handle(event, stdin, environ)
+        return claude_code.handle(event, stdin, environ, store=store)
     return "", 0
 
 

@@ -93,8 +93,21 @@ class Reconciler:
         finally:
             conn.close()
         # git acceleration and git-operation attribution belong to the software profile; others walk the folder.
-        self.is_git = "software" in getattr(store, "profiles", ("software",)) and subprocess.run(
-            ["git", "-C", str(self.root), "rev-parse", "--git-dir"], capture_output=True).returncode == 0
+        # Whether this is a git work tree, and where its HEAD reflog lives, are asked once per store and root
+        # (a long-lived store, such as the session server's, reconciles many times).
+        cache = store.__dict__.setdefault("_git_roots", {})
+        if self.root not in cache:
+            info = None
+            if "software" in getattr(store, "profiles", ("software",)):
+                out = subprocess.run(["git", "-C", str(self.root), "rev-parse", "--git-dir", "--git-path", "logs/HEAD"],
+                                     capture_output=True, text=True)
+                if out.returncode == 0:
+                    lines = out.stdout.splitlines()
+                    info = {"reflog": str(self.root / lines[1]) if len(lines) > 1 else None}
+            cache[self.root] = info
+        self.is_git = cache[self.root] is not None
+        self._reflog_path = cache[self.root]["reflog"] if self.is_git else None
+        self._status: tuple[str | None, set[str]] | None = None
 
     # ------------------------------------------------------------ git and files
     def _git(self, *args: str, check: bool = True) -> str:
@@ -104,12 +117,35 @@ class Reconciler:
             raise ReconcileError(f"git {' '.join(args)} failed: {out.stderr.strip()}")
         return out.stdout
 
+    def _git_status(self) -> tuple[str | None, set[str]]:
+        """HEAD and the dirty files, from one `git status` (porcelain v2 with the branch header)."""
+        out = self._git("status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all", "--no-renames")
+        head, dirty = None, set()
+        for entry in out.split("\0"):
+            if entry.startswith("# branch.oid "):
+                oid = entry[len("# branch.oid "):].strip()
+                head = None if oid == "(initial)" else oid
+            elif entry.startswith("1 "):
+                dirty.add(entry.split(" ", 8)[8])
+            elif entry.startswith("u "):
+                dirty.add(entry.split(" ", 10)[10])
+            elif entry.startswith("? "):
+                dirty.add(entry[2:])
+        return head, dirty
+
     def _head(self) -> str | None:
-        out = subprocess.run(["git", "-C", str(self.root), "rev-parse", "HEAD"], capture_output=True, text=True)
-        return out.stdout.strip() or None
+        if self._status is None:
+            self._status = self._git_status()
+        return self._status[0]
 
     def _reflog(self) -> list[str]:
-        return self._git("reflog", "--format=%gs", check=False).splitlines()
+        """HEAD's reflog subjects, newest first (as `git reflog --format=%gs`), read from the reflog file."""
+        try:
+            with open(self._reflog_path, encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+        except (OSError, TypeError):
+            return []
+        return [line.split("\t", 1)[1] if "\t" in line else "" for line in reversed(lines)]
 
     def _listed(self) -> list[str]:
         if self.is_git:
@@ -123,8 +159,10 @@ class Reconciler:
         return sorted(files)
 
     def _dirty(self) -> set[str]:
-        out = self._git("status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames")
-        return {entry[3:] for entry in out.split("\0") if len(entry) > 3}
+        """The files git sees as changed or untracked, as of this run's status snapshot."""
+        if self._status is None:
+            self._status = self._git_status()
+        return set(self._status[1])
 
     # ------------------------------------------------------------ state
     def _meta(self, conn, key, default=None):
@@ -205,6 +243,7 @@ class Reconciler:
     def _run(self, conn, full: bool) -> Result:
         from agent_memory.schema import EventInput
 
+        self._status = None   # one git status per run
         self._current = self.store.current_files()
         baseline = {p: oid for p, (oid, _) in self._current.items()}
         cache = {p: (s, m, c) for p, s, m, c in conn.execute("SELECT * FROM reconcile_files")}
