@@ -563,7 +563,7 @@ Stages 2.1 to 2.5 are kept as built. The order follows the agreed priority: foun
 | 2.10 | **Mind the Context** | The context manager: ledger events, budgets, priorities, relevance, Assemble, onload, offload, restore, protect, missing-context detection, compaction recovery; context packets; the per-tree MCP tools and CLI | from #55, new |
 | 2.11 | **Burn the Leak** | Purge, storage reporting, tiered lossless compression (D3), verify from a checkpoint (#79), the full suite plus **context-limit stress tests** (a long synthetic project whose engine-delivered context never exceeds budget, while every record stays restorable) | #76 |
 | 3.1 | First Plugin | The Claude Code adapter at tier B. Verify which hooks exist (prompt-time context, compaction signal), and capture the environment (#82) | #56 |
-| 3.2 | Weigh the Thesis | The benchmark tests the complete design, including multi-session continuity after compaction, against compaction alone, and git plus notes | #57 |
+| 3.2 | Weigh the Thesis | The benchmark tests the complete design, including multi-session continuity after compaction, against compaction alone, and git plus notes. Its acceptance also includes the owner review's six verification questions (tree navigation, intent-aware retrieval, injected-context cost, offloading across real compaction, protected-context overflow, a non-coding project), answered with test evidence | #57 |
 | 3.3 to 3.6 | OpenCode, Pi, others, release | As planned, each adapter declaring its tier | #58 to #61 |
 | 4.1 | Connect the Engine | ADAM at **tier A**: ADAM assembles every request through the context manager | #46 |
 
