@@ -67,7 +67,7 @@ them are explicit, and each link says which trees it joins.
   - attribution of file changes to `agent_tool`, `agent_bash`, `git_operation`, `external` or an honest `unattributed`;
   - conflict records for concurrent agents;
   - checkpoints, and crash recovery that matches a clean replay;
-  - `amem verify`.
+  - `amem verify`, which reports four things separately (#93). Archive integrity (its exit code) proves the captured records are intact and continuous, not that nothing was missed before capture. So it also reports capture completeness within the instrumentation (sessions that ended cleanly, the last reconciliation), known gaps (`capture_gap` and `partial` records) and uncertain attribution (`unattributed` changes).
 
 ```python
 from agent_memory import Store

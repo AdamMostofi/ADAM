@@ -1,7 +1,9 @@
 """`amem`: the engine's command line.
 
 **Maintenance:** `where`, `verify`, `reconcile`, `checkpoint`, `recover`, `rebuild`. These print JSON.
-`verify` exits 1 when it finds a problem, and it never repairs anything.
+`verify` never repairs anything. It reports four things separately (#93): archive integrity (its exit code:
+1 when the captured records are damaged), capture completeness within the instrumentation, known gaps, and
+uncertain attribution.
 
 **Agent tools** (Stage 2.10): the same tools an agent gets over MCP, with the
 same context accounting. Each is `amem <tool> [op] [key=value ...]`. Values
@@ -163,7 +165,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "verify":
         report = store.verify(full=args.full)
         _print(report)
-        return 0 if report["ok"] else 1
+        for line in report["statement"]:   # the four results in words, after the JSON (on stderr)
+            print(line, file=sys.stderr)
+        return 0 if report["ok"] else 1   # integrity alone: a recorded gap is information, not corruption
     if args.command == "reconcile":
         result = store.reconciler(args.project, args.session).run(full=args.full)
         _print({"ok": True, "changes": len(result.changes), "hashed": result.hashed, "full": result.full,

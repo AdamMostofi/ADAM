@@ -631,9 +631,20 @@ class Store:
                     problems.append({"type": "derived_problem", "detail": f"artifact index entry for missing object {oid}"})
         finally:
             conn.close()
-        return {"ok": not problems, "events": len(positions), "writers": len(chains),
-                "objects_checked": len(referenced), "purged_records": len(purged["events"]),
-                "purged_objects": len(purged["objects"]), "mode": "full", "problems": problems}
+        return self._with_capture({"ok": not problems, "events": len(positions), "writers": len(chains),
+                                   "objects_checked": len(referenced), "purged_records": len(purged["events"]),
+                                   "purged_objects": len(purged["objects"]), "mode": "full", "problems": problems})
+
+    def _with_capture(self, report: dict) -> dict:
+        """Integrity, plus what integrity can't prove: capture, known gaps, attribution (#93). `ok` stays
+        integrity alone."""
+        from agent_memory import completeness
+        report["integrity"] = {"ok": report["ok"], "problems": len(report["problems"]),
+                               "proves": "the captured records are intact and continuous; not that nothing was "
+                                         "missed before capture"}
+        report.update(completeness.capture_report(self))
+        report["statement"] = completeness.statement(report)
+        return report
 
     def _verify_since_checkpoint(self) -> dict:
         """verify(full=False): trust the newest checkpoint that checks out, then verify everything after it."""
@@ -685,8 +696,8 @@ class Store:
                 problems.append({"type": "structure_mismatch", "table": table,
                                  "detail": f"doesn't match checkpoint {used[0]} plus replay"})
         problems += storage.check(self)
-        return {"ok": not problems, "mode": f"since checkpoint {used[0]} (log position {position})",
-                "events": len(later), "objects_checked": len(referenced), "problems": problems}
+        return self._with_capture({"ok": not problems, "mode": f"since checkpoint {used[0]} (log position {position})",
+                                   "events": len(later), "objects_checked": len(referenced), "problems": problems})
 
     # ------------------------------------------------------------ declaring structure (design 6.2-6.4)
     def declare(self, kind: str, session_id: str, writer_id: str, **fields) -> Event:
