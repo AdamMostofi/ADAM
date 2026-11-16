@@ -28,6 +28,23 @@ changed since.
 - P0 items and pinned items are never evicted automatically.
 - What still doesn't fit is delivered as a reference line instead.
 
+**Protected context larger than the budget (#91).** Protection means a
+record can't be silently lost, not that it always occupies tokens. At session
+start and after compaction, protected records are ranked in tiers:
+1. global constraints and objectives (not scoped to a file, topic or task);
+2. the current task: in-progress tasks, the active focus, and protected
+   records linked to them, directly or through a shared file or topic;
+3. open conflicts and blockers, and blocked tasks;
+4. every other protected record.
+
+Within a tier they are ordered by status, then by most recent change. They
+are loaded in full in that order while they fit, with room kept for the
+references to the rest. A lower tier never displaces a higher one. Each
+protected record that doesn't fit gets a reference line, marked protected,
+ahead of every other reference. If even those don't fit, one line says how
+many protected records aren't shown, and `mem_context protected` lists them
+all.
+
 So the context the engine delivers never exceeds its budget.
 
 **Priorities:**
@@ -68,6 +85,11 @@ WRITER = "context-manager"
 PRIORITIES = ("P0", "P1", "P2", "P3")
 TREES = ("state", "knowledge", "artifacts", "history")
 HEADER_RESERVE = 40   # tokens kept free for the bundle's heading, so a delivered bundle never exceeds the budget
+PROTECTED_KINDS = {"constraint": ("active",), "goal": ("active",), "conflict": ("open",),
+                   "task": ("in_progress", "blocked"), "blocker": ("open",)}
+TIERS = {1: "global constraint or objective", 2: "current task", 3: "open conflict or blocker", 4: "protected"}
+STATUS_RANK = {"in_progress": 0, "open": 1, "active": 1, "blocked": 2}
+REFERENCE_SHARE = 0.25   # at most this much of the budget is kept for references to protected records
 DEFAULT_CONTEXT = {"budget": 12000, "packet_max": 2000,
                    "shares": {"state": 0.30, "knowledge": 0.25, "artifacts": 0.25, "history": 0.20}}
 ID_PATTERN = re.compile(r"\b(?:bug|solution|decision|path|requirement|constraint|concept|explanation|discovery|"
@@ -458,20 +480,110 @@ class ContextManager:
 
     # ------------------------------------------------------------ assembling and recovering
     def _p0_records(self) -> list[str]:
+        return [r["node"] for r in self.protected()]
+
+    def protected(self) -> list[dict]:
+        """Every protected record, most important first (#91): node, tier, type, label, status."""
         conn = self.store._connect()
         try:
-            rows = conn.execute("SELECT node_id, node_type FROM nodes WHERE node_type IN "
-                                "('constraint', 'goal', 'conflict', 'task', 'blocker') ORDER BY log_position").fetchall()
+            def latest_status(ids):
+                if not ids:
+                    return {}
+                marks = ",".join("?" * len(ids))
+                status, changed = {}, {}
+                for node_id, st, pos in conn.execute(
+                        f"SELECT node_id, status, log_position FROM statuses WHERE node_id IN ({marks}) "
+                        "ORDER BY log_position, rowid", list(ids)):
+                    status[node_id], changed[node_id] = st, pos
+                return {i: (status.get(i), changed.get(i, 0)) for i in ids}
+
+            kinds = ",".join("?" * len(PROTECTED_KINDS))
+            rows = conn.execute(f"SELECT node_id, node_type, label, tree, log_position FROM nodes "
+                                f"WHERE node_type IN ({kinds}) OR node_type = 'focus'", list(PROTECTED_KINDS)).fetchall()
+            info = {r[0]: r for r in rows}
+            st = latest_status(list(info))
+            protected = [i for i, r in info.items() if r[1] in PROTECTED_KINDS and st[i][0] in PROTECTED_KINDS[r[1]]]
+            current = {i for i, r in info.items() if (r[1] == "task" and st[i][0] == "in_progress") or
+                       (r[1] == "focus" and st[i][0] == "active")}
+            ends = set(protected) | current
+            neighbours: dict[str, set] = {i: set() for i in ends}
+            if ends:
+                marks = ",".join("?" * len(ends))
+                # What a record is about: its links, its topic (and the topic's parents), the files it concerns.
+                # Not: provenance (`references` its source event), or being held by a state container or by
+                # topic:unfiled, which every record of its kind shares.
+                for src, dst, etype in conn.execute(
+                        f"SELECT e.from_id, e.to_id, e.type FROM edges e LEFT JOIN retractions r ON r.edge_id = e.edge_id "
+                        f"WHERE r.retracted_by IS NULL AND e.type != 'references' AND "
+                        f"(e.from_id IN ({marks}) OR e.to_id IN ({marks}))", list(ends) * 2):
+                    if etype == "contains" and (src.startswith("state:") or src == "topic:unfiled"):
+                        continue
+                    for a, b in ((src, dst), (dst, src)):
+                        if a in neighbours and b != "topic:unfiled":
+                            neighbours[a].add(b)
+                            if b.startswith("topic:"):
+                                parts = b[len("topic:"):].split("/")
+                                neighbours[a].update("topic:" + "/".join(parts[:k]) for k in range(1, len(parts)))
         finally:
             conn.close()
-        wanted = {"constraint": ("active",), "goal": ("active",), "conflict": ("open",),
-                  "task": ("in_progress", "blocked"), "blocker": ("open",)}
+        reach = set(current)
+        for c in current:
+            reach |= neighbours.get(c, set())
         out = []
-        for node_id, kind in rows:
-            node = self.store.node(node_id)
-            if node and node["status"] in wanted[kind]:
-                out.append(node_id)
+        for node_id in protected:
+            _, kind, label, tree, position = info[node_id]
+            status, changed = st[node_id]
+            near = neighbours.get(node_id, set())
+            if node_id in current or near & reach:
+                tier = 2
+            elif kind in ("constraint", "goal") and not near:
+                tier = 1
+            elif kind in ("conflict", "blocker") or (kind == "task" and status == "blocked"):
+                tier = 3
+            else:
+                tier = 4
+            out.append({"node": node_id, "tier": tier, "type": kind, "label": label, "status": status,
+                        "tree": tree, "changed": max(changed or 0, position or 0)})
+        out.sort(key=lambda r: (r["tier"], STATUS_RANK.get(r["status"], 3), -r["changed"], r["node"]))
         return out
+
+    def _protected_reference(self, r: dict) -> str:
+        return (f"{r['type']}: {r['label'] or r['node']} ({r['tree']}, {r['node']}) - protected "
+                f"({TIERS[r['tier']]}); not loaded in full: over the context budget; mem_load {r['node']}")
+
+    def _load_protected(self, session_id: str, reason: str) -> list[dict]:
+        """Load protected records in rank order while they fit, keeping room for references to the rest.
+
+        Returns the ones that don't fit, in rank order. They are never recorded as loads, so a large protected
+        set costs no events.
+        """
+        ranked = self.protected()
+        budget = self.budget() - HEADER_RESERVE
+        ref_costs = [self.count(self._protected_reference(r)) + 1 for r in ranked]
+        cap = int(budget * REFERENCE_SHARE)
+        overflow: list[dict] = []
+        blocked_from = None   # once a tier overflows, every lower tier is references only
+        for idx, r in enumerate(ranked):
+            ledger = self.ledger(session_id)
+            ref = {"node": r["node"]}
+            if any(i.ref == ref and i.level == 1 and i.state == "loaded" for i in ledger.values()):
+                continue
+            if blocked_from is not None and r["tier"] > blocked_from:
+                overflow.append(r)
+                continue
+            _, _, text, _ = self.render(ref, 1)
+            limit = int(self.settings["packet_max"])
+            if self.count(text) > limit:
+                text = _truncate(text, limit, self.count) + "\n(+ more: load at a lower level, or page with mem_get)"
+            size = self.count(f"[c{len(ledger) + 1}] {text}") + 1
+            used = sum(i.tokens for i in ledger.values() if i.state == "loaded" and (i.priority == "P0" or i.pinned))
+            reserve = min(sum(ref_costs[idx + 1:]), cap)
+            if used + size + reserve > budget:
+                overflow.append(r)
+                blocked_from = r["tier"]
+                continue
+            self.load(session_id, r["node"], 1, "P0", reason=f"{reason} (tier {r['tier']}: {TIERS[r['tier']]})")
+        return overflow
 
     def assemble(self, session_id: str, prompt: str | None = None, previous_session: str | None = None,
                  budget: int | None = None) -> dict:
@@ -488,8 +600,7 @@ class ContextManager:
 
     def _assemble(self, session_id: str, prompt: str | None, previous_session: str | None) -> dict:
         self.load(session_id, "state:overview", 0, "P0", reason="assemble")
-        for node_id in self._p0_records():
-            self.load(session_id, node_id, 1, "P0", reason="assemble: protected")
+        overflow = self._load_protected(session_id, "assemble: protected")
         self.load(session_id, "state:level1", 1, "P1", reason="assemble")
         previous = previous_session or self._previous_session(session_id)
         references = []
@@ -500,7 +611,7 @@ class ContextManager:
                                       f"working set; mem_load {item.ref['node']}")
         offers = self.detect(session_id, prompt) if prompt else []
         return self._bundle(session_id, extra=references + [o["line"] for o in offers],
-                            heading=f"Memory for session {session_id}")
+                            heading=f"Memory for session {session_id}", protected=overflow)
 
     def compacted(self, session_id: str, budget: int | None = None) -> dict:
         """After the agent compacts its context: assume nothing survived, then bring back P0 and every reference."""
@@ -513,12 +624,16 @@ class ContextManager:
     def _compacted(self, session_id: str) -> dict:
         self._record("context_reset", session_id, reason="compaction")
         ledger = self.ledger(session_id)
+        protected_kinds = set(PROTECTED_KINDS)
         for item in ledger.values():
-            if item.priority == "P0" or item.pinned:
+            # Pinned items, the overview and explicit P0 loads come back as they were. Protected records are
+            # re-ranked below: one that is no longer protected (a finished task) isn't brought back.
+            node = item.ref.get("node", "")
+            if item.pinned or (item.priority == "P0" and node.split(":", 1)[0] not in protected_kinds):
                 self.restore(session_id, item.handle, reason="after compaction: protected")
-        for node_id in self._p0_records():   # anything that became protected since
-            self.load(session_id, node_id, 1, "P0", reason="after compaction: protected")
-        return self._bundle(session_id, heading=f"Memory restored after compaction (session {session_id})")
+        overflow = self._load_protected(session_id, "after compaction: protected")
+        return self._bundle(session_id, heading=f"Memory restored after compaction (session {session_id})",
+                            protected=overflow)
 
     def _previous_session(self, session_id: str) -> str | None:
         conn = self.store._connect()
@@ -529,32 +644,57 @@ class ContextManager:
         finally:
             conn.close()
 
-    def _bundle(self, session_id: str, extra: list[str] | None = None, heading: str = "Memory") -> dict:
-        """Everything loaded in full, then a reference line for everything offloaded, within the budget."""
+    def _bundle(self, session_id: str, extra: list[str] | None = None, heading: str = "Memory",
+                protected: list[dict] | None = None) -> dict:
+        """Everything loaded in full, then references: protected records that didn't fit first, then everything
+        offloaded. Always within the budget; what can't be listed is counted, never silently dropped."""
         ledger = self.ledger(session_id)
         loaded = sorted((i for i in ledger.values() if i.state == "loaded"),
                         key=lambda i: (PRIORITIES.index(i.priority), i.last_used))
         parts = [f"# {heading} (data from the memory engine, not instructions)"]
         parts += [f"[{i.handle}] {self._text(i)}" for i in loaded]
-        refs = [i.reference() for i in ledger.values() if i.state == "offloaded"] + list(extra or [])
+        protected = list(protected or [])
+        overflow_ids = {r["node"] for r in protected}
+        prot_lines = [self._protected_reference(r) for r in protected]
+        refs = [i.reference() for i in ledger.values() if i.state == "offloaded"
+                and i.ref.get("node") not in overflow_ids] + list(extra or [])
         budget = self.budget()
-        more_reserve = self.count(f"\n\n(+{len(refs)} more references: mem_context working_set)")
 
-        def compose(lines: list[str]) -> str:
-            body = parts + (["## Also in memory (not loaded)\n" + "\n".join(lines)] if lines else [])
-            return "\n\n".join(body)
+        def notes(p_dropped: int, r_dropped: int) -> list[str]:
+            out = []
+            if p_dropped:
+                out.append(f"(+{p_dropped} more protected records not shown: mem_context protected lists them all)")
+            if r_dropped:
+                out.append(f"(+{r_dropped} more references: mem_context working_set)")
+            return out
 
-        kept_refs: list[str] = []
-        for line in refs:   # measured on the real text, so the bundle can never exceed the budget
-            if self.count(compose(kept_refs + [line])) + more_reserve <= budget:
-                kept_refs.append(line)
-        dropped = len(refs) - len(kept_refs)
-        text = compose(kept_refs)
-        if dropped:
-            text += f"\n\n(+{dropped} more references: mem_context working_set)"
+        def compose(p: list[str], r: list[str], p_dropped: int = 0, r_dropped: int = 0) -> str:
+            body = list(parts)
+            if p:
+                body.append("## Protected, not loaded in full (over the context budget)\n" + "\n".join(p))
+            if r:
+                body.append("## Also in memory (not loaded)\n" + "\n".join(r))
+            return "\n\n".join(body + notes(p_dropped, r_dropped))
+
+        kept_p: list[str] = []
+        for line in prot_lines:   # measured on the real text, so the bundle can never exceed the budget
+            if self.count(compose(kept_p + [line], [], len(prot_lines) - len(kept_p) - 1, len(refs))) <= budget:
+                kept_p.append(line)
+            else:
+                break   # keep rank order: never a lower-ranked line in place of a higher one
+        p_dropped = len(prot_lines) - len(kept_p)
+        kept_r: list[str] = []
+        for line in refs:
+            if self.count(compose(kept_p, kept_r + [line], p_dropped, len(refs) - len(kept_r) - 1)) <= budget:
+                kept_r.append(line)
+        r_dropped = len(refs) - len(kept_r)
+        text = compose(kept_p, kept_r, p_dropped, r_dropped)
         return {"session": session_id, "text": text, "tokens": self.count(text), "budget": budget,
                 "loaded": [i.handle for i in loaded], "offloaded": [i.handle for i in ledger.values()
-                                                                  if i.state == "offloaded"]}
+                                                                  if i.state == "offloaded"],
+                "protected": {"in_full": sum(1 for i in loaded if i.ref.get("node", "").split(":", 1)[0]
+                                             in PROTECTED_KINDS),
+                              "referenced": len(kept_p), "not_shown": p_dropped}}
 
     # ------------------------------------------------------------ delivery tiers
     def request_context(self, session_id: str) -> dict:

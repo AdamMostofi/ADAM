@@ -69,8 +69,9 @@ TOOLS = {
                 "properties": {"handle": {"type": "string"}, "pinned": {"type": "boolean"}}},
     "mem_context": {
         "description": "The working context: assemble (session start), working_set, detect (what a prompt needs), "
-                       "compacted (after compaction), request (tier A), delta (tier B).",
-        "ops": ["assemble", "working_set", "detect", "compacted", "request", "delta"],
+                       "compacted (after compaction), request (tier A), delta (tier B), protected (every protected "
+                       "record, ranked).",
+        "ops": ["assemble", "working_set", "detect", "compacted", "request", "delta", "protected"],
         "properties": {"prompt": {"type": "string"}, "since": {"type": "integer"}}},
     "mem_storage": {
         "description": "Storage: report sizes and growth, or compress / decompress content losslessly (by session_id, "
@@ -232,6 +233,12 @@ def call(store, session_id: str, name: str, args: dict) -> str:
             return "\n".join(o["line"] for o in offers) or "(nothing missing)"
         if op == "compacted":
             return ctx.compacted(session_id)["text"]
+        if op == "protected":
+            loaded = {i.ref.get("node") for i in ctx.ledger(session_id).values() if i.state == "loaded"}
+            from agent_memory.context import TIERS
+            return "\n".join(f"{n}. [tier {r['tier']}: {TIERS[r['tier']]}] {r['type']}: {r['label']} ({r['node']}, "
+                             f"{r['status']}) - {'loaded' if r['node'] in loaded else 'mem_load ' + r['node']}"
+                             for n, r in enumerate(ctx.protected(), 1)) or "(nothing is protected)"
         if op == "request":
             return ctx.request_context(session_id)["text"]
         if op == "delta":
