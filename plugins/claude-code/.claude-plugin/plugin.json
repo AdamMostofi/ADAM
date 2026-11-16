@@ -1,0 +1,32 @@
+{
+  "name": "agent-memory",
+  "displayName": "Agent Memory (Lossless Tree Memory)",
+  "version": "0.1.0",
+  "description": "Lossless, tree-structured project memory: every session, edit and decision is kept, and only what the work needs is loaded into context, offloaded when done, and restored after compaction.",
+  "author": { "name": "AdamMostofi", "url": "https://github.com/AdamMostofi" },
+  "homepage": "https://github.com/AdamMostofi/ADAM/tree/master/packages/agent-memory",
+  "repository": "https://github.com/AdamMostofi/ADAM",
+  "license": "MIT",
+  "keywords": ["memory", "context", "history", "lossless"],
+  "userConfig": {
+    "key_storage": {
+      "type": "string",
+      "title": "Where the memory's encryption key lives",
+      "description": "key-file: a key file in your user config folder (default). passphrase: derived from the passphrase below, cached per login session. keychain: the OS keychain (needs the keyring package). Applies when a project's memory is first created.",
+      "options": ["key-file", "passphrase", "keychain"],
+      "default": "key-file"
+    },
+    "passphrase": {
+      "type": "string",
+      "title": "Passphrase (only for the passphrase option)",
+      "description": "Used only when key storage is 'passphrase'. Kept in your OS's secure storage by Claude Code.",
+      "sensitive": true
+    },
+    "profiles": {
+      "type": "string",
+      "title": "Domain profiles",
+      "description": "Comma-separated: generic (always on), software (code symbols, git, test results), documents (Markdown and reStructuredText structure).",
+      "default": "generic,software,documents"
+    }
+  }
+}

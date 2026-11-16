@@ -74,6 +74,22 @@ Outcomes are as follows:
 | #85–#88 | D10–D13 | Four independent trees over one shared store, a cross-tree layer, a dynamic context manager, the revised stage plan (57 stages), context budgets, and domain profiles. | **Accepted by the owner, 2026-11-13.** | [architecture revision 3](design/2026-11-13-memory-architecture-rev3.md) |
 | #51 | — | One data key per project instead of per session. | Settled (engineering): per-session keys would prevent deduplication. | [engine design 5.2](design/2026-11-06-agent-memory-engine.md) |
 
+## Phase 3 — Carry the Memory
+
+| Issue | ID | Decision | Outcome | Details |
+|---|---|---|---|---|
+| #56 | D4 | Key storage chosen at onboarding. | **Built:** key file, passphrase (with a per-login-session cache, #83) or OS keychain, chosen in the Claude Code plugin's config dialog (`AMEM_KEY_SOURCE`). | `packages/agent-memory/src/agent_memory/keys.py` |
+| #56 | D14 | Hook latency: the 100 ms p95 target. | **Open, for the owner.** On real sessions, p50 is about 170 ms and p95 300–400 ms. The time goes to a fresh Python process per hook (about 60 ms), one durable write (about 26 ms), and reconciles around Bash. The options are below. | [plugin README](../plugins/claude-code/README.md) |
+
+**D14 options** (the stage's acceptance criterion: "under 100 ms, or the result is recorded and the language decision revisited"):
+
+| Option | What changes | Expected p50 | Cost |
+|---|---|---|---|
+| **A (recommended)** | Hooks hand their payload over a local socket to the session's MCP server, a process Claude Code already runs for the whole session. The per-hook process becomes a few milliseconds of shell. | About 40–60 ms | Moderate. No new language and no new background service. It falls back to today's path when the server isn't up yet |
+| B | A compiled hook client (Go or Rust) talking to the same server, per D2 ("compiled helpers only if latency requires") | About 30–50 ms | A second language in the build and release |
+| C | `synchronous=NORMAL` for hook writes (WAL) | Saves about 20 ms | A power cut can lose the last few events, though it never corrupts the store. This is a durability trade-off |
+| D | Accept today's latency | About 170 ms | None. Hooks run while Claude Code works, so the cost is mostly hidden behind model latency |
+
 ## Later phases (not started)
 
 | Issue | ID | Decision | Outcome |

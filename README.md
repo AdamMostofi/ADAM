@@ -104,8 +104,8 @@ only what it needs, from the right tree, at the right time.
 
 **Status:** Phase 2 is complete (Stages 2.1 to 2.11). That includes the
 context manager that loads and offloads context within a token budget, and
-storage that compresses old content losslessly. Next are the agent plugins
-(Phase 3).
+storage that compresses old content losslessly. Phase 3 has started with the
+[Claude Code plugin](plugins/claude-code/README.md) (Stage 3.1).
 
 Design documents:
 - [architecture revision 3](docs/design/2026-11-13-memory-architecture-rev3.md), the current architecture;
@@ -142,6 +142,7 @@ that they were.
 | The context manager: a crash-safe ledger of what the agent has loaded, token budgets per tree, protected items, offload to one-line references with exact restore, prompt-driven offers, and recovery after compaction | `context.py` | `packages/agent-memory/tests/test_context.py` |
 | Twelve agent tools (one per tree, plus load, offload, restore, pin, context and declare) over MCP (stdio) and the `amem` CLI | `tools.py`, `mcp.py`, `cli.py` | `packages/agent-memory/tests/test_context.py` |
 | Storage: tiered lossless compression of old, unvisited content (automatic past a size, or on request), purge of a leaked secret or session that leaves no byte behind, key rotation, size and growth reporting, export and import, and a fast verify from the newest checkpoint | `storage.py`, `archive.py` | `packages/agent-memory/tests/test_storage.py` |
+| The Claude Code plugin: lossless capture through eleven hooks (never blocking, replay-safe, with explicit gaps), memory injected at session start, on each prompt and after compaction, key storage chosen at onboarding, and a launcher that works from Windows into WSL | `adapters/claude_code.py`, `keys.py` | `packages/agent-memory/tests/test_claude_code.py` |
 | The engine never imports ADAM | `pyproject.toml` | `packages/agent-memory/tests/test_boundary.py` |
 
 The "Where" files are in `packages/agent-memory/src/agent_memory/`.
@@ -171,7 +172,7 @@ The single order of work is [docs/ROADMAP.md](docs/ROADMAP.md): 10 phases and
 |---|---|
 | 1 — Repair the Floor | The kernel and docs work listed above (Stages 1.1–1.8). |
 | 2 — Forge the Memory Engine | The [memory engine](#memory-engine). Complete (Stages 2.1–2.11). |
-| 3 — Carry the Memory | Plugins for Claude Code, OpenCode, Pi and others; a benchmark that decides whether to continue; a standalone release. |
+| 3 — Carry the Memory | Plugins for Claude Code (3.1, built), OpenCode, Pi and others; a benchmark that decides whether to continue; a standalone release. |
 | 4 — The Citation Rite | ADAM's storage moved onto the memory engine, Markdown sources with exact passages, answers only from evidence, the EQ revisit, citations in chat, and a thought trace. |
 | 5 — The Book Study | Reading a real book into reviewed claims, measured against plain search, and a learning loop connected to chat. |
 | 6 — The Ontology Web | A shared vocabulary, concept hierarchies across sources, and checked analogies. |
@@ -415,6 +416,9 @@ ADAM/
 │   └── agent-memory/       # the standalone memory engine (own lockfile, tests and CI job)
 │       ├── src/agent_memory/
 │       └── tests/
+├── plugins/
+│   └── claude-code/        # the agent-memory plugin for Claude Code (Stage 3.1)
+├── .claude-plugin/         # marketplace.json: `claude plugin install agent-memory@adam`
 ├── docs/
 │   ├── ROADMAP.md          # the order of work
 │   ├── DECISIONS.md        # every decision and where it lives

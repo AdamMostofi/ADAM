@@ -12,6 +12,9 @@ def isolated(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
     monkeypatch.delenv("AMEM_HOME", raising=False)
     monkeypatch.delenv("AMEM_PASSPHRASE", raising=False)
+    for name in ("AMEM_KEY_SOURCE", "AMEM_PROFILES", "AMEM_PROJECT", "CLAUDE_PROJECT_DIR"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "runtime"))   # the passphrase cache stays in the test
 
 
 @pytest.fixture

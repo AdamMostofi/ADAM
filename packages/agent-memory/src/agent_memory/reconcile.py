@@ -149,9 +149,7 @@ class Reconciler:
         commands: list[str] = []
         agent_active = False
         last_after: dict[str, str] = {}
-        for ev in self.store.events():
-            if ev.log_position <= since:
-                continue
+        for ev in self.store.events(after=since):   # only what happened since the last reconcile
             s = ev.summary_fields
             if ev.kind in ("tool_call", "tool_result"):
                 agent_active = True
@@ -180,15 +178,14 @@ class Reconciler:
 
     def _previous_session_unclean(self) -> bool:
         """True if some other session started and never ended: its changes can't be called external."""
-        started, ended = set(), set()
-        for ev in self.store.events():
-            if ev.session_id == self.session_id:
-                continue
-            if ev.kind == "session_start":
-                started.add(ev.session_id)
-            elif ev.kind == "session_end":
-                ended.add(ev.session_id)
-        return bool(started - ended)
+        conn = self.store._connect()
+        try:   # two indexed lookups, not a scan of the whole log
+            row = conn.execute("SELECT 1 FROM events s WHERE s.kind = 'session_start' AND s.session_id != ? AND NOT "
+                               "EXISTS (SELECT 1 FROM events e WHERE e.kind = 'session_end' AND e.session_id = "
+                               "s.session_id) LIMIT 1", (self.session_id,)).fetchone()
+        finally:
+            conn.close()
+        return row is not None
 
     # ------------------------------------------------------------ run
     def run(self, full: bool = False) -> Result:

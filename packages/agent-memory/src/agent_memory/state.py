@@ -80,7 +80,8 @@ class ActiveState:
     def __init__(self, store, now: datetime | None = None, environment: dict | None = None):
         self.store = store
         self.now = now or datetime.now(timezone.utc)
-        self.environment = environment
+        # The current environment: given, or what the agent adapter captured for this session (#82).
+        self.environment = environment if environment is not None else getattr(store, "environment", None)
         self.settings = store.settings
 
     def _conn(self):
@@ -127,7 +128,8 @@ class ActiveState:
         boundary = conn.execute("SELECT COALESCE(MAX(log_position), 0) FROM events WHERE kind = 'session_end'"
                                 ).fetchone()[0]
         rows = conn.execute("SELECT path, change, attribution, attribution_basis, source_event, MAX(log_position) "
-                            "FROM file_versions WHERE log_position > ? GROUP BY path ORDER BY MAX(log_position) DESC",
+                            "FROM file_versions WHERE log_position > ? AND COALESCE(attribution, '') != 'baseline' "
+                            "GROUP BY path ORDER BY MAX(log_position) DESC",   # a first look at files isn't progress
                             (boundary,)).fetchall()
         return [{"id": artifact_node(path), "section": "progress", "kind": "change",
                  "label": f"{path} {change}" + (f" ({attribution})" if attribution and attribution != "reported" else ""),

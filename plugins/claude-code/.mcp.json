@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "agent-memory": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/amem-run", "mcp"],
+      "env": {
+        "AMEM_KEY_SOURCE": "${user_config.key_storage}",
+        "AMEM_PASSPHRASE": "${user_config.passphrase}",
+        "AMEM_PROFILES": "${user_config.profiles}"
+      }
+    }
+  }
+}

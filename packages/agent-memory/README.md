@@ -1,7 +1,7 @@
 # agent-memory
 
 **Status:** Phase 2 is complete (Stages 2.1 to 2.11) inside the ADAM
-repository. The agent plugins come next (Phase 3). `agent-memory` is a working name; the final name is decision D8.
+repository. Phase 3 has started: the [Claude Code plugin](../../plugins/claude-code/README.md) (Stage 3.1). `agent-memory` is a working name; the final name is decision D8.
 
 The Lossless Tree Memory Engine is a general-purpose, lossless memory for
 long-running AI agents, with software development as its primary use.
@@ -104,6 +104,11 @@ uv run amem --project /path/to/project reconcile    # also: where, verify, check
   - **Size and growth reporting,** with warnings.
   - **Backups:** `amem export` / `amem import`.
   - **Faster checks:** batch appends (a 20,000-file first scan in about 10 s), and a fast `amem verify` from the newest checkpoint (`--full` for everything).
+
+- **Agent adapters (Stage 3.1):** `amem hook claude-code <Event>` and the Claude Code plugin, with:
+  - lossless capture that never blocks the agent;
+  - memory injected at session start, on each prompt and after compaction;
+  - key storage chosen at onboarding: key file, passphrase with a session cache, or OS keychain.
 
 ## Not built yet
 - **Phase 3:** the agent plugins and onboarding.

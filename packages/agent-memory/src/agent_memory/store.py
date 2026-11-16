@@ -67,6 +67,8 @@ class Store:
             warnings.warn(w, stacklevel=2)
         self.project_id = project_id or default_project_id(self.path)
         self._key_path = None
+        self.environment = None     # the current environment fingerprint, when an adapter captured one (#82)
+        self.defer_upkeep = False   # skip checkpoint and compaction after writes (hooks with a tight time budget)
         self.exclusions = tuple(exclusions)
         self._db = self.path / "memory.db"
         self._migrated_from = None
@@ -135,6 +137,7 @@ class Store:
                 );
                 CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
                 CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);
+                CREATE INDEX IF NOT EXISTS idx_events_kind_session ON events(kind, session_id);
                 CREATE TRIGGER IF NOT EXISTS events_append_only_update BEFORE UPDATE ON events
                     BEGIN SELECT RAISE(ABORT, 'the event log is append-only'); END;
                 CREATE TRIGGER IF NOT EXISTS events_append_only_delete BEFORE DELETE ON events
@@ -225,15 +228,18 @@ class Store:
             passphrase = os.environ.get("AMEM_PASSPHRASE")
             conn.execute("BEGIN IMMEDIATE")
             source = self._meta(conn, "kek_source")
-            if source is None:
-                source = "passphrase" if passphrase else "key_file"
+            if source is None:   # a new store: the source chosen at onboarding (D4), else the default
+                source = keys.normalize_source(os.environ.get("AMEM_KEY_SOURCE")) or \
+                    ("passphrase" if passphrase else "key_file")
                 conn.execute("INSERT INTO meta VALUES ('kek_source', ?)", (source,))
                 if source == "passphrase":
                     conn.execute("INSERT INTO meta VALUES ('kek_salt', ?)", (_secrets.token_bytes(16),))
             if source == "passphrase":
                 if not passphrase:
                     raise keys.KeyError_("this store is locked with a passphrase: set AMEM_PASSPHRASE")
-                kek = keys.passphrase_kek(passphrase, self._meta(conn, "kek_salt"))
+                kek = keys.cached_passphrase_kek(passphrase, self._meta(conn, "kek_salt"))
+            elif source == "keychain":
+                kek = keys.keychain_kek(self.project_id)
             else:
                 kek = keys.key_file_kek(self.project_id, key_dir)
                 self._key_path = (key_dir or keys.config_dir()) / "keys" / f"{self.project_id}.key"
@@ -349,7 +355,7 @@ class Store:
         fresh = [e for e in stored_all if e.log_position > 0]
         every = self.checkpoint_every
         crossed = fresh and every and any(e.log_position % every == 0 for e in fresh)
-        if fresh and (any(e.kind == "session_end" for e in fresh) or crossed):
+        if fresh and not self.defer_upkeep and (any(e.kind == "session_end" for e in fresh) or crossed):
             try:
                 self.checkpoint(reason="session end" if any(e.kind == "session_end" for e in fresh)
                                 else "every N events")
@@ -405,11 +411,14 @@ class Store:
         finally:
             conn.close()
 
-    def events(self, session_id: str | None = None, kind: str | None = None) -> Iterator[Event]:
+    def events(self, session_id: str | None = None, kind: str | None = None, after: int = 0) -> Iterator[Event]:
+        """Events in log order: all, or one session's, or one kind's; `after` skips positions up to it."""
         conn = self._connect()
         try:
             sql, args = "SELECT * FROM events", []
             where = []
+            if after:
+                where.append("log_position > ?"); args.append(after)
             if session_id:
                 where.append("session_id = ?"); args.append(session_id)
             if kind:
@@ -804,7 +813,8 @@ class Store:
                             exit_code: int | None = None, output: bytes | str = b"", check_type: str = "test",
                             targets=(), coverage_files=None, environment: dict | None = None,
                             commit: str | None = None, branch: str | None = None, worktree: str | None = None,
-                            dirty: bool | None = None, verifies=(), parent_id: str | None = None) -> Event:
+                            dirty: bool | None = None, verifies=(), parent_id: str | None = None,
+                            idempotency_key: str | None = None) -> Event:
         """Record a check with everything needed to tell later whether it still holds (design 7.3)."""
         self._require("software", "recording a verification")
         current = {path: oid for path, (oid, _) in self.current_files().items()}
@@ -834,7 +844,8 @@ class Store:
         if unresolved:
             summary["unresolved_imports"] = unresolved
         return self.append(EventInput(kind="verification", session_id=session_id, writer_id=writer_id,
-                                      payload=output, summary_fields=summary, parent_id=parent_id))
+                                      payload=output, summary_fields=summary, parent_id=parent_id,
+                                      idempotency_key=idempotency_key))
 
     def verification_status(self, event_id: str, environment: dict | None = None,
                             reconciled: bool | None = None) -> dict:

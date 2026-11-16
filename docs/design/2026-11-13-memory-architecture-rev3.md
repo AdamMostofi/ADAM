@@ -456,6 +456,35 @@ So a **true** guarantee that memory never overfills the context is possible only
   - recovery after a compaction: 0.12 s.
 - **Limits are unchanged** (section 11). Whether hooks for prompt-time context and compaction exist is verified per agent in Phase 3.
 
+### 7.7 As built (Stage 3.1, #56): the first plugin
+- **The contract** (`adapters/__init__.py`):
+  - `amem hook <agent> <event>` reads the agent's JSON on stdin and prints its hook output, always exiting 0;
+  - idempotency keys come from the agent's payload, so replays are free;
+  - completeness is honest on every event;
+  - diagnostics never include content.
+- **The Claude Code adapter** (`adapters/claude_code.py`): eleven hooks mapped onto canonical events.
+  - **Edits:** an edit's intent and result carry content ids.
+  - **Bash:** commands are bracketed by reconciles, and test commands become verification records with the captured environment (#82).
+  - **Assistant messages:** read from the transcript incrementally, plus the Stop hook's last message (the transcript can lag), deduplicated by content.
+  - **Compaction:** `PreCompact` asks the summary to keep reference lines, `PostCompact` archives the summary, and `SessionStart` with the `compact` source restores.
+  - **Windows into WSL:** Windows paths into WSL are mapped to Linux paths.
+- **Delivery** is tier B, as designed:
+  - session start injects `assemble` within a 2,300-token budget, under Claude Code's 10,000-character cap;
+  - prompts get offers only (about 180–250 tokens per turn on real sessions);
+  - the MCP server serves the session the hooks started (`--session auto`).
+- **The plugin** (`plugins/claude-code/`):
+  - the manifest with `userConfig` (key storage, passphrase, profiles), `hooks/hooks.json` in exec form, `.mcp.json`, a `memory` skill;
+  - a launcher that finds `amem` (natively, or through WSL) and never blocks;
+  - a marketplace entry at the repository root.
+- **Measured by replaying real Claude Code sessions from this project** (601 and 108 hooks):
+  - every event captured, no gaps, `verify` ok;
+  - hook p50 about 170 ms, p95 300–400 ms (decision D14);
+  - first session start about 2 s.
+- **Fixed on the way:**
+  - the secret scanner was 14 times slower than needed (one rule tried a URL scheme at every letter);
+  - each reconcile read the whole log twice;
+  - tree-sitter is now loaded only when parsing.
+
 ## 8. Domain neutrality: core and profiles
 
 - **The universal core:** the four trees, their generic node types, the cross-tree layer, the context manager, and the preservation classes.

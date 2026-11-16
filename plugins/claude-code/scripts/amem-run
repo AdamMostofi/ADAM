@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Runs `amem` for the agent-memory Claude Code plugin.
+#
+#   amem-run hook <Event>   one hook: Claude Code's JSON on stdin, hook output on stdout, always exit 0
+#   amem-run mcp            the MCP server for the session the hooks started
+#
+# It finds `amem` in one of two places:
+#   - natively: $AMEM_BIN, then `amem` on PATH, then ~/.local/bin/amem (where `uv tool install` puts it);
+#   - through WSL, when Claude Code runs on Windows but the project lives inside WSL
+#     (\\wsl.localhost\<distro>\... or \\wsl$\...).
+#
+# Memory must never block Claude Code. If `amem` can't be found, every hook exits 0, and SessionStart tells
+# the agent (and so the user) how to install it.
+
+mode="$1"; shift
+
+# The user's choices from the plugin's config dialog (decision D4: key storage chosen at onboarding).
+[ -n "${CLAUDE_PLUGIN_OPTION_KEY_STORAGE:-}" ] && export AMEM_KEY_SOURCE="$CLAUDE_PLUGIN_OPTION_KEY_STORAGE"
+[ -n "${CLAUDE_PLUGIN_OPTION_PASSPHRASE:-}" ] && export AMEM_PASSPHRASE="$CLAUDE_PLUGIN_OPTION_PASSPHRASE"
+[ -n "${CLAUDE_PLUGIN_OPTION_PROFILES:-}" ] && export AMEM_PROFILES="$CLAUDE_PLUGIN_OPTION_PROFILES"
+
+project="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ "$mode" = "mcp" ]; then
+  args=(--project "$project" --session auto mcp)
+else
+  args=(--project "$project" hook claude-code "$@")
+fi
+
+amem="${AMEM_BIN:-}"
+[ -z "$amem" ] && amem="$(command -v amem 2>/dev/null)"
+[ -z "$amem" ] && [ -x "$HOME/.local/bin/amem" ] && amem="$HOME/.local/bin/amem"
+if [ -n "$amem" ]; then
+  exec "$amem" "${args[@]}"
+fi
+
+# Windows Claude Code, project inside WSL: run amem in that distribution, with the Linux path.
+case "$project" in
+  //wsl.localhost/*|//wsl\$/*|\\\\wsl.localhost\\*|\\\\wsl\$\\*)
+    rest="${project//\\//}"; rest="${rest#//}"; rest="${rest#*/}"
+    distro="${rest%%/*}"; linux="/${rest#*/}"
+    [ "$linux" = "/$distro" ] && linux="/"
+    if command -v wsl.exe >/dev/null 2>&1; then
+      export WSLENV="${WSLENV:+$WSLENV:}AMEM_KEY_SOURCE/u:AMEM_PASSPHRASE/u:AMEM_PROFILES/u"
+      if [ "$mode" = "mcp" ]; then
+        exec wsl.exe -d "$distro" --exec bash -lc 'exec amem --project "$0" --session auto mcp' "$linux"
+      fi
+      exec wsl.exe -d "$distro" --exec bash -lc 'exec amem --project "$0" hook claude-code "$1"' "$linux" "$1"
+    fi
+    ;;
+esac
+
+# amem isn't installed: never block, and say how to fix it where it can be seen.
+if [ "$mode" = "mcp" ]; then
+  echo "agent-memory: the amem command isn't installed. Install it with: uv tool install agent-memory" \
+       "(or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory)" >&2
+  exit 1
+fi
+cat >/dev/null   # read the hook's input so Claude Code isn't left writing to a closed pipe
+if [ "${1:-}" = "SessionStart" ]; then
+  printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The agent-memory plugin is enabled, but its amem command is not installed, so this session is not being remembered. To install it: uv tool install agent-memory (or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory). Claude Code works as usual meanwhile."}}'
+fi
+exit 0

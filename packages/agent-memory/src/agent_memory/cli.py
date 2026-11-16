@@ -80,7 +80,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("checkpoint", help="take a checkpoint now")
     sub.add_parser("recover", help="rebuild state from the newest valid checkpoint, replay, and reconcile")
     sub.add_parser("rebuild", help="regenerate the derived layer (artifact and search indexes) from the core")
-    sub.add_parser("mcp", help="serve the agent tools over stdio (Model Context Protocol)")
+    sub.add_parser("mcp", help="serve the agent tools over stdio (Model Context Protocol); --session auto follows "
+                              "the agent session the hooks started")
+    hk = sub.add_parser("hook", help="run one agent hook: the agent's JSON on stdin, its hook output on stdout "
+                                     "(always exits 0)")
+    hk.add_argument("agent", choices=["claude-code"])
+    hk.add_argument("event")
     from agent_memory import tools
     for command, tool in TOOL_COMMANDS.items():
         p = sub.add_parser(command, help=tools.TOOLS[tool]["description"])
@@ -89,6 +94,17 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("pairs", nargs="*", metavar="key=value")
     args = parser.parse_args(argv)
 
+    if args.command == "hook":   # before opening the store: the adapter handles a broken store itself
+        from agent_memory.adapters import run
+        environ = dict(os.environ, AMEM_PROJECT=os.path.abspath(args.project) if args.project != "." else
+                       os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if args.home:
+            environ["AMEM_HOME"] = args.home
+        out, code = run(args.agent, args.event, sys.stdin.buffer.read(), environ)
+        if out:
+            sys.stdout.write(out)
+            sys.stdout.flush()
+        return code
     path = store_path(args.project, args.home)
     if args.command == "where":
         print(path)
@@ -108,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "mcp":
         from agent_memory.mcp import serve
-        serve(store, args.session)
+        serve(store, args.session)   # "auto": the session the agent's hooks most recently started
         return 0
     if args.command in TOOL_COMMANDS:
         from agent_memory.context import ContextError

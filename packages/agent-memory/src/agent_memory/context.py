@@ -113,6 +113,7 @@ class ContextManager:
     def __init__(self, store, tokenizer=None):
         self.store = store
         self.count = tokenizer or estimate_tokens
+        self._override: int | None = None   # a smaller budget for one delivery (an agent's injection cap)
 
     # ------------------------------------------------------------ settings
     @property
@@ -127,7 +128,8 @@ class ContextManager:
         return merged
 
     def budget(self) -> int:
-        return int(self.settings["budget"])
+        full = int(self.settings["budget"])
+        return min(full, self._override) if self._override else full
 
     def share(self, tree: str) -> int:
         return int(self.budget() * float(self.settings["shares"].get(tree, 0)))
@@ -470,8 +472,20 @@ class ContextManager:
                 out.append(node_id)
         return out
 
-    def assemble(self, session_id: str, prompt: str | None = None, previous_session: str | None = None) -> dict:
-        """Session start: overview, every P0 record, level-1 state, the last working set as references, offers."""
+    def assemble(self, session_id: str, prompt: str | None = None, previous_session: str | None = None,
+                 budget: int | None = None) -> dict:
+        """Session start: overview, every P0 record, level-1 state, the last working set as references, offers.
+
+        `budget` caps this delivery (for example an agent's limit on injected context). Later loads use the full
+        budget again.
+        """
+        self._override = budget
+        try:
+            return self._assemble(session_id, prompt, previous_session)
+        finally:
+            self._override = None
+
+    def _assemble(self, session_id: str, prompt: str | None, previous_session: str | None) -> dict:
         self.load(session_id, "state:overview", 0, "P0", reason="assemble")
         for node_id in self._p0_records():
             self.load(session_id, node_id, 1, "P0", reason="assemble: protected")
@@ -487,8 +501,15 @@ class ContextManager:
         return self._bundle(session_id, extra=references + [o["line"] for o in offers],
                             heading=f"Memory for session {session_id}")
 
-    def compacted(self, session_id: str) -> dict:
+    def compacted(self, session_id: str, budget: int | None = None) -> dict:
         """After the agent compacts its context: assume nothing survived, then bring back P0 and every reference."""
+        self._override = budget
+        try:
+            return self._compacted(session_id)
+        finally:
+            self._override = None
+
+    def _compacted(self, session_id: str) -> dict:
         self._record("context_reset", session_id, reason="compaction")
         ledger = self.ledger(session_id)
         for item in ledger.values():

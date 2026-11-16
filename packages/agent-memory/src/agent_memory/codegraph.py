@@ -38,17 +38,34 @@ import posixpath
 import re
 from datetime import datetime, timezone
 
-import tree_sitter_python
-import tree_sitter_typescript
-from tree_sitter import Language, Parser, Query, QueryCursor
+from functools import lru_cache
 
-PY = Language(tree_sitter_python.language())
-TS = Language(tree_sitter_typescript.language_typescript())
-TSX = Language(tree_sitter_typescript.language_tsx())
+# Parsers load only when a parse is needed: hook processes that never parse don't pay for tree-sitter (Stage 3.1).
+LANGUAGES = {".py": ("python", "python"), ".ts": ("typescript", "typescript"), ".mts": ("typescript", "typescript"),
+             ".cts": ("typescript", "typescript"), ".tsx": ("tsx", "tsx"), ".js": ("typescript", "typescript"),
+             ".mjs": ("typescript", "typescript"), ".cjs": ("typescript", "typescript"), ".jsx": ("tsx", "tsx")}
 
-LANGUAGES = {".py": ("python", PY), ".ts": ("typescript", TS), ".mts": ("typescript", TS), ".cts": ("typescript", TS),
-             ".tsx": ("tsx", TSX), ".js": ("typescript", TS), ".mjs": ("typescript", TS),
-             ".cjs": ("typescript", TS), ".jsx": ("tsx", TSX)}
+
+@lru_cache(maxsize=None)
+def _language(name: str):
+    from tree_sitter import Language
+    if name == "python":
+        import tree_sitter_python
+        return Language(tree_sitter_python.language())
+    import tree_sitter_typescript
+    return Language(tree_sitter_typescript.language_tsx() if name == "tsx" else
+                    tree_sitter_typescript.language_typescript())
+
+
+def _parser(name: str):
+    from tree_sitter import Parser
+    return Parser(_language(name))
+
+
+@lru_cache(maxsize=None)
+def _query(name: str):
+    from tree_sitter import Query
+    return Query(_language(name), _IMPORT_QUERY)
 DOCUMENTS = {".md": "markdown", ".markdown": "markdown", ".mdx": "markdown", ".rst": "rst"}
 TS_EXTENSIONS = (".ts", ".tsx", ".d.ts", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts")
 PY_SOURCE_ROOTS = ("", "src/", "lib/")
@@ -98,8 +115,6 @@ _IMPORT_QUERY = """
 (call_expression function: (identifier) @fn arguments: (arguments (string (string_fragment) @spec)))
 (call_expression function: (import) arguments: (arguments (string (string_fragment) @spec)))
 """
-_TS_QUERY = Query(TS, _IMPORT_QUERY)
-_TSX_QUERY = Query(TSX, _IMPORT_QUERY)
 
 
 def supported(path: str) -> bool:
@@ -118,7 +133,7 @@ def _text(node, source: bytes) -> str:
 # ------------------------------------------------------------ code: imports
 def parse_python(source: bytes) -> list[dict]:
     """Imports as {"module": "a.b", "level": dots, "names": [...]} records."""
-    tree = Parser(PY).parse(source)
+    tree = _parser("python").parse(source)
     found = []
     stack = [tree.root_node]
     while stack:
@@ -152,10 +167,11 @@ def parse_python(source: bytes) -> list[dict]:
 
 
 def parse_typescript(source: bytes, tsx: bool = False) -> list[dict]:
-    language, query = (TSX, _TSX_QUERY) if tsx else (TS, _TS_QUERY)
-    tree = Parser(language).parse(source)
+    from tree_sitter import QueryCursor
+    name = "tsx" if tsx else "typescript"
+    tree = _parser(name).parse(source)
     specs = []
-    for _, captures in QueryCursor(query).matches(tree.root_node):
+    for _, captures in QueryCursor(_query(name)).matches(tree.root_node):
         fn = captures.get("fn")
         if fn and _text(fn[0], source) != "require":
             continue
@@ -205,11 +221,12 @@ def _symbols(root, source: bytes, table: dict, typescript: bool) -> list[dict]:
 
 
 def python_symbols(source: bytes) -> list[dict]:
-    return _symbols(Parser(PY).parse(source).root_node, source, PY_SYMBOLS, typescript=False)
+    return _symbols(_parser("python").parse(source).root_node, source, PY_SYMBOLS, typescript=False)
 
 
 def typescript_symbols(source: bytes, tsx: bool = False) -> list[dict]:
-    return _symbols(Parser(TSX if tsx else TS).parse(source).root_node, source, TS_SYMBOLS, typescript=True)
+    return _symbols(_parser("tsx" if tsx else "typescript").parse(source).root_node, source, TS_SYMBOLS,
+                    typescript=True)
 
 
 # ------------------------------------------------------------ documents

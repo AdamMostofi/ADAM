@@ -51,7 +51,7 @@ def test_every_memory_engine_capability_names_existing_code_and_tests():
         assert tests, f"no test named for: {capability}"
         for path in tests:
             assert (ROOT / path).is_file(), f"{capability}: {path} doesn't exist"
-        for name in re.findall(r"`([a-z_]+\.(?:py|toml))`", where):
+        for name in re.findall(r"`([a-z_/]+\.(?:py|toml))`", where):
             found = (package / "src" / "agent_memory" / name).is_file() or (package / name).is_file()
             assert found, f"{capability}: {name} doesn't exist in the engine package"
 
