@@ -7,8 +7,11 @@ so every result is in the session's ledger and counts against its budget:
 - a listing or search loads a query packet, which can be offloaded and
   restored like any other.
 
-**Context tools:** `mem_load`, `mem_offload`, `mem_restore`, `mem_pin`,
-`mem_context`.
+**Context tools:** `mem_load` and `mem_context`, whose operations include
+offload, restore and pin. Those three were separate tools until #94. Their
+old names still work as aliases (`call` and the CLI), but they aren't listed
+to agents, because every listed tool's definition costs context in every
+session. `DEFINITION_BUDGET` caps what the listed definitions may cost.
 
 **Updates:** `mem_declare`.
 
@@ -59,20 +62,14 @@ TOOLS = {
         "ops": [],
         "properties": {"id": {"type": "string"}, "level": {"type": "integer"},
                        "priority": {"type": "string", "enum": ["P0", "P1", "P2", "P3"]}}},
-    "mem_offload": {
-        "description": "Replace a loaded packet by a one-line reference; optionally keep findings as a note.",
-        "ops": [],
-        "properties": {"handle": {"type": "string"}, "keep": {"type": "string"}, "force": {"type": "boolean"}}},
-    "mem_restore": {"description": "Bring an offloaded packet back exactly as it was loaded.", "ops": [],
-                    "properties": {"handle": {"type": "string"}}},
-    "mem_pin": {"description": "Protect a packet from automatic offloading (or unpin it).", "ops": [],
-                "properties": {"handle": {"type": "string"}, "pinned": {"type": "boolean"}}},
     "mem_context": {
-        "description": "The working context: assemble (session start), working_set, detect (what a prompt needs), "
-                       "compacted (after compaction), request (tier A), delta (tier B), protected (every protected "
-                       "record, ranked).",
-        "ops": ["assemble", "working_set", "detect", "compacted", "request", "delta", "protected"],
-        "properties": {"prompt": {"type": "string"}, "since": {"type": "integer"}}},
+        "description": "The working context. offload a handle (keep= saves what you learned), restore it exactly, "
+                       "pin it (pinned=false unpins); working_set, protected (ranked), detect (what a prompt needs), "
+                       "assemble, compacted, request, delta.",
+        "ops": ["offload", "restore", "pin", "working_set", "protected", "detect", "assemble", "compacted",
+                "request", "delta"],
+        "properties": {"handle": {"type": "string"}, "keep": {"type": "string"}, "force": {"type": "boolean"},
+                       "pinned": {"type": "boolean"}, "prompt": {"type": "string"}, "since": {"type": "integer"}}},
     "mem_storage": {
         "description": "Storage: report sizes and growth, or compress / decompress content losslessly (by session_id, "
                        "before an ISO time, object ids, or old and unvisited). Nothing is ever deleted.",
@@ -89,16 +86,30 @@ TOOLS = {
                        "status": {"type": "string"}, "fields": {"type": "object"}}},
 }
 STATE_KINDS = ("goal", "task", "blocker", "progress", "priority", "next_action", "focus")
+# Former tools, now mem_context operations (#94): still callable by name, not listed.
+ALIASES = {"mem_offload": "offload", "mem_restore": "restore", "mem_pin": "pin"}
+DEFINITION_BUDGET = 1300   # estimated tokens for every listed tool's definition, as MCP sends them
 
 
 def schema(name: str) -> dict:
     spec = TOOLS[name]
     props = dict(spec["properties"])
-    required = []
+    out = {"type": "object", "properties": props, "additionalProperties": False}
     if spec["ops"]:
-        props = {"op": {"type": "string", "enum": spec["ops"]}, **props}
-        required.append("op")
-    return {"type": "object", "properties": props, "required": required, "additionalProperties": False}
+        out["properties"] = {"op": {"type": "string", "enum": spec["ops"]}, **props}
+        out["required"] = ["op"]
+    return out
+
+
+def definitions() -> list[dict]:
+    """What MCP lists: every tool's name, description and input schema."""
+    return [{"name": name, "description": spec["description"], "inputSchema": schema(name)}
+            for name, spec in TOOLS.items()]
+
+
+def definition_tokens(count=None) -> int:
+    from agent_memory.state import tokens
+    return (count or tokens)(json.dumps(definitions()))
 
 
 # ------------------------------------------------------------ text formatting
@@ -213,6 +224,8 @@ def _raw(store, args: dict) -> str:
 # ------------------------------------------------------------ dispatch
 def call(store, session_id: str, name: str, args: dict) -> str:
     """Run one tool for a session. Returns the text the agent sees."""
+    if name in ALIASES:
+        name, args = "mem_context", {**(args or {}), "op": ALIASES[name]}
     if name not in TOOLS:
         raise ContextError(f"unknown tool {name!r}; tools: {sorted(TOOLS)}")
     args = {k: v for k, v in (args or {}).items() if v is not None}
@@ -224,6 +237,14 @@ def call(store, session_id: str, name: str, args: dict) -> str:
         return _declare(store, session_id, args)
     if name == "mem_context":
         op = args["op"]
+        if op in ("offload", "restore", "pin") and not args.get("handle"):
+            raise ContextError(f"mem_context op={op} needs handle")
+        if op == "offload":
+            return _plain(ctx.offload(session_id, args["handle"], args.get("keep"), bool(args.get("force"))))
+        if op == "restore":
+            return _show(ctx.restore(session_id, args["handle"]))
+        if op == "pin":
+            return _plain(ctx.pin(session_id, args["handle"], args.get("pinned", True)))
         if op == "assemble":
             return ctx.assemble(session_id, args.get("prompt"))["text"]
         if op == "working_set":
@@ -252,12 +273,6 @@ def call(store, session_id: str, name: str, args: dict) -> str:
         if op == "compress":
             return _plain(store.compress(**scope, older_than_days=args.get("older_than_days")))
         return _plain(store.decompress(**scope, everything=bool(args.get("everything"))))
-    if name == "mem_offload":
-        return _plain(ctx.offload(session_id, args["handle"], args.get("keep"), bool(args.get("force"))))
-    if name == "mem_restore":
-        return _show(ctx.restore(session_id, args["handle"]))
-    if name == "mem_pin":
-        return _plain(ctx.pin(session_id, args["handle"], args.get("pinned", True)))
     if name == "mem_load":
         return _show(ctx.load(session_id, args["id"], int(args.get("level", 1)), args.get("priority")))
     # Opening one record loads the record; everything else is a query packet.

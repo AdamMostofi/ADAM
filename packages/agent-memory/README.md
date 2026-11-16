@@ -96,7 +96,7 @@ uv run amem --project /path/to/project reconcile    # also: where, verify, check
   - offers for what a prompt names but the context lacks;
   - recovery after compaction;
   - delivery for clients that build every request (`request_context`) or add context per prompt (`delta`).
-- **Agent tools:** `mem_state`, `mem_knowledge`, `mem_artifacts`, `mem_history`, `mem_links`, `mem_get`, `mem_load`, `mem_offload`, `mem_restore`, `mem_pin`, `mem_context`, `mem_declare`. They are served over MCP (`amem mcp`) and the CLI (`amem knowledge topics`, `amem offload handle=c3 keep=...`).
+- **Agent tools:** `mem_state`, `mem_knowledge`, `mem_artifacts`, `mem_history`, `mem_links`, `mem_get`, `mem_load`, `mem_context` (including offload, restore and pin), `mem_storage`, `mem_declare`. They are served over MCP (`amem mcp`) and the CLI (`amem knowledge topics`, `amem offload handle=c3 keep=...`).
 
 - **Storage (Stage 2.11):**
   - **Compression:** old, unvisited content is packed and compressed losslessly (lzma) once the store passes a recommended size, or whenever an agent or user asks (`mem_storage`, `amem storage compress|decompress`).

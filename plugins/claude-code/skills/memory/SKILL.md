@@ -18,7 +18,7 @@ The session already starts with a short memory overview. Everything else stays o
 
 ## Working with it
 - **Load only what the task needs.** `mem_load id=<record>` (level 1 is a summary, 2 is full, 3 is the raw recorded data). Tree tools return packets with a handle such as `[c7]`.
-- **Offload what you are done with.** `mem_offload handle=c7 keep="<what you learned>"` replaces it with a one-line reference, and saves your finding as a note. `mem_restore handle=c7` brings it back exactly.
+- **Offload what you are done with.** `mem_context op=offload handle=c7 keep="<what you learned>"` replaces it with a one-line reference, and saves your finding as a note. `mem_context op=restore handle=c7` brings it back exactly.
 - **Use the offers.** When a prompt names something memory knows about, a short line appears: `... - mem_load <id>`. Load it if it matters.
 - **Record what future sessions need.** Use `mem_declare`:
   - decisions (`kind=decision`), with the reason;

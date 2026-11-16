@@ -113,7 +113,7 @@ def test_a_packet_that_cannot_fit_is_delivered_as_a_reference(store, project):
     put(store, "docs/huge.md", huge)
     packet = store.context.load(S, "artifact:docs/huge.md", 3)
     assert packet["state"] == "offloaded" and "doesn't fit" in packet["note"]
-    assert packet["text"].startswith(f"[{packet['handle']}]") and "mem_restore" in packet["text"]
+    assert packet["text"].startswith(f"[{packet['handle']}]") and "op=restore handle=" in packet["text"]
     within_budget(store)
 
 
@@ -198,7 +198,7 @@ def test_a_prompt_naming_an_unloaded_record_gets_an_offer(store, project):
     assert "artifact:src/auth/jwt.py" not in {o["node"] for o in store.context.detect(S, "src/auth/jwt.py again")}
     store.context.offload(S, loaded["handle"])
     (again,) = [o for o in store.context.detect(S, "src/auth/jwt.py again") if o["node"] == "artifact:src/auth/jwt.py"]
-    assert again["handle"] == loaded["handle"] and f"mem_restore {loaded['handle']}" in again["line"]
+    assert again["handle"] == loaded["handle"] and f"mem_context op=restore handle={loaded['handle']}" in again["line"]
 
 
 # ---------------------------------------------------------------- durability
@@ -256,7 +256,7 @@ def test_tier_a_request_and_tier_b_delta(store, project):
     request = store.context.request_context(S)["text"]
     assert b["text"] in request and f"[{a['handle']}]" in request and a["text"] not in request
     delta = store.context.delta(S, mark)
-    assert b["text"] in delta["text"] and f"mem_restore {a['handle']}" in delta["text"]
+    assert b["text"] in delta["text"] and f"op=restore handle={a['handle']}" in delta["text"]
     assert store.context.delta(S, delta["position"])["text"] == ""
 
 
@@ -346,3 +346,22 @@ def test_the_cli_runs_the_same_tools(tmp_path, capsys):
     assert amem([*base, "context", "working_set"]) == 0
     assert '"state": "offloaded"' in capsys.readouterr().out
     assert amem([*base, "restore", "handle=c404"]) == 1
+
+
+# ---------------------------------------------------------------- #94: what the tool definitions cost
+def test_the_listed_tool_definitions_stay_within_their_budget():
+    from agent_memory.tools import ALIASES, DEFINITION_BUDGET, definition_tokens, definitions
+    names = [d["name"] for d in definitions()]
+    assert len(names) == 10 and not set(ALIASES) & set(names)
+    assert definition_tokens() <= DEFINITION_BUDGET, definition_tokens()
+
+
+def test_the_former_tools_still_work_by_name(store, project):
+    loaded = store.context.load(S, project["bug"], 1)
+    assert "offloaded" in call(store, S, "mem_offload", {"handle": loaded["handle"], "keep": "fixed by a lock"})
+    assert loaded["handle"] in call(store, S, "mem_restore", {"handle": loaded["handle"]})
+    assert "pinned" in call(store, S, "mem_pin", {"handle": loaded["handle"]})
+    assert "offloaded" in call(store, S, "mem_context", {"op": "offload", "handle": loaded["handle"], "force": True})
+    reply = mcp(store, S, {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                           "params": {"name": "mem_restore", "arguments": {"handle": loaded["handle"]}}})
+    assert reply["result"]["isError"] is False

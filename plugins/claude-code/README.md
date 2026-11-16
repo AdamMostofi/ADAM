@@ -8,7 +8,7 @@ A Claude Code plugin for the [Lossless Tree Memory engine](../../packages/agent-
 - **At session start:** a short memory overview, the protected items (constraints, objectives, open conflicts, active work), the current state, and reference lines for the last session's working set. It stays within Claude Code's 10,000-character limit for added context.
 - **On each prompt:** short offers for records the prompt names but the context lacks, about 180–250 tokens on real sessions.
 - **After a compaction:** the protected items in full, and everything else as one-line references to restore.
-- **Through MCP tools:** anything else, on demand: `mem_history`, `mem_artifacts`, `mem_knowledge`, `mem_state`, `mem_load`, `mem_offload`, `mem_restore`, and more.
+- **Through MCP tools:** anything else, on demand: `mem_history`, `mem_artifacts`, `mem_knowledge`, `mem_state`, `mem_load`, `mem_context` (offload, restore, pin, and the working set), and more.
 
 ## Install
 

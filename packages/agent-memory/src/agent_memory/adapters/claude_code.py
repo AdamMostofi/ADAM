@@ -359,7 +359,7 @@ def pre_compact(h: Hook) -> str:
     if not refs:
         return ""
     text = ("When summarising, keep these memory reference lines verbatim, so each detail stays one "
-            "mem_restore call away:\n" + "\n".join(refs))
+            "mem_context op=restore call away:\n" + "\n".join(refs))
     return _fit(text, 2000)   # PreCompact stdout becomes instructions for the compaction summary
 
 

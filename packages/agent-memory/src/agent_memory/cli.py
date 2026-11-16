@@ -93,8 +93,11 @@ def main(argv: list[str] | None = None) -> int:
     hk.add_argument("event")
     from agent_memory import tools
     for command, tool in TOOL_COMMANDS.items():
-        p = sub.add_parser(command, help=tools.TOOLS[tool]["description"])
-        if tools.TOOLS[tool]["ops"]:
+        if tool in tools.ALIASES:   # offload, restore, pin: mem_context operations since #94
+            p = sub.add_parser(command, help=f"mem_context op={tools.ALIASES[tool]}")
+        else:
+            p = sub.add_parser(command, help=tools.TOOLS[tool]["description"])
+        if tool in tools.TOOLS and tools.TOOLS[tool]["ops"]:
             p.add_argument("op", choices=tools.TOOLS[tool]["ops"])
         p.add_argument("pairs", nargs="*", metavar="key=value")
     args = parser.parse_args(argv)

@@ -130,7 +130,7 @@ class Item:
 
     def reference(self) -> str:
         """The one-line stand-in for an offloaded item (about 20 tokens)."""
-        line = f"[{self.handle}] {self.label} ({self.tree}) - offloaded; mem_restore {self.handle}"
+        line = f"[{self.handle}] {self.label} ({self.tree}) - offloaded; mem_context op=restore handle={self.handle}"
         return line + (f"; kept: {self.keep}" if self.keep else "")
 
 
@@ -564,7 +564,7 @@ class ContextManager:
             previous = by_ref.get(node_id)
             label = f"{node['type']}: {node['label'] or node_id}"
             line = (f"[{previous.handle}] {label} ({node['tree']}) [{o['confidence']}] - offloaded; "
-                    f"mem_restore {previous.handle}" if previous else
+                    f"mem_context op=restore handle={previous.handle}" if previous else
                     f"{label} ({node['tree']}, {node_id}) [{o['confidence']}] - mem_load {node_id}")
             shown = o["reasons"][:2] + ([f"+{len(o['reasons']) - 2} more"] if len(o["reasons"]) > 2 else [])
             out.append({**o, "tree": node["tree"], "label": label, "line": line + " - " + "; ".join(shown),
