@@ -9,6 +9,8 @@ build/
 adam_vectors.lance/
 adam_memory.db
 skills/
+# ...but not the Claude Code plugin skill, which ships with the plugin (Stage 3.1).
+!plugins/claude-code/skills/
 models/
 interface/web/tests/shots/
 *.save/
