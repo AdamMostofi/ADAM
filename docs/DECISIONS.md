@@ -79,9 +79,9 @@ Outcomes are as follows:
 | Issue | ID | Decision | Outcome | Details |
 |---|---|---|---|---|
 | #56 | D4 | Key storage chosen at onboarding. | **Built:** key file, passphrase (with a per-login-session cache, #83) or OS keychain, chosen in the Claude Code plugin's config dialog (`AMEM_KEY_SOURCE`). | `packages/agent-memory/src/agent_memory/keys.py` |
-| #56 | D14 | Hook latency: the 100 ms p95 target. | **Open, for the owner.** On real sessions, p50 is about 170 ms and p95 300–400 ms. The time goes to a fresh Python process per hook (about 60 ms), one durable write (about 26 ms), and reconciles around Bash. The options are below. | [plugin README](../plugins/claude-code/README.md) |
+| #56, #90 | D14 | Hook latency: the 100 ms p95 target. | **Accepted: option A, built agent-neutral.** On real sessions, p50 was about 170 ms and p95 300–400 ms, mostly a fresh Python process per hook (about 60 ms), one durable write (about 26 ms), and reconciles around Bash. The fix belongs to the engine, not to one adapter: a **session server** (`amem serve`, the same process as `amem mcp`) listens on a per-project local socket. Whoever owns a long-lived process starts it: the MCP server for agents that run shell hooks (Claude Code; Stage 3.5 agents with hooks), or the plugin itself for agents whose plugins run in-process (OpenCode, Stage 3.3; Pi, Stage 3.4), which then keep one connection open and pay no per-hook process at all. Agents without hooks (the 3.5 fallback) have no hook latency. Every adapter falls back to today's direct write when no server answers. Not yet measured: hooks launched from Windows through `wsl.exe`, whose own start-up may dominate. Targets are re-measured when it is built. | [plugin README](../plugins/claude-code/README.md) |
 
-**D14 options** (the stage's acceptance criterion: "under 100 ms, or the result is recorded and the language decision revisited"):
+**D14 options considered** (the stage's acceptance criterion: "under 100 ms, or the result is recorded and the language decision revisited"):
 
 | Option | What changes | Expected p50 | Cost |
 |---|---|---|---|
