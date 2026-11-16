@@ -90,6 +90,9 @@ PROTECTED_KINDS = {"constraint": ("active",), "goal": ("active",), "conflict": (
 TIERS = {1: "global constraint or objective", 2: "current task", 3: "open conflict or blocker", 4: "protected"}
 STATUS_RANK = {"in_progress": 0, "open": 1, "active": 1, "blocked": 2}
 REFERENCE_SHARE = 0.25   # at most this much of the budget is kept for references to protected records
+CONFIDENCE = ("exact", "text", "linked", "task", "inferred")   # strongest first (#92)
+TASK_OFFERS = 3          # offers per prompt that come only from the current task (they would repeat every turn)
+LINK_FANOUT = 20        # links followed per record and records expanded per hop, so a hub can't flood the offers
 DEFAULT_CONTEXT = {"budget": 12000, "packet_max": 2000,
                    "shares": {"state": 0.30, "knowledge": 0.25, "artifacts": 0.25, "history": 0.20}}
 ID_PATTERN = re.compile(r"\b(?:bug|solution|decision|path|requirement|constraint|concept|explanation|discovery|"
@@ -415,68 +418,195 @@ class ContextManager:
         return p
 
     # ------------------------------------------------------------ relevance and missing context
-    def detect(self, session_id: str, prompt: str, limit: int = 8) -> list[dict]:
-        """Records the prompt names (or matches) that the working set lacks, best first, with reasons."""
+    def _neighbours(self, conn, node_ids) -> dict[str, list[tuple[str, str, str, bool]]]:
+        """What each record is linked to: {node: [(other, link type, basis, other is the link's source)]}, without
+        provenance or state containers."""
+        ids = list(node_ids)
+        out: dict[str, list] = {i: [] for i in ids}
+        if not ids:
+            return out
+        marks = ",".join("?" * len(ids))
+        for src, dst, etype, basis in conn.execute(
+                f"SELECT e.from_id, e.to_id, e.type, e.basis FROM edges e LEFT JOIN retractions r ON r.edge_id = "
+                f"e.edge_id WHERE r.retracted_by IS NULL AND e.type != 'references' AND "
+                f"(e.from_id IN ({marks}) OR e.to_id IN ({marks}))", ids * 2):
+            if etype == "contains" and (src.startswith("state:") or src.endswith(":") or src == "topic:unfiled"):
+                continue
+            for a, b in ((src, dst), (dst, src)):
+                if a in out and b != "topic:unfiled" and not b.startswith("state:") and not b.endswith(":"):
+                    out[a].append((b, etype, basis, b == src))
+        return out
+
+    def _current_work(self, conn) -> list[tuple[str, str]]:
+        """The current task: in-progress tasks and the active focus, as (node, label)."""
+        rows = conn.execute("SELECT n.node_id, n.node_type, n.label, (SELECT status FROM statuses s WHERE "
+                            "s.node_id = n.node_id ORDER BY log_position DESC, rowid DESC LIMIT 1) FROM nodes n "
+                            "WHERE n.node_type IN ('task', 'focus')").fetchall()
+        return [(i, label or i) for i, kind, label, status in rows
+                if (kind == "task" and status == "in_progress") or (kind == "focus" and status == "active")]
+
+    def detect(self, session_id: str, prompt: str, limit: int = 8, task_cap: int = TASK_OFFERS) -> list[dict]:
+        """Records the prompt or the current task needs that the working set lacks, best first.
+
+        Each offer has a score, its reasons and a **confidence** (#92), so the agent can tell a weak association
+        from a fact:
+        - `exact`: the prompt names it (an id, a file path, a symbol, a topic);
+        - `text`: its words match the prompt's;
+        - `linked`: a recorded link from something exact or textual (up to two hops, with the hops listed);
+        - `task`: linked to the current task or focus, whatever the prompt says;
+        - `inferred`: reached through a link whose basis is inferred.
+        Core retrieval uses no model. It finds what is named, linked or worded alike; purely semantic matches
+        ("login problem" for a record titled "auth failure") are found only when a link or the current task
+        connects them.
+        """
         ledger = self.ledger(session_id)
         loaded = {json.dumps(i.ref, sort_keys=True) for i in ledger.values() if i.state == "loaded"}
         by_ref = {i.ref.get("node"): i for i in ledger.values()}
         found: dict[str, dict] = {}
+        rank = {c: n for n, c in enumerate(CONFIDENCE)}
 
-        def offer(node_id: str, score: float, why: str) -> None:
+        def offer(node_id: str, score: float, why: str, confidence: str) -> None:
             if json.dumps({"node": node_id}, sort_keys=True) in loaded:
                 return
-            o = found.setdefault(node_id, {"node": node_id, "score": 0.0, "reasons": []})
+            o = found.setdefault(node_id, {"node": node_id, "score": 0.0, "reasons": [], "confidence": confidence})
             o["score"] += score
+            if rank[confidence] < rank[o["confidence"]]:
+                o["confidence"] = confidence
             if why not in o["reasons"]:
                 o["reasons"].append(why)
 
         for match in ID_PATTERN.findall(prompt):
             if self.store.node(match):
-                offer(match, 1.0, f"named: {match}")
+                offer(match, 1.0, f"named: {match}", "exact")
         current = self.store.current_files()
         self.store.update_artifacts()   # once per prompt; lookups below read the index directly
         for raw in PATH_PATTERN.findall(prompt):
             for path in current:
                 if path == raw or path.endswith("/" + raw):
-                    offer(f"artifact:{path}", 1.0, f"mentions the file {raw}")
+                    offer(f"artifact:{path}", 1.0, f"mentions the file {raw}", "exact")
         words = sorted({w for w in WORD_PATTERN.findall(prompt) if len(w) >= 3 and w.lower() not in STOPWORDS})
         for word, parts in self.store.codegraph.find_parts(words, per_name=3).items():
             for part in parts:
-                offer(f"artifact:{part['path']}", 0.8, f"mentions {part['kind']} {part['qualified']}")
+                offer(f"artifact:{part['path']}", 0.8, f"mentions {part['kind']} {part['qualified']}", "exact")
         conn = self.store._connect()
         try:
             topics = conn.execute("SELECT node_id, label FROM nodes WHERE node_type = 'topic'").fetchall()
+            lower = prompt.lower()
+            for node_id, label in topics:
+                if label and label.lower() != "unfiled" and re.search(rf"\b{re.escape(label.lower())}\b", lower):
+                    offer(node_id, 0.6, f"mentions the topic {label}", "exact")
+            terms = [w for w in WORD_PATTERN.findall(prompt) if len(w) >= 3 and w.lower() not in STOPWORDS]
+            for node_id, _snippet, _rank in self.store.search_index.knowledge_any(terms, limit=limit):
+                offer(node_id, 0.5, "matches the prompt in knowledge", "text")
+
+            # Relationship-aware: follow links from what the prompt matched, up to two hops, decaying. A hub
+            # (a topic or folder) is never expanded: its neighbours are everything filed in it.
+            seeds = [n for n, o in found.items() if o["score"] >= 0.5]
+            seen = set(seeds)
+            frontier = [n for n in seeds if not _is_hub(n)]
+            for hop, weight in ((1, 0.3), (2, 0.15)):
+                links = self._neighbours(conn, frontier[:LINK_FANOUT])
+                nxt = []
+                for src in frontier[:LINK_FANOUT]:
+                    for other, etype, basis, other_first in _followable(links.get(src, []))[:LINK_FANOUT]:
+                        if other in seen or _is_hub(other):
+                            continue   # no flowing back to what is already offered; hubs only as exact matches
+                        why = _why(other_first, etype, src) + (" (2 hops)" if hop == 2 else "")
+                        offer(other, weight, why, "inferred" if basis == "inferred" else "linked")
+                        seen.add(other)
+                        nxt.append(other)
+                frontier = nxt
+
+            # Task-aware: what the current task and focus are linked to, on every prompt; then records linked to
+            # the files and topics they concern; then one more link from those records (a bug's fix).
+            work = self._current_work(conn)
+            work_ids = {w for w, _ in work}
+            first = self._neighbours(conn, list(work_ids))
+            hubs, reached = [], []
+            for node_id, label in work:
+                kind = node_id.split(":", 1)[0]
+                for other, etype, basis, other_first in _followable(first.get(node_id, []))[:LINK_FANOUT]:
+                    if other.startswith(("artifact:", "topic:", "collection:")):
+                        hubs.append((other, label))   # pass through: the records about this file or topic
+                    if _is_hub(other):
+                        continue
+                    offer(other, 0.25, _why(other_first, etype, f"the current {kind} {label!r}"),
+                          "inferred" if basis == "inferred" else "task")
+                    reached.append(other)
+            second = self._neighbours(conn, [h for h, _ in hubs])
+            for hub, label in hubs:
+                for other, etype, basis, other_first in _followable(second.get(hub, []))[:LINK_FANOUT]:
+                    if other in work_ids or _is_hub(other):
+                        continue
+                    offer(other, 0.15, _why(other_first, etype, hub.split(":", 1)[-1]) + f" (current work {label!r})",
+                          "inferred" if basis == "inferred" else "task")
+                    reached.append(other)
+            knowledge = [r for r in dict.fromkeys(reached) if r.split(":", 1)[0] in KNOWLEDGE_PREFIXES]
+            third = self._neighbours(conn, knowledge[:LINK_FANOUT])
+            for src in knowledge[:LINK_FANOUT]:
+                for other, etype, basis, other_first in _followable(third.get(src, []))[:LINK_FANOUT]:
+                    if other in work_ids or _is_hub(other) or other.startswith("artifact:"):
+                        continue
+                    offer(other, 0.1, _why(other_first, etype, src) + " (current work)",
+                          "inferred" if basis == "inferred" else "task")
         finally:
             conn.close()
-        lower = prompt.lower()
-        for node_id, label in topics:
-            if label and label.lower() != "unfiled" and re.search(rf"\b{re.escape(label.lower())}\b", lower):
-                offer(node_id, 0.6, f"mentions the topic {label}")
-        terms = [w for w in WORD_PATTERN.findall(prompt) if len(w) >= 3 and w.lower() not in STOPWORDS]
-        for node_id, _snippet, _rank in self.store.search_index.knowledge_any(terms, limit=limit):
-            offer(node_id, 0.5, "matches the prompt in knowledge")
-        # One link away from something the prompt names: knowledge and state about it (link distance).
-        for node_id, o in list(found.items()):
-            if o["score"] < 0.8:
-                continue
-            for link in self.store.links(node_id):
-                if link["tree"] in ("knowledge", "state"):
-                    offer(link["node"], 0.3, f"{link['type']} {node_id}")
+
         out = []
         for node_id, o in sorted(found.items(), key=lambda kv: (-kv[1]["score"], kv[0])):
+            if len(out) >= limit * 3:
+                break
             node = self.store.node(node_id)
-            if node is None:
+            if node is None or (_is_hub(node_id) and o["confidence"] != "exact"):
                 continue
             if node["status"] in ("open", "in_progress", "active", "blocked"):
                 o["score"] += 0.2
             previous = by_ref.get(node_id)
             label = f"{node['type']}: {node['label'] or node_id}"
-            line = (f"[{previous.handle}] {label} ({node['tree']}) - offloaded; mem_restore {previous.handle}"
-                    if previous else f"{label} ({node['tree']}, {node_id}) - mem_load {node_id}")
-            out.append({**o, "tree": node["tree"], "label": label, "line": line + " - " + "; ".join(o["reasons"]),
+            line = (f"[{previous.handle}] {label} ({node['tree']}) [{o['confidence']}] - offloaded; "
+                    f"mem_restore {previous.handle}" if previous else
+                    f"{label} ({node['tree']}, {node_id}) [{o['confidence']}] - mem_load {node_id}")
+            shown = o["reasons"][:2] + ([f"+{len(o['reasons']) - 2} more"] if len(o["reasons"]) > 2 else [])
+            out.append({**o, "tree": node["tree"], "label": label, "line": line + " - " + "; ".join(shown),
                         "handle": previous.handle if previous else None})
         out.sort(key=lambda o: (-o["score"], o["node"]))
-        return out[:limit]
+        # Offers that come only from the current task would repeat on every prompt: keep a few, knowledge
+        # (decisions, bugs, fixes) before files, which the task itself already names.
+        def task_only(o):
+            return o["confidence"] in ("task", "inferred") and all("current" in r for r in o["reasons"])
+        # Each is offered once per session (and again after a compaction), not on every prompt.
+        already = self._offered(session_id)
+        keep = sorted((o for o in out if task_only(o) and o["node"] not in already),
+                      key=lambda o: (o["node"].split(":", 1)[0] not in KNOWLEDGE_PREFIXES, -o["score"], o["node"]))
+        keep = {o["node"] for o in keep[:task_cap]}
+        picked = [o for o in out if not task_only(o) or o["node"] in keep][:limit]
+        self._mark_offered(session_id, [o["node"] for o in picked if task_only(o)])
+        return picked
+
+    # Which task-context records a session has been offered: operational state (like a cache), not history.
+    def _offered_table(self, conn) -> None:
+        conn.execute("CREATE TABLE IF NOT EXISTS context_offered (session_id TEXT NOT NULL, node_id TEXT NOT NULL, "
+                     "PRIMARY KEY (session_id, node_id))")
+
+    def _offered(self, session_id: str) -> set[str]:
+        conn = self.store._connect()
+        try:
+            self._offered_table(conn)
+            return {r[0] for r in conn.execute("SELECT node_id FROM context_offered WHERE session_id = ?",
+                                               (session_id,))}
+        finally:
+            conn.close()
+
+    def _mark_offered(self, session_id: str, nodes: list[str], clear: bool = False) -> None:
+        conn = self.store._connect()
+        try:
+            self._offered_table(conn)
+            if clear:
+                conn.execute("DELETE FROM context_offered WHERE session_id = ?", (session_id,))
+            conn.executemany("INSERT OR IGNORE INTO context_offered VALUES (?, ?)", [(session_id, n) for n in nodes])
+            conn.commit()
+        finally:
+            conn.close()
 
     # ------------------------------------------------------------ assembling and recovering
     def _p0_records(self) -> list[str]:
@@ -609,7 +739,8 @@ class ContextManager:
                 if item.state == "loaded" and "node" in item.ref and not item.ref["node"].startswith("state:"):
                     references.append(f"{item.label} ({item.tree}, {item.ref['node']}) - in the last session's "
                                       f"working set; mem_load {item.ref['node']}")
-        offers = self.detect(session_id, prompt) if prompt else []
+        # Session start also offers what the current task is linked to, once, as references (#92).
+        offers = self.detect(session_id, prompt or "", task_cap=8)
         return self._bundle(session_id, extra=references + [o["line"] for o in offers],
                             heading=f"Memory for session {session_id}", protected=overflow)
 
@@ -623,6 +754,7 @@ class ContextManager:
 
     def _compacted(self, session_id: str) -> dict:
         self._record("context_reset", session_id, reason="compaction")
+        self._mark_offered(session_id, [], clear=True)   # the offers were in the compacted context too
         ledger = self.ledger(session_id)
         protected_kinds = set(PROTECTED_KINDS)
         for item in ledger.values():
@@ -724,6 +856,34 @@ class ContextManager:
         per_tree = {t: sum(i.tokens for i in ledger.values() if i.state == "loaded" and i.tree == t) for t in TREES}
         return {"session": session_id, "budget": self.budget(), "used": self.used(session_id, ledger),
                 "per_tree": per_tree, "shares": {t: self.share(t) for t in TREES}, "items": rows}
+
+
+KNOWLEDGE_PREFIXES = ("bug", "solution", "decision", "path", "requirement", "constraint", "concept", "explanation",
+                      "discovery", "question", "reference")
+
+
+def _is_hub(node_id: str) -> bool:
+    """A topic or folder: linked to everything filed in it, so never expanded and never offered by association."""
+    return node_id.startswith(("topic:", "collection:"))
+
+
+def _why(other_is_source: bool, etype: str, anchor: str) -> str:
+    """A link as a reason, read from the offered record's side: "fixes bug:x", or "bug:x fixes it"."""
+    return f"{etype} {anchor}" if other_is_source else f"{anchor} {etype} it"
+
+
+def _followable(links: list[tuple]) -> list[tuple]:
+    """Links worth offering: records in knowledge, state and artifacts, and history only where a record says it
+    was discussed there. A file's versions (every event that changed it) are not followed: there can be
+    thousands."""
+    out = []
+    for link in links:
+        other, etype = link[0], link[1]
+        is_history = ":" not in other or other.startswith(("session:", "history:"))
+        if is_history and etype != "discussed_in":
+            continue
+        out.append(link)
+    return out
 
 
 def _sections() -> tuple:

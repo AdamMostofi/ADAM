@@ -188,7 +188,8 @@ class SessionServer:
         self._tcp.owner = self   # type: ignore[attr-defined]
         threading.Thread(target=self._tcp.serve_forever, name="amem-session-server", daemon=True).start()
         self._claim_if_free()
-        threading.Thread(target=self._watch, name="amem-session-server-watch", daemon=True).start()
+        self._watcher = threading.Thread(target=self._watch, name="amem-session-server-watch", daemon=True)
+        self._watcher.start()
         return self
 
     @property
@@ -223,6 +224,9 @@ class SessionServer:
 
     def stop(self) -> None:
         self._stop.set()
+        watcher = getattr(self, "_watcher", None)
+        if watcher is not None and watcher is not threading.current_thread():
+            watcher.join(5)   # it must not re-publish the file after we remove it
         if self.owns_file():
             try:
                 server_file(self.store_dir).unlink()

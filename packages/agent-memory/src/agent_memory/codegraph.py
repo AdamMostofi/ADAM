@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS artifact_parts (
     end_line INTEGER NOT NULL, parent TEXT, object_id TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_parts_name ON artifact_parts(name);
 CREATE INDEX IF NOT EXISTS idx_parts_path ON artifact_parts(path);
+CREATE INDEX IF NOT EXISTS idx_parts_qualified ON artifact_parts(qualified);
 CREATE TABLE IF NOT EXISTS code_edges (
     from_path TEXT NOT NULL, to_path TEXT, type TEXT NOT NULL, spec TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_code_edges_from ON code_edges(from_path);
@@ -645,10 +646,13 @@ class ArtifactIndex:
             out = {}
             keys = ("path", "name", "qualified", "kind", "line", "end_line", "parent")
             for name in names:
+                # Indexed lookups only (this runs for every word of every prompt). A code part's name is the last
+                # segment of its qualified name, so "a.b" ending a qualified name means name = "b".
                 like = "%." + name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                last = name.rsplit(".", 1)[-1]
                 rows = conn.execute("SELECT path, name, qualified, kind, line, end_line, parent FROM artifact_parts "
-                                    "WHERE (name = ? OR qualified = ? OR qualified LIKE ? ESCAPE '\\') "
-                                    "ORDER BY path, line LIMIT ?", (name, name, like, per_name)).fetchall()
+                                    "WHERE name = ? OR qualified = ? OR (name = ? AND qualified LIKE ? ESCAPE '\\') "
+                                    "ORDER BY path, line LIMIT ?", (name, name, last, like, per_name)).fetchall()
                 out[name] = [dict(zip(keys, r)) for r in rows]
             return out
         finally:
