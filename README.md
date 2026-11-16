@@ -143,6 +143,10 @@ that they were.
 | Twelve agent tools (one per tree, plus load, offload, restore, pin, context and declare) over MCP (stdio) and the `amem` CLI | `tools.py`, `mcp.py`, `cli.py` | `packages/agent-memory/tests/test_context.py` |
 | Storage: tiered lossless compression of old, unvisited content (automatic past a size, or on request), purge of a leaked secret or session that leaves no byte behind, key rotation, size and growth reporting, export and import, and a fast verify from the newest checkpoint | `storage.py`, `archive.py` | `packages/agent-memory/tests/test_storage.py` |
 | The Claude Code plugin: lossless capture through eleven hooks (never blocking, replay-safe, with explicit gaps), memory injected at session start, on each prompt and after compaction, key storage chosen at onboarding, and a launcher that works from Windows into WSL | `adapters/claude_code.py`, `keys.py` | `packages/agent-memory/tests/test_claude_code.py` |
+| The session server (decision D14): hooks hand their payload to a process that has the store open, for any agent (`amem mcp` or `amem serve`), with a fallback to the direct path | `server.py` | `packages/agent-memory/tests/test_session_server.py` |
+| Protected context that overflows its budget is ranked (global, current task, conflicts, the rest), referenced or counted, never silently dropped | `context.py` | `packages/agent-memory/tests/test_protected_context.py` |
+| Retrieval that follows the current task and recorded links, with a confidence on every offer | `context.py` | `packages/agent-memory/tests/test_retrieval.py` |
+| `amem verify` reports integrity, capture completeness, known gaps and uncertain attribution separately | `completeness.py`, `store.py` | `packages/agent-memory/tests/test_verify_report.py` |
 | The engine never imports ADAM | `pyproject.toml` | `packages/agent-memory/tests/test_boundary.py` |
 
 The "Where" files are in `packages/agent-memory/src/agent_memory/`.

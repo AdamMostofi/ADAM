@@ -485,6 +485,31 @@ So a **true** guarantee that memory never overfills the context is possible only
   - each reconcile read the whole log twice;
   - tree-sitter is now loaded only when parsing.
 
+### 7.8 As built (#90 to #94): the session server, and the owner review's gaps
+- **Session server (decision D14, #90):** see `server.py` and the D14 row in `docs/DECISIONS.md`.
+  - It is agent-neutral: `amem mcp` runs it beside the tools, and `amem serve` runs it alone.
+  - The launcher's hand-off uses bash builtins only.
+  - Found on the way: Git Bash rewrote the Linux path given to `wsl.exe`, so the 3.1 bridge never worked from Git Bash. That is fixed.
+- **Protected context that overflows (#91):** protected records are ranked in four tiers:
+  1. global constraints and objectives;
+  2. the current task, and records linked to it (directly or through a shared file or topic);
+  3. open conflicts and blockers;
+  4. the rest.
+
+  They are loaded in full in rank order while they fit. What doesn't fit gets a protected reference line, or is counted, and `mem_context protected` lists everything. Measured with 50 constraints and 80 conflicts at the 2,300-token session budget: 38 in full, 10 referenced, 83 counted, 2,295 tokens.
+- **Retrieval (#92):** offers now come from three sources:
+  - the current task, offered once per session and again after compaction;
+  - recorded links, up to two hops;
+  - what the prompt names or words.
+
+  Each offer carries a confidence: exact, text, linked, task or inferred. On a fixture whose prompts share no words with what they need, recall went from 20% to 80%. The remaining miss has neither a link nor a shared word; no-model retrieval can't reach it, and the optional semantic matcher waits for Stage 3.2.
+- **Verify wording (#93):** `amem verify` reports four results separately:
+  - integrity (the exit code);
+  - capture within the instrumentation;
+  - known gaps;
+  - uncertain attribution.
+- **Tool definitions (#94):** 13 tools became 10. Offload, restore and pin are now `mem_context` operations; their old names still work as aliases. The definitions are about 1,224 estimated tokens (from about 1,386), with a test-enforced budget of 1,300.
+
 ## 8. Domain neutrality: core and profiles
 
 - **The universal core:** the four trees, their generic node types, the cross-tree layer, the context manager, and the preservation classes.
