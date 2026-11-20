@@ -96,80 +96,27 @@ suite in an environment without ADAM.
 
 ## Memory engine
 
-`packages/agent-memory/` (working name; command `amem`) is the Lossless Tree
-Memory Engine.
+The Lossless Tree Memory Engine (command `amem`) was built here in Phases 2 and 3, under the working name
+`agent-memory`. It is now released on its own, with its history: **[lossless-tree-memory](https://github.com/AdamMostofi/lossless-tree-memory)**.
 
-**The principle:** the entire history is kept permanently, but an agent loads
-only what it needs, from the right tree, at the right time.
+**ADAM depends on a pinned release:** `lossless-tree-memory` v0.1.0 in `pyproject.toml`, installed from its
+tagged GitHub release. This repository holds no copy of it.
 
-**Status:** Phase 2 is complete (Stages 2.1 to 2.11). That includes the
-context manager that loads and offloads context within a token budget, and
-storage that compresses old content losslessly. Phase 3 has started with the
-[Claude Code plugin](plugins/claude-code/README.md) (Stage 3.1).
+**The principle:** the entire history is kept permanently, but an agent loads only what it needs, from the
+right tree, at the right time.
 
-Design documents:
+**Where things are now:**
+- **Capabilities, tests and install instructions:** in its [README](https://github.com/AdamMostofi/lossless-tree-memory#readme).
+- **What each coding agent gets:** in [docs/agents.md](https://github.com/AdamMostofi/lossless-tree-memory/blob/main/docs/agents.md).
+- **Security notes:** in [SECURITY.md](https://github.com/AdamMostofi/lossless-tree-memory/blob/main/SECURITY.md).
+
+Design documents (they stay here, as the record of how it was designed):
 - [architecture revision 3](docs/design/2026-11-13-memory-architecture-rev3.md), the current architecture;
 - the [original design](docs/design/2026-11-06-agent-memory-engine.md).
 
-**Four trees over one shared store.** Each tree has its own root, rules and
-navigator, and links between trees are explicit.
-
-| Tree | Answers | Holds |
-|---|---|---|
-| History | What happened? | Sessions, turns and every event, in order |
-| Artifacts | What exists? | Files and other artifacts, every version, code symbols, document sections, dependencies |
-| Knowledge | What do we know? | A topic hierarchy of decisions, approaches, requirements, constraints, concepts, bugs and their solutions, and more |
-| Active State | What matters now? | Objectives, tasks, blockers, priorities, constraints, conflicts, focus, check status, next actions |
-
-Every record and link says how it is known:
-- **observed** by the engine;
-- **declared** by an agent or the user;
-- **inferred**, with the rule named.
-
-Nothing is ever deleted. Secrets are redacted before storage, with a record
-that they were.
-
 | Capability | Where | Tested by |
 |---|---|---|
-| Append-only event log with per-writer hash chains; a compressed, encrypted, content-addressed archive; secret redaction and exclusion records; gap records instead of silent loss | `store.py`, `archive.py`, `secrets.py`, `keys.py` | `packages/agent-memory/tests/test_archive_and_log.py` |
-| The store lives inside the project (`.agent-memory/`, ignored by git) | `location.py` | `packages/agent-memory/tests/test_archive_and_log.py` |
-| The four trees, cross-tree links, a basis on every record, domain profiles (generic, software, documents), and automatic format upgrades | `structure.py`, `trees.py`, `profiles.py` | `packages/agent-memory/tests/test_four_trees.py`, `packages/agent-memory/tests/test_structure.py` |
-| Artifact versions, Python and TypeScript symbols and imports (tsconfig aliases included), Markdown sections and links, metadata, full-text search | `codegraph.py` | `packages/agent-memory/tests/test_artifacts.py`, `packages/agent-memory/tests/test_code_and_verification.py` |
-| Test results recorded with their files and environment, and shown as verified, stale or unknown, with reasons | `verification.py` | `packages/agent-memory/tests/test_code_and_verification.py` |
-| Knowledge entries with statuses, topics, supersession chains, bug-to-solution links, and knowledge and conversation search | `structure.py`, `search.py` | `packages/agent-memory/tests/test_knowledge.py` |
-| Active state in ten sections, with staleness and token-budgeted levels; never injects raw tool output | `state.py` | `packages/agent-memory/tests/test_state.py` |
-| Reconciliation with the files and git (who changed what, with honest "unattributed"), conflict records for concurrent agents, checkpoints, and crash recovery that matches a clean replay | `reconcile.py`, `recovery.py` | `packages/agent-memory/tests/test_reconcile_and_recovery.py` |
-| The context manager: a crash-safe ledger of what the agent has loaded, token budgets per tree, protected items, offload to one-line references with exact restore, prompt-driven offers, and recovery after compaction | `context.py` | `packages/agent-memory/tests/test_context.py` |
-| Twelve agent tools (one per tree, plus load, offload, restore, pin, context and declare) over MCP (stdio) and the `amem` CLI | `tools.py`, `mcp.py`, `cli.py` | `packages/agent-memory/tests/test_context.py` |
-| Storage: tiered lossless compression of old, unvisited content (automatic past a size, or on request), purge of a leaked secret or session that leaves no byte behind, key rotation, size and growth reporting, export and import, and a fast verify from the newest checkpoint | `storage.py`, `archive.py` | `packages/agent-memory/tests/test_storage.py` |
-| The Claude Code plugin: lossless capture through eleven hooks (never blocking, replay-safe, with explicit gaps), memory injected at session start, on each prompt and after compaction, key storage chosen at onboarding, and a launcher that works from Windows into WSL | `adapters/claude_code.py`, `keys.py` | `packages/agent-memory/tests/test_claude_code.py` |
-| The OpenCode plugin: OpenCode events in, memory context back (system prompt, prompt offers, compaction), tools registered by the plugin; one project's memory shared with Claude Code | `adapters/opencode.py`, `plugins/opencode/index.js` | `packages/agent-memory/tests/test_opencode.py` |
-| Every file change an agent's tool or command explains names that agent's writer; when two agents' commands could explain it, both are listed and none is guessed | `reconcile.py` | `packages/agent-memory/tests/test_opencode.py` |
-| The Pi package: Pi events in, memory context back (a system-prompt section, prompt offers), tools through Pi's MCP; a forked Pi session and a `/tree` branch each become an engine branch | `adapters/pi.py`, `plugins/pi/extensions/agent-memory.ts` | `packages/agent-memory/tests/test_pi.py` |
-| Codex, Gemini CLI and Cursor adapters (built from their docs, not tested against installs); MCP-only and CLI-only tiers that record what they can't see; one shared adapter suite for every agent | `adapters/hooked.py`, `setup.py`, `docs/agents.md` | `packages/agent-memory/tests/test_adapter_suite.py` |
-| The session server (decision D14): hooks hand their payload to a process that has the store open, for any agent (`amem mcp` or `amem serve`), with a fallback to the direct path | `server.py` | `packages/agent-memory/tests/test_session_server.py` |
-| Protected context that overflows its budget is ranked (global, current task, conflicts, the rest), referenced or counted, never silently dropped | `context.py` | `packages/agent-memory/tests/test_protected_context.py` |
-| Retrieval that follows the current task and recorded links, with a confidence on every offer | `context.py` | `packages/agent-memory/tests/test_retrieval.py` |
-| `amem verify` reports integrity, capture completeness, known gaps and uncertain attribution separately | `completeness.py`, `store.py` | `packages/agent-memory/tests/test_verify_report.py` |
-| The engine never imports ADAM | `pyproject.toml` | `packages/agent-memory/tests/test_boundary.py` |
-
-The "Where" files are in `packages/agent-memory/src/agent_memory/`.
-
-```bash
-cd packages/agent-memory
-uv sync --locked --extra dev
-uv run pytest -q
-uv run amem --project /path/to/project reconcile   # also: where, verify, checkpoint, recover, rebuild
-uv run amem --project /path/to/project context assemble prompt="what broke?"
-uv run amem --project /path/to/project mcp          # serve the tools to an agent over stdio
-uv run amem --project /path/to/project storage report   # also: storage compress|decompress, export, import, purge
-```
-
-Known open problems are tracked as
-[follow-up issues](https://github.com/AdamMostofi/ADAM/issues?q=is%3Aissue+is%3Aopen+label%3Afollow-up),
-ordered by severity.
-
----
+| ADAM uses the released engine: the pinned version installs, imports, and stores and verifies a record | `pyproject.toml` | `tests/unit/test_memory_engine_release.py` |
 
 ## Planned
 

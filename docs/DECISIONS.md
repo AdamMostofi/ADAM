@@ -106,5 +106,8 @@ Outcomes are as follows:
 | #41 | DL.1 | Explanation-based learning, gated. | Adopted. |
 | #42 | DSEC.1 | Trust comes from the user channel only. | Adopted. |
 
+**Since Stage 3.6 (#61)** the engine lives in [lossless-tree-memory](https://github.com/AdamMostofi/lossless-tree-memory); paths below that
+start `packages/agent-memory/` or `plugins/` name where things were in this repository, at the time.
+
 The memory engine's own design decisions (D1–D8) are in
 [the engine design](design/2026-11-06-agent-memory-engine.md).

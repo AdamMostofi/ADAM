@@ -1,8 +1,0 @@
-{
-  "name": "agent-memory",
-  "version": "0.1.0",
-  "description": "Lossless project memory: captures sessions, prompts, tools, file changes and test runs, and gives the agent memory context at session start and on each prompt, plus the agent-memory tools. Needs the amem engine.",
-  "license": "MIT",
-  "keywords": ["memory", "context"],
-  "hooks": "./hooks/hooks.json"
-}

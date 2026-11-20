@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "agent-memory": {
-      "command": "bash",
-      "args": ["${PLUGIN_ROOT}/scripts/amem-run", "mcp"],
-      "env": { "AMEM_AGENT": "codex" }
-    }
-  }
-}

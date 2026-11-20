@@ -40,20 +40,17 @@ def test_every_working_capability_names_existing_code_and_tests():
             assert (ROOT / path.rstrip("/")).exists(), f"{capability}: {path} doesn't exist"
 
 
-def test_every_memory_engine_capability_names_existing_code_and_tests():
+def test_the_memory_engine_is_the_pinned_release():
+    """The engine lives in its own repository (Stage 3.6, #61); ADAM pins a release and holds no copy."""
     section = README.split("## Memory engine", 1)[1].split("\n## ", 1)[0]
-    rows = [line for line in section.splitlines() if line.startswith("| ") and "`" in line.split("|")[2]]
-    assert len(rows) >= 8
-    package = ROOT / "packages" / "agent-memory"
-    for row in rows:
-        capability, where, tested = [c.strip() for c in row.strip("|").split("|")]
-        tests = re.findall(r"`(packages/agent-memory/tests/[^`]+\.py)`", tested)
-        assert tests, f"no test named for: {capability}"
-        for path in tests:
-            assert (ROOT / path).is_file(), f"{capability}: {path} doesn't exist"
-        for name in re.findall(r"`([a-z_/]+\.(?:py|toml))`", where):
-            found = (package / "src" / "agent_memory" / name).is_file() or (package / name).is_file()
-            assert found, f"{capability}: {name} doesn't exist in the engine package"
+    pin = re.search(r'"lossless-tree-memory @ git\+(https://github.com/[^@"]+)@(v[\d.]+)"',
+                    (ROOT / "pyproject.toml").read_text())
+    assert pin, "pyproject.toml doesn't pin lossless-tree-memory to a release tag"
+    repo, tag = pin.groups()
+    assert repo.removesuffix(".git") in section and tag in section
+    assert not (ROOT / "packages" / "agent-memory").exists() and not (ROOT / "plugins").exists()
+    for path in re.findall(r"`(tests/[^`]+\.py)`", section):
+        assert (ROOT / path).is_file(), path
 
 
 def test_the_readme_counts_the_roadmap_stages():
