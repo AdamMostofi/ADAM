@@ -439,4 +439,5 @@ self-contained vanilla JavaScript port.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Bundled fonts, reference components and other third-party material keep their own
+licenses: see [THIRD_PARTY.md](THIRD_PARTY.md).

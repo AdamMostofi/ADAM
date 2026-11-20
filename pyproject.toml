@@ -8,6 +8,7 @@ version = "0.8.0"
 description = "A local neuro-symbolic machine intelligence."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY.md"]
 requires-python = ">=3.10"
 dependencies = [
     "networkx>=3.0",
