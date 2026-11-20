@@ -1,7 +1,7 @@
 # agent-memory
 
 **Status:** Phase 2 is complete (Stages 2.1 to 2.11) inside the ADAM
-repository. Phase 3 has started: the [Claude Code plugin](../../plugins/claude-code/README.md) (Stage 3.1) and the [OpenCode plugin](../../plugins/opencode/README.md) (Stage 3.3). `agent-memory` is a working name; the final name is decision D8.
+repository. Phase 3 has started: the [Claude Code plugin](../../plugins/claude-code/README.md) (Stage 3.1) the [OpenCode plugin](../../plugins/opencode/README.md) (Stage 3.3) and the [Pi package](../../plugins/pi/README.md) (Stage 3.4). `agent-memory` is a working name; the final name is decision D8.
 
 The Lossless Tree Memory Engine is a general-purpose, lossless memory for
 long-running AI agents, with software development as its primary use.
@@ -115,6 +115,12 @@ uv run amem --project /path/to/project reconcile    # also: where, verify, check
   - the memory overview in the system prompt, kept unchanged until a compaction, so prompt caching keeps working;
   - offers on each prompt;
   - the memory tools, registered by the plugin itself.
+
+- **Pi (Stage 3.4):** `amem hook pi <event>` and the Pi package (`pi install`):
+  - Pi's session tree becomes memory branches, with no core change: a fork or clone links to its parent, and a
+    `/tree` branch continues as its own session;
+  - the memory overview is kept as a system-prompt section, which Pi keeps across compaction;
+  - offers on each prompt, and the memory tools through Pi's own MCP support.
 
 - **Who did what:** every record names its agent and session.
   - A file change that a tool or command explains names that writer (`by`).

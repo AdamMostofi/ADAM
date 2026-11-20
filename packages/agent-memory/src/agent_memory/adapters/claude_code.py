@@ -366,8 +366,14 @@ def subagent(h: Hook, started: bool) -> str:
 
 def pre_compact(h: Hook) -> str:
     p = h.payload
+    # Claude Code sends the same PreCompact payload for every compaction of a session. The transcript only
+    # grows, so its size tells a second compaction from a replay of the first.
+    try:
+        size = os.path.getsize(native(p.get("transcript_path")) or "")
+    except OSError:
+        size = None
     h.append("compaction", {"phase": "before", "trigger": p.get("trigger"),
-                            "custom_instructions": p.get("custom_instructions")})
+                            "custom_instructions": p.get("custom_instructions")}, part=f"transcript:{size}")
     ledger = h.store.context.ledger(h.session)
     refs = [i.reference() for i in ledger.values() if i.state == "loaded"]
     if not refs:

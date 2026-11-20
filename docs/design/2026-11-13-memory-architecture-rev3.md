@@ -531,6 +531,26 @@ So a **true** guarantee that memory never overfills the context is possible only
 - **Found live:** OpenCode publishes `file.edited` before the edit tool's result. Reconciling on it recorded the
   change as unattributed and the tool's report as a conflict, so it isn't used.
 
+### 7.10 As built (Stage 3.4, #59): Pi, and a session tree
+- **Package:** `plugins/pi/` is a Pi package (`pi install`) with one extension, `extensions/agent-memory.ts`. It
+  only translates; the adapter is `agent_memory/adapters/pi.py`.
+- **How memory reaches the model (tier B), verified in the real Pi 1.4 runtime:**
+  - the overview is an `agent_memory` system-prompt section, set in `before_agent_start`;
+  - offers are a hidden custom message added to the run;
+  - Pi has no hook for compaction instructions, but keeps the system prompt across compaction, and the section
+    is refreshed with the restored memory afterwards.
+- **Tools:** `pi.registerMcpServer` with direct exposure. Pi names them `mcp__agent_memory__*`.
+- **The session tree, with no core change:**
+  - a fork or clone carries `forked_from`, which the core already turns into a `based_on` link and a proposed
+    `session_fork` path;
+  - a `/tree` branch continues as session `<session>~<entry>`, forked from the line it left.
+- **Contract corrected (rule 3):** agents send identical payloads for distinct events (a second compaction, a
+  second session end). They were being dropped as replays:
+  - in-process plugins (OpenCode and Pi) now add a per-event `delivery` id, which a retry reuses;
+  - Claude Code's PreCompact is keyed by the transcript's size.
+- **Testing without a model:** a scripted model on Pi's own faux provider (`tests/fixtures/pi_scripted_model.js`)
+  drives the real runtime end to end.
+
 ## 8. Domain neutrality: core and profiles
 
 - **The universal core:** the four trees, their generic node types, the cross-tree layer, the context manager, and the preservation classes.

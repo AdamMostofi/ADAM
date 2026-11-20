@@ -9,12 +9,16 @@
 2. **Never block the agent.** `run()` returns quickly with output the agent understands, and never raises.
    - If the store is broken, the failure goes to the store's content-free spool and becomes a `capture_gap` when the store next opens.
 3. **Replays are free.** Each event's idempotency key is a hash of the agent's payload, so the same payload is stored once.
+   When an agent sends identical payloads for distinct events (a second compaction, a second session end), the
+   adapter must tell them apart without breaking replays: in-process plugins add a `delivery` id per event, which
+   a retry reuses; Claude Code's PreCompact adds the transcript's size, which only grows (#59).
 4. **Deliver context through the engine.** Adapters ask the context manager for what to inject, and pass it through the agent's own mechanism (hook output, a tool result), within the agent's limits.
 5. **No content in logs.** Diagnostics name the event and the error, never the payload.
 6. **Say who did it.** Every event carries the agent and a writer id (`<agent>:<session>`), and a file change
    that an agent's tool or command explains names that writer (`by`), so agents sharing a project stay apart.
 
-Adapters: `claude_code` (Stage 3.1, hooks) and `opencode` (Stage 3.3, an in-process plugin).
+Adapters: `claude_code` (Stage 3.1, hooks), `opencode` (Stage 3.3, an in-process plugin) and `pi`
+(Stage 3.4, an in-process extension, with Pi's session tree mapped onto engine branches).
 
 Entry points:
 - `amem hook <agent> <event>` reads the agent's JSON on stdin and prints the agent's hook output;
@@ -32,7 +36,7 @@ import json
 
 from agent_memory.schema import canonical_json
 
-AGENTS = ("claude-code", "opencode")
+AGENTS = ("claude-code", "opencode", "pi")
 ADAPTER_VERSION = "0.1.0"
 
 
@@ -54,6 +58,9 @@ def run(agent: str, event: str, stdin: bytes, environ: dict, store=None) -> tupl
     if agent == "opencode":
         from agent_memory.adapters import opencode
         return opencode.handle(event, stdin, environ, store=store)
+    if agent == "pi":
+        from agent_memory.adapters import pi
+        return pi.handle(event, stdin, environ, store=store)
     return "", 0
 
 

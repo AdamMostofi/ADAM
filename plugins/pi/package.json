@@ -1,0 +1,15 @@
+{
+  "name": "pi-agent-memory",
+  "version": "0.1.0",
+  "description": "Lossless project memory for Pi: capture, memory context in the system prompt and per prompt, the agent-memory tools, and Pi's session tree mapped onto memory branches. Needs the amem engine.",
+  "type": "module",
+  "keywords": ["pi-package", "memory"],
+  "license": "MIT",
+  "files": ["extensions", "README.md"],
+  "pi": {
+    "extensions": ["./extensions/agent-memory.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}

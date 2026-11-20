@@ -341,3 +341,16 @@ def test_test_commands_are_recognised():
         assert cc.TEST_COMMAND.search(cmd), cmd
     for cmd in ("ls", "git commit -m 'test'", "cat pytest.ini", "echo testing"):
         assert not cc.TEST_COMMAND.search(cmd), cmd
+
+
+def test_a_second_compaction_is_kept_and_a_replayed_one_is_not(project, tmp_path):
+    """Claude Code sends the same PreCompact payload for every compaction; the growing transcript tells them apart."""
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text("{}\n")
+    payload = {"session_id": S, "transcript_path": str(transcript), "trigger": "auto", "custom_instructions": None}
+    hook(project, "SessionStart", {"session_id": S, "source": "startup", "cwd": str(project)})
+    hook(project, "PreCompact", payload)
+    hook(project, "PreCompact", payload)              # a replay: nothing new
+    transcript.write_text("{}\n" * 50)               # the session went on, then compacted again
+    hook(project, "PreCompact", payload)
+    assert kinds(open_store(project)).count("compaction") == 2

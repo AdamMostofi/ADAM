@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { homedir } from "node:os";
+import { randomUUID } from "node:crypto";
 
 const AGENT = "opencode";
 const TIMEOUT_MS = 120_000;
@@ -110,7 +111,9 @@ export const AgentMemory = async (ctx, options = {}) => {
   // One event at a time, in order: an edit's "before" must be recorded before its "after".
   let chain = Promise.resolve();
   const send = (event, payload) => {
-    const body = JSON.stringify({ directory, ...payload });
+    // `delivery` tells a retry (the same body, after a failed hand-off) from a second, identical event: the
+    // engine's idempotency keys drop the first and keep the second.
+    const body = JSON.stringify({ directory, delivery: randomUUID(), ...payload });
     const result = chain.then(async () => {
       const viaServer = await forward(serverFile, event, body);
       if (viaServer !== null) return viaServer;
