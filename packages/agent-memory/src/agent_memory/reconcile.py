@@ -45,8 +45,9 @@ WORKTREE_GIT = re.compile(r"^(checkout|pull|reset|merge|rebase|cherry-pick|rever
 GROUP_THRESHOLD = 100
 RUNNING_LIMIT = 50          # shell commands kept in view while they run (#58)
 LARGE_RECONCILE = 500
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "edit", "write", "multiedit", "patch", "apply_patch", "str_replace_editor"}
-SHELL_TOOLS = {"Bash", "bash", "shell", "run_shell_command", "terminal"}
+EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "edit", "write", "multiedit", "patch", "apply_patch",
+              "str_replace_editor", "write_file", "replace"}
+SHELL_TOOLS = {"Bash", "bash", "Shell", "shell", "run_shell_command", "terminal"}
 WALK_SKIP = {".git", ".agent-memory", ".hg", ".svn", "node_modules", "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache"}
 
 SCHEMA = """
@@ -97,7 +98,11 @@ class Result:
 
 
 class Reconciler:
-    def __init__(self, store, root: str | os.PathLike, session_id: str, writer_id: str = "reconciler"):
+    def __init__(self, store, root: str | os.PathLike, session_id: str, writer_id: str = "reconciler",
+                 agent_unseen: bool = False):
+        # agent_unseen: an agent may be working here without reporting its tools (an MCP-only agent, #60), so
+        # a change nothing explains is `unattributed`, never `external`.
+        self.agent_unseen = agent_unseen
         self.store = store
         self.root = Path(root).resolve()
         self.session_id = session_id
@@ -365,7 +370,7 @@ class Reconciler:
                 return "agent_tool"
             if obs["commands"] and (path in mentioned or (old_path and old_path in mentioned)):
                 return "agent_bash"
-            if not obs["agent_active"] and not unclean:
+            if not obs["agent_active"] and not unclean and not self.agent_unseen:
                 return "external"
             return "unattributed"
 

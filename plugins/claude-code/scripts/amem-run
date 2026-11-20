@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Runs `amem` for the agent-memory Claude Code plugin.
+# Runs `amem` for the agent-memory plugins with command hooks: Claude Code, and (#60) Codex and Gemini CLI.
+# The same file ships in each plugin; AMEM_AGENT names the agent (default claude-code).
 #
-#   amem-run hook <Event>   one hook: Claude Code's JSON on stdin, hook output on stdout, always exit 0
+#   amem-run hook <Event>   one hook: the agent's JSON on stdin, hook output on stdout, always exit 0
 #   amem-run mcp            the MCP server for the session the hooks started
 #
 # It finds `amem` in one of two places:
@@ -19,7 +20,8 @@ mode="$1"; shift
 [ -n "${CLAUDE_PLUGIN_OPTION_PASSPHRASE:-}" ] && export AMEM_PASSPHRASE="$CLAUDE_PLUGIN_OPTION_PASSPHRASE"
 [ -n "${CLAUDE_PLUGIN_OPTION_PROFILES:-}" ] && export AMEM_PROFILES="$CLAUDE_PLUGIN_OPTION_PROFILES"
 
-project="${CLAUDE_PROJECT_DIR:-$PWD}"
+agent="${AMEM_AGENT:-claude-code}"
+project="${CLAUDE_PROJECT_DIR:-${GEMINI_PROJECT_DIR:-$PWD}}"
 
 # Fast path (decision D14, #90): hand the hook to the project's session server, which `amem mcp` runs with
 # the store already open. Pure bash builtins: no new process at all (each one costs about 50 ms in Git Bash on
@@ -34,7 +36,7 @@ if [ "$mode" = "hook" ] && [ "${AMEM_SERVER:-1}" != "0" ] && [ -z "${AMEM_HOME:-
     if IFS= read -r -t 2 hello <&3 && [ "${hello%$'\r'}" = "AMEM1 $sid" ]; then
       saved_lc="${LC_ALL-}"; LC_ALL=C
       size="${#payload}"   # bytes, not characters
-      printf 'AMEM1 %s claude-code %s %s\n%s' "$token" "$1" "$size" "$payload" >&3 2>/dev/null
+      printf 'AMEM1 %s %s %s %s\n%s' "$token" "$agent" "$1" "$size" "$payload" >&3 2>/dev/null
       if [ -n "$saved_lc" ]; then LC_ALL="$saved_lc"; else unset LC_ALL; fi
       if IFS= read -r -t 120 status <&3 && [ "$status" = "OK" ]; then
         IFS= read -r -d '' reply <&3 || true
@@ -51,7 +53,7 @@ fi
 if [ "$mode" = "mcp" ]; then
   args=(--project "$project" --session auto mcp)
 else
-  args=(--project "$project" hook claude-code "$@")
+  args=(--project "$project" hook "$agent" "$@")
 fi
 
 amem="${AMEM_BIN:-}"
@@ -68,7 +70,7 @@ case "$project" in
     distro="${rest%%/*}"; linux="/${rest#*/}"
     [ "$linux" = "/$distro" ] && linux="/"
     if command -v wsl.exe >/dev/null 2>&1; then
-      export WSLENV="${WSLENV:+$WSLENV:}AMEM_KEY_SOURCE/u:AMEM_PASSPHRASE/u:AMEM_PROFILES/u:AMEM_SERVER/u"
+      export WSLENV="${WSLENV:+$WSLENV:}AMEM_KEY_SOURCE/u:AMEM_PASSPHRASE/u:AMEM_PROFILES/u:AMEM_SERVER/u:AMEM_AGENT/u"
       # Git Bash rewrites arguments that look like POSIX paths (/home/x becomes C:/Program Files/Git/home/x)
       # before starting a Windows program; the Linux path must reach WSL as it is.
       export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
@@ -76,8 +78,8 @@ case "$project" in
       if [ "$mode" = "mcp" ]; then
         exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" --session auto mcp' "$linux"
       fi
-      exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" hook claude-code "$1"' \
-        "$linux" "$1"
+      exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" hook "$2" "$1"' \
+        "$linux" "$1" "$agent"
     fi
     ;;
 esac
@@ -88,8 +90,10 @@ if [ "$mode" = "mcp" ]; then
        "(or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory)" >&2
   exit 1
 fi
-cat >/dev/null   # read the hook's input so Claude Code isn't left writing to a closed pipe
+cat >/dev/null   # read the hook's input so the agent isn't left writing to a closed pipe
 if [ "${1:-}" = "SessionStart" ]; then
-  printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The agent-memory plugin is enabled, but its amem command is not installed, so this session is not being remembered. To install it: uv tool install agent-memory (or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory). Claude Code works as usual meanwhile."}}'
+  printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The agent-memory plugin is enabled, but its amem command is not installed, so this session is not being remembered. To install it: uv tool install agent-memory (or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory). The agent works as usual meanwhile."}}'
+elif [ "$agent" = "gemini" ]; then
+  printf '%s\n' '{}'   # Gemini CLI reads stdout as JSON
 fi
 exit 0

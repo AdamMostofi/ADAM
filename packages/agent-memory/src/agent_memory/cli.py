@@ -81,15 +81,26 @@ def main(argv: list[str] | None = None) -> int:
     rec = sub.add_parser("reconcile", help="record every file change since the last reconcile")
     rec.add_argument("--full", action="store_true", help="rehash every file instead of asking git what changed")
     sub.add_parser("checkpoint", help="take a checkpoint now")
+    st = sub.add_parser("setup", help="connect an agent that has no plugin package: cursor (hooks), windsurf or "
+                                      "cline (MCP only), aider (CLI only); codex and gemini print how to install "
+                                      "their plugins")
+    from agent_memory.setup import AGENTS as SETUP_AGENTS
+    st.add_argument("agent", choices=SETUP_AGENTS)
+    st.add_argument("--dry-run", action="store_true", help="show what would change, write nothing")
+    br = sub.add_parser("brief", help="write the memory overview to a file, for agents that only read files")
+    br.add_argument("--out", help="the file (default: <store>/brief.md)")
     sub.add_parser("recover", help="rebuild state from the newest valid checkpoint, replay, and reconcile")
     sub.add_parser("rebuild", help="regenerate the derived layer (artifact and search indexes) from the core")
     mcp = sub.add_parser("mcp", help="serve the agent tools over stdio (Model Context Protocol); --session auto "
                                     "follows the agent session the hooks started. Also starts the session server")
     mcp.add_argument("--no-server", action="store_true", help="don't start the session server for hooks")
+    mcp.add_argument("--agent", help="the MCP-only tier: an agent with no hooks (for example cline). Opens a "
+                                     "session for it, records that its conversation isn't captured, and "
+                                     "reconciles files before each tool call")
     sub.add_parser("serve", help="run only the session server (hooks hand it their payload) until stdin closes")
     hk = sub.add_parser("hook", help="run one agent hook: the agent's JSON on stdin, its hook output on stdout "
                                      "(always exits 0)")
-    hk.add_argument("agent", choices=["claude-code", "opencode", "pi"])
+    hk.add_argument("agent", choices=["claude-code", "opencode", "pi", "codex", "gemini", "cursor"])
     hk.add_argument("event")
     from agent_memory import tools
     for command, tool in TOOL_COMMANDS.items():
@@ -114,6 +125,16 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.flush()
         return code
     path = store_path(args.project, args.home)
+    if args.command == "setup":
+        from agent_memory.setup import setup
+        for line in setup(args.agent, args.project, dry_run=args.dry_run):
+            print(line)
+        return 0
+    if args.command == "brief":
+        from pathlib import Path
+        from agent_memory.setup import write_brief
+        print(write_brief(Path(os.path.realpath(args.project)), args.home, Path(args.out) if args.out else None))
+        return 0
     if args.command == "where":
         print(path)
         return 0
@@ -140,7 +161,17 @@ def main(argv: list[str] | None = None) -> int:
             except OSError as err:   # hooks fall back to the direct path
                 print(f"agent-memory: session server not started: {err}", file=sys.stderr)
         try:
-            serve(store, args.session)   # "auto": the session the agent's hooks most recently started
+            if args.agent:   # the MCP-only tier (#60)
+                from agent_memory.mcp import close_mcp_only_session, open_mcp_only_session
+                project = _hook_environ(args)["AMEM_PROJECT"]
+                session = open_mcp_only_session(store, args.agent, project)
+                try:
+                    serve(store, session, before_call=lambda: store.reconciler(project, session,
+                                                                               agent_unseen=True).run())
+                finally:
+                    close_mcp_only_session(store, args.agent, session)
+            else:
+                serve(store, args.session)   # "auto": the session the agent's hooks most recently started
         finally:
             if server is not None:
                 server.stop()

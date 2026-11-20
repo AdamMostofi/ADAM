@@ -74,7 +74,38 @@ def _error(msg_id, code: int, text: str) -> dict:
     return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": code, "message": text}}
 
 
-def serve(store, session_id: str, stdin=None, stdout=None) -> None:
+def open_mcp_only_session(store, agent: str, project: str) -> str:
+    """A session for an agent that reaches memory only through MCP, with no hooks (the MCP-only tier, #60).
+
+    Its record says plainly what isn't captured: the conversation (a capture gap), and who changed which file
+    (changes made while it is open are `unattributed`).
+    """
+    import uuid
+    from agent_memory.adapters.claude_code import _State
+    from agent_memory.schema import EventInput
+    session = f"{agent}-mcp-{uuid.uuid4().hex[:12]}"
+    writer = f"{agent}:{session}"
+    store.append(EventInput(kind="session_start", session_id=session, writer_id=writer, agent=agent,
+                            summary_fields={"source": "mcp", "cwd": project, "tier": "mcp-only",
+                                            "capture": "MCP tools only: the conversation and tool calls aren't "
+                                                       "captured; file changes appear as unattributed"}))
+    store.append(EventInput(kind="capture_gap", session_id=session, writer_id=writer, agent=agent,
+                            completeness="unavailable",
+                            summary_fields={"missed_kind": "conversation",
+                                            "reason": f"{agent} has no hooks: only the memory tools it calls are "
+                                                      "recorded"}))
+    _State(store, "*").set("project", "current_session", session)
+    return session
+
+
+def close_mcp_only_session(store, agent: str, session: str) -> None:
+    from agent_memory.schema import EventInput
+    store.safe_append(EventInput(kind="session_end", session_id=session, writer_id=f"{agent}:{session}",
+                                 agent=agent, summary_fields={"reason": "the MCP server closed"}))
+
+
+def serve(store, session_id: str, stdin=None, stdout=None, before_call=None) -> None:
+    """Serve MCP over stdio. `before_call` runs before each tool call (the MCP-only tier reconciles there)."""
     stdin, stdout = stdin or sys.stdin, stdout or sys.stdout
     for line in stdin:
         line = line.strip()
@@ -85,6 +116,12 @@ def serve(store, session_id: str, stdin=None, stdout=None) -> None:
         except json.JSONDecodeError:
             reply = _error(None, -32700, "parse error")
         else:
+            if before_call and isinstance(message, dict) and message.get("method") == "tools/call":
+                try:
+                    with LOCK:
+                        before_call()
+                except Exception as err:   # a failed reconcile is recorded by the reconciler; the call goes on
+                    print(f"agent-memory: reconcile before a tool call failed: {err!r}", file=sys.stderr)
             reply = handle(store, session_id, message) if isinstance(message, dict) else \
                 _error(None, -32600, "invalid request")
         if reply is not None:

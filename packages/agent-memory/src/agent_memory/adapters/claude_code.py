@@ -38,7 +38,11 @@ AGENT = "claude-code"
 INJECT_CHARS = 9500          # Claude Code caps each additionalContext string at 10,000 characters
 SESSION_BUDGET = 2300        # tokens: what session start may load in full (about 9,200 characters)
 OFFER_CHARS = 1500
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
+EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit",   # Claude Code
+              "apply_patch",                                     # Codex (the patch is in tool_input.command)
+              "write_file", "replace"}                           # Gemini CLI
+SHELL_TOOLS = {"Bash", "run_shell_command", "Shell"}             # Claude Code and Codex, Gemini CLI, Cursor
+PATCH_FILE = re.compile(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", re.M)
 TEST_COMMAND = re.compile(r"(?:^|[;&|(])\s*(?:[A-Z_][A-Z0-9_]*=\S*\s+)*(?:uv run |poetry run |python3? -m |npx |bunx )?"
                           r"(pytest|tox|nox|vitest|jest|mocha|go test|cargo test|mvn test|gradle test|dotnet test|"
                           r"(?:npm|pnpm|yarn|bun) (?:run )?test|make test|rspec|phpunit)\b")
@@ -230,22 +234,35 @@ def _file_bytes(project: str, rel: str) -> bytes | None:
         return None
 
 
+def edit_paths(project: str, tool: str, ti: dict) -> list[str]:
+    """The project files an edit tool names: one for most tools, several for a patch."""
+    if tool not in EDIT_TOOLS:
+        return []
+    if tool == "apply_patch":
+        text = ti.get("command") or ti.get("patch") or ti.get("input") or ""
+        found = PATCH_FILE.findall(text if isinstance(text, str) else " ".join(map(str, text)))
+    else:
+        found = [ti.get("file_path") or ti.get("notebook_path") or ti.get("path")]
+    rels = [relative(project, f.strip()) for f in found if f]
+    return [r for r in rels if not _outside(r)]
+
+
 def pre_tool(h: Hook) -> str:
     p = h.payload
     tool, ti, tuid = p.get("tool_name") or "?", p.get("tool_input") or {}, p.get("tool_use_id")
-    if tool in EDIT_TOOLS:
-        rel = relative(h.project, ti.get("file_path") or ti.get("notebook_path"))
-        if not _outside(rel):
-            before = _file_bytes(h.project, rel)
-            before_id = h.store.content_id(before, rel) if before is not None else None
-            h.state.set("tool", f"before:{tuid}", before_id)
-            h.append("tool_call", {"tool": tool, "path": rel, "before_object": before_id, "intent": "edit",
-                                   "tool_use_id": tuid})
-            return ""
-    if tool == "Bash":
+    paths = edit_paths(h.project, tool, ti)
+    for rel in paths:
+        before = _file_bytes(h.project, rel)
+        before_id = h.store.content_id(before, rel) if before is not None else None
+        h.state.set("tool", f"before:{tuid}:{rel}", before_id)
+        h.append("tool_call", {"tool": tool, "path": rel, "before_object": before_id, "intent": "edit",
+                               "tool_use_id": tuid}, part=rel if len(paths) > 1 else "")
+    if paths:
+        return ""
+    if tool in SHELL_TOOLS:
         h.reconcile()   # so the command's own changes are the only ones in its window
         command = str(ti.get("command") or "")
-        h.append("tool_call", {"tool": "Bash", "command": command, "description": ti.get("description"),
+        h.append("tool_call", {"tool": tool, "command": command, "description": ti.get("description"),
                                "tool_use_id": tuid}, payload=command.encode())
         return ""
     h.append("tool_call", {"tool": tool, "tool_use_id": tuid}, payload=json.dumps(ti, ensure_ascii=False).encode())
@@ -266,16 +283,18 @@ def post_tool(h: Hook, failed: bool = False) -> str:
         m = re.match(r"Exit code (\d+)", first)
         exit_code = int(m.group(1)) if m else 1
         summary["interrupted"] = p.get("is_interrupt")
-    if tool in EDIT_TOOLS:
-        rel = relative(h.project, ti.get("file_path") or ti.get("notebook_path"))
-        if not _outside(rel):
-            after = _file_bytes(h.project, rel)
-            summary.update({"path": rel, "before_object": h.state.get("tool", f"before:{tuid}"),
-                            "after_object": h.store.content_id(after, rel) if after is not None else None})
-    if tool == "Bash":
+    paths = edit_paths(h.project, tool, ti)
+    for rel in paths:   # one result per file, so each change is attributed to this call
+        after = _file_bytes(h.project, rel)
+        h.append("tool_result", dict(summary, path=rel, before_object=h.state.get("tool", f"before:{tuid}:{rel}"),
+                                     after_object=h.store.content_id(after, rel) if after is not None else None),
+                 payload=payload, part=rel if len(paths) > 1 else "")
+    if paths:
+        return ""
+    if tool in SHELL_TOOLS:
         summary.update({"command": ti.get("command"), "exit_code": exit_code if failed else 0})
     h.append("tool_result", summary, payload=payload)
-    if tool == "Bash":
+    if tool in SHELL_TOOLS:
         h.reconcile()
         command = str(ti.get("command") or "")
         if TEST_COMMAND.search(command) and "software" in h.store.profiles:

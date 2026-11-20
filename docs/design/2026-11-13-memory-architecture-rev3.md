@@ -551,6 +551,25 @@ So a **true** guarantee that memory never overfills the context is possible only
 - **Testing without a model:** a scripted model on Pi's own faux provider (`tests/fixtures/pi_scripted_model.js`)
   drives the real runtime end to end.
 
+### 7.11 As built (Stage 3.5, #60): other agents, and the lower tiers
+- **Testing:** by the owner's decision, Codex, Gemini CLI and Cursor were built from their documentation (read
+  2026-11-20) and **not** tested against real installs. `docs/agents.md` is the capability table, and says
+  exactly what was tested for each agent.
+- **One handler set for command hooks:** Codex, Gemini CLI and Cursor send JSON on stdin as Claude Code does.
+  `adapters/hooked.py` translates their events and fields, runs `claude_code`'s handlers as that agent, and
+  answers in each agent's format. Those handlers now understand other agents' edit and shell tools, and patches
+  that change several files.
+- **Cursor:** its permission hooks block on invalid output, so none is used. Memory never approves or blocks an
+  action.
+- **MCP only (`amem mcp --agent <name>`):**
+  - a session for the agent, with a capture gap for its conversation;
+  - files reconciled before each tool call, with `agent_unseen`, so a change nothing explains is
+    `unattributed`, not `external`.
+- **CLI only:** `amem brief` writes the memory overview for agents that only read files (Aider).
+- **`amem setup <agent>`:** writes only documented files, merges JSON, and owns only `agent-memory` entries.
+- **The shared adapter suite** (`tests/test_adapter_suite.py`) runs one scenario through all six hooked adapters,
+  with the same checks for each.
+
 ## 8. Domain neutrality: core and profiles
 
 - **The universal core:** the four trees, their generic node types, the cross-tree layer, the context manager, and the preservation classes.

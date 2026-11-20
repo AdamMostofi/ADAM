@@ -1,7 +1,7 @@
 # agent-memory
 
 **Status:** Phase 2 is complete (Stages 2.1 to 2.11) inside the ADAM
-repository. Phase 3 has started: the [Claude Code plugin](../../plugins/claude-code/README.md) (Stage 3.1) the [OpenCode plugin](../../plugins/opencode/README.md) (Stage 3.3) and the [Pi package](../../plugins/pi/README.md) (Stage 3.4). `agent-memory` is a working name; the final name is decision D8.
+repository. Phase 3 has started: the [Claude Code plugin](../../plugins/claude-code/README.md) (Stage 3.1) the [OpenCode plugin](../../plugins/opencode/README.md) (Stage 3.3) the [Pi package](../../plugins/pi/README.md) (Stage 3.4), and Stage 3.5's other agents and fallback tiers: [docs/agents.md](../../docs/agents.md) says what each gets and how far each is tested. `agent-memory` is a working name; the final name is decision D8.
 
 The Lossless Tree Memory Engine is a general-purpose, lossless memory for
 long-running AI agents, with software development as its primary use.
@@ -121,6 +121,14 @@ uv run amem --project /path/to/project reconcile    # also: where, verify, check
     `/tree` branch continues as its own session;
   - the memory overview is kept as a system-prompt section, which Pi keeps across compaction;
   - offers on each prompt, and the memory tools through Pi's own MCP support.
+
+- **Other agents (Stage 3.5),** built from their documentation and not yet tested against real installs:
+  - **Hooks:** Codex (plugin) and Gemini CLI (extension), sharing Claude Code's hook handlers through
+    `adapters/hooked.py`; Cursor through `amem setup cursor`.
+  - **MCP only:** Windsurf/Devin and Cline (`amem setup windsurf|cline`; `amem mcp --agent`). The conversation
+    is a recorded gap, and file changes are `unattributed`.
+  - **CLI only:** Aider (`amem setup aider`, `amem brief`).
+  - **Tests:** one shared adapter suite runs all six hooked adapters.
 
 - **Who did what:** every record names its agent and session.
   - A file change that a tool or command explains names that writer (`by`).

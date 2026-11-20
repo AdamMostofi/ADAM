@@ -660,7 +660,7 @@ Other agent event --'
 - **A shared suite:** recorded events from every agent run through one adapter test suite.
 
 ### Support by agent
-Taken from each agent's docs on 2026-11-06. Stage 3.5 publishes a table tested against specific versions.
+Taken from each agent's docs on 2026-11-06. **Superseded by [docs/agents.md](../agents.md)** (Stage 3.5), which says what each agent gets and how far each was tested.
 
 | Agent | Stage | Package | Capture | Context at session start |
 |---|---|---|---|---|

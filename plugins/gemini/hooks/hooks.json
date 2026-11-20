@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-session-start", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook SessionStart", "timeout": 120000 } ] }
+    ],
+    "BeforeAgent": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-prompt", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook BeforeAgent", "timeout": 30000 } ] }
+    ],
+    "BeforeTool": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-before-tool", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook BeforeTool", "timeout": 30000 } ] }
+    ],
+    "AfterTool": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-after-tool", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook AfterTool", "timeout": 60000 } ] }
+    ],
+    "AfterAgent": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-reply", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook AfterAgent", "timeout": 60000 } ] }
+    ],
+    "PreCompress": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-compress", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook PreCompress", "timeout": 30000 } ] }
+    ],
+    "SessionEnd": [
+      { "matcher": "*", "hooks": [ { "name": "agent-memory-session-end", "type": "command", "command": "AMEM_AGENT=gemini bash \"${extensionPath}${/}scripts${/}amem-run\" hook SessionEnd", "timeout": 10000 } ] }
+    ]
+  }
+}

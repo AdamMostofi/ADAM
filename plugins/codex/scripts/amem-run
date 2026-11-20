@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Runs `amem` for the agent-memory plugins with command hooks: Claude Code, and (#60) Codex and Gemini CLI.
+# The same file ships in each plugin; AMEM_AGENT names the agent (default claude-code).
+#
+#   amem-run hook <Event>   one hook: the agent's JSON on stdin, hook output on stdout, always exit 0
+#   amem-run mcp            the MCP server for the session the hooks started
+#
+# It finds `amem` in one of two places:
+#   - natively: $AMEM_BIN, then `amem` on PATH, then ~/.local/bin/amem (where `uv tool install` puts it);
+#   - through WSL, when Claude Code runs on Windows but the project lives inside WSL
+#     (\\wsl.localhost\<distro>\... or \\wsl$\...).
+#
+# Memory must never block Claude Code. If `amem` can't be found, every hook exits 0, and SessionStart tells
+# the agent (and so the user) how to install it.
+
+mode="$1"; shift
+
+# The user's choices from the plugin's config dialog (decision D4: key storage chosen at onboarding).
+[ -n "${CLAUDE_PLUGIN_OPTION_KEY_STORAGE:-}" ] && export AMEM_KEY_SOURCE="$CLAUDE_PLUGIN_OPTION_KEY_STORAGE"
+[ -n "${CLAUDE_PLUGIN_OPTION_PASSPHRASE:-}" ] && export AMEM_PASSPHRASE="$CLAUDE_PLUGIN_OPTION_PASSPHRASE"
+[ -n "${CLAUDE_PLUGIN_OPTION_PROFILES:-}" ] && export AMEM_PROFILES="$CLAUDE_PLUGIN_OPTION_PROFILES"
+
+agent="${AMEM_AGENT:-claude-code}"
+project="${CLAUDE_PROJECT_DIR:-${GEMINI_PROJECT_DIR:-$PWD}}"
+
+# Fast path (decision D14, #90): hand the hook to the project's session server, which `amem mcp` runs with
+# the store already open. Pure bash builtins: no new process at all (each one costs about 50 ms in Git Bash on
+# Windows). Anything unexpected falls back to the direct path below; the engine's idempotency keys make that
+# retry safe.
+#   AMEM_SERVER=0 turns it off. A custom store location (AMEM_HOME) always uses the direct path.
+if [ "$mode" = "hook" ] && [ "${AMEM_SERVER:-1}" != "0" ] && [ -z "${AMEM_HOME:-}" ]; then
+  IFS= read -r -d '' payload || true   # all of stdin (JSON has no NUL bytes)
+  file="${project//\\//}/.agent-memory/run/server"
+  if [ -r "$file" ] && read -r port sid token _ < "$file" 2>/dev/null && [ -n "$token" ] &&
+     { exec 3<>"/dev/tcp/127.0.0.1/$port"; } 2>/dev/null; then
+    if IFS= read -r -t 2 hello <&3 && [ "${hello%$'\r'}" = "AMEM1 $sid" ]; then
+      saved_lc="${LC_ALL-}"; LC_ALL=C
+      size="${#payload}"   # bytes, not characters
+      printf 'AMEM1 %s %s %s %s\n%s' "$token" "$agent" "$1" "$size" "$payload" >&3 2>/dev/null
+      if [ -n "$saved_lc" ]; then LC_ALL="$saved_lc"; else unset LC_ALL; fi
+      if IFS= read -r -t 120 status <&3 && [ "$status" = "OK" ]; then
+        IFS= read -r -d '' reply <&3 || true
+        printf '%s' "$reply"
+        exit 0
+      fi
+    fi
+    exec 3>&- 3<&-
+  fi
+  # Direct path, with the payload already read.
+  exec 0< <(printf '%s' "$payload")
+fi
+
+if [ "$mode" = "mcp" ]; then
+  args=(--project "$project" --session auto mcp)
+else
+  args=(--project "$project" hook "$agent" "$@")
+fi
+
+amem="${AMEM_BIN:-}"
+[ -z "$amem" ] && amem="$(command -v amem 2>/dev/null)"
+[ -z "$amem" ] && [ -x "$HOME/.local/bin/amem" ] && amem="$HOME/.local/bin/amem"
+if [ -n "$amem" ]; then
+  exec "$amem" "${args[@]}"
+fi
+
+# Windows Claude Code, project inside WSL: run amem in that distribution, with the Linux path.
+case "$project" in
+  //wsl.localhost/*|//wsl\$/*|\\\\wsl.localhost\\*|\\\\wsl\$\\*)
+    rest="${project//\\//}"; rest="${rest#//}"; rest="${rest#*/}"
+    distro="${rest%%/*}"; linux="/${rest#*/}"
+    [ "$linux" = "/$distro" ] && linux="/"
+    if command -v wsl.exe >/dev/null 2>&1; then
+      export WSLENV="${WSLENV:+$WSLENV:}AMEM_KEY_SOURCE/u:AMEM_PASSPHRASE/u:AMEM_PROFILES/u:AMEM_SERVER/u:AMEM_AGENT/u"
+      # Git Bash rewrites arguments that look like POSIX paths (/home/x becomes C:/Program Files/Git/home/x)
+      # before starting a Windows program; the Linux path must reach WSL as it is.
+      export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
+      find='a="$(command -v amem)"; [ -z "$a" ] && [ -x "$HOME/.local/bin/amem" ] && a="$HOME/.local/bin/amem"'
+      if [ "$mode" = "mcp" ]; then
+        exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" --session auto mcp' "$linux"
+      fi
+      exec wsl.exe -d "$distro" --exec bash -lc "$find"'; exec "${a:-amem}" --project "$0" hook "$2" "$1"' \
+        "$linux" "$1" "$agent"
+    fi
+    ;;
+esac
+
+# amem isn't installed: never block, and say how to fix it where it can be seen.
+if [ "$mode" = "mcp" ]; then
+  echo "agent-memory: the amem command isn't installed. Install it with: uv tool install agent-memory" \
+       "(or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory)" >&2
+  exit 1
+fi
+cat >/dev/null   # read the hook's input so the agent isn't left writing to a closed pipe
+if [ "${1:-}" = "SessionStart" ]; then
+  printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The agent-memory plugin is enabled, but its amem command is not installed, so this session is not being remembered. To install it: uv tool install agent-memory (or, from a clone of the ADAM repository: uv tool install ./packages/agent-memory). The agent works as usual meanwhile."}}'
+elif [ "$agent" = "gemini" ]; then
+  printf '%s\n' '{}'   # Gemini CLI reads stdout as JSON
+fi
+exit 0

@@ -518,9 +518,9 @@ class Store:
         return self.append(EventInput(kind="tool_call", session_id=session_id, writer_id=writer_id, agent=agent,
                                       summary_fields=summary, idempotency_key=idempotency_key))
 
-    def reconciler(self, project_root, session_id: str, writer_id: str = "reconciler"):
+    def reconciler(self, project_root, session_id: str, writer_id: str = "reconciler", agent_unseen: bool = False):
         from agent_memory.reconcile import Reconciler
-        return Reconciler(self, project_root, session_id, writer_id)
+        return Reconciler(self, project_root, session_id, writer_id, agent_unseen=agent_unseen)
 
     def checkpoint(self, reason: str = "manual") -> int | None:
         made = recovery.checkpoint(self, reason)

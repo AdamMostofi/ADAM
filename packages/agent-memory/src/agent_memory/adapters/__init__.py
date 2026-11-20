@@ -18,7 +18,8 @@
    that an agent's tool or command explains names that writer (`by`), so agents sharing a project stay apart.
 
 Adapters: `claude_code` (Stage 3.1, hooks), `opencode` (Stage 3.3, an in-process plugin) and `pi`
-(Stage 3.4, an in-process extension, with Pi's session tree mapped onto engine branches).
+(Stage 3.4, an in-process extension, with Pi's session tree mapped onto engine branches), and `hooked`
+(Stage 3.5: Codex, Gemini CLI and Cursor, built from their docs and not yet tested against real installs).
 
 Entry points:
 - `amem hook <agent> <event>` reads the agent's JSON on stdin and prints the agent's hook output;
@@ -36,7 +37,7 @@ import json
 
 from agent_memory.schema import canonical_json
 
-AGENTS = ("claude-code", "opencode", "pi")
+AGENTS = ("claude-code", "opencode", "pi", "codex", "gemini", "cursor")
 ADAPTER_VERSION = "0.1.0"
 
 
@@ -61,6 +62,9 @@ def run(agent: str, event: str, stdin: bytes, environ: dict, store=None) -> tupl
     if agent == "pi":
         from agent_memory.adapters import pi
         return pi.handle(event, stdin, environ, store=store)
+    if agent in ("codex", "gemini", "cursor"):
+        from agent_memory.adapters import hooked
+        return hooked.handle(agent, event, stdin, environ, store=store)
     return "", 0
 
 

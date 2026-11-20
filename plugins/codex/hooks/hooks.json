@@ -1,0 +1,35 @@
+{
+  "description": "agent-memory: lossless capture into the project's memory, and memory context at session start and on each prompt. Every hook exits 0: memory never blocks Codex.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook SessionStart", "timeout": 120, "statusMessage": "Loading project memory", "additionalContextLimit": 3000 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook UserPromptSubmit", "timeout": 30 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "*", "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook PreToolUse", "timeout": 30 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "*", "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook PostToolUse", "timeout": 60 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook Stop", "timeout": 60 } ] }
+    ],
+    "PreCompact": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook PreCompact", "timeout": 30 } ] }
+    ],
+    "PostCompact": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook PostCompact", "timeout": 30 } ] }
+    ],
+    "SubagentStart": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook SubagentStart", "timeout": 30 } ] }
+    ],
+    "SubagentStop": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook SubagentStop", "timeout": 30 } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "AMEM_AGENT=codex bash \"${PLUGIN_ROOT}/scripts/amem-run\" hook SessionEnd", "timeout": 3 } ] }
+    ]
+  }
+}
