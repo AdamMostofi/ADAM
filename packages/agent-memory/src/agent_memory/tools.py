@@ -293,19 +293,31 @@ def _show(packet: dict) -> str:
     return f"{head}{note}\n{packet['text']}"
 
 
+def _writer(store, session_id: str) -> str:
+    """Who declares: the agent that started this session (`opencode:<session>`), or "agent" if no adapter did."""
+    conn = store._connect()
+    try:
+        row = conn.execute("SELECT agent FROM events WHERE session_id = ? AND kind = 'session_start' "
+                           "ORDER BY log_position LIMIT 1", (session_id,)).fetchone()
+    finally:
+        conn.close()
+    return f"{row[0]}:{session_id}" if row and row[0] and row[0] != "unknown" else "agent"
+
+
 def _declare(store, session_id: str, args: dict) -> str:
     fields = dict(args.get("fields") or {})
+    writer = _writer(store, session_id)
     if args["op"] == "status":
-        store.set_entry_status(args["id"], args["status"], session_id, "agent", **fields)
+        store.set_entry_status(args["id"], args["status"], session_id, writer, **fields)
         return f"{args['id']} is now {args['status']}"
     kind, title = args["kind"], args.get("title")
     if kind == "topic":
-        return store.declare_topic(title, session_id, "agent", fields.get("description"))
+        return store.declare_topic(title, session_id, writer, fields.get("description"))
     if kind == "note":
         from agent_memory.schema import EventInput
-        ev = store.append(EventInput(kind="note", session_id=session_id, writer_id="agent",
+        ev = store.append(EventInput(kind="note", session_id=session_id, writer_id=writer,
                                      summary_fields={"text": title, **fields}))
         return f"note:{ev.event_id}"
     if kind in STATE_KINDS:
-        return store.declare_state(kind, title, session_id, "agent", **fields)
-    return store.declare_entry(kind, title, session_id, "agent", **fields)
+        return store.declare_state(kind, title, session_id, writer, **fields)
+    return store.declare_entry(kind, title, session_id, writer, **fields)

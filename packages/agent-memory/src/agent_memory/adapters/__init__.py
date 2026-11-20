@@ -11,6 +11,10 @@
 3. **Replays are free.** Each event's idempotency key is a hash of the agent's payload, so the same payload is stored once.
 4. **Deliver context through the engine.** Adapters ask the context manager for what to inject, and pass it through the agent's own mechanism (hook output, a tool result), within the agent's limits.
 5. **No content in logs.** Diagnostics name the event and the error, never the payload.
+6. **Say who did it.** Every event carries the agent and a writer id (`<agent>:<session>`), and a file change
+   that an agent's tool or command explains names that writer (`by`), so agents sharing a project stay apart.
+
+Adapters: `claude_code` (Stage 3.1, hooks) and `opencode` (Stage 3.3, an in-process plugin).
 
 Entry points:
 - `amem hook <agent> <event>` reads the agent's JSON on stdin and prints the agent's hook output;
@@ -28,7 +32,7 @@ import json
 
 from agent_memory.schema import canonical_json
 
-AGENTS = ("claude-code",)
+AGENTS = ("claude-code", "opencode")
 ADAPTER_VERSION = "0.1.0"
 
 
@@ -47,6 +51,9 @@ def run(agent: str, event: str, stdin: bytes, environ: dict, store=None) -> tupl
     if agent == "claude-code":
         from agent_memory.adapters import claude_code
         return claude_code.handle(event, stdin, environ, store=store)
+    if agent == "opencode":
+        from agent_memory.adapters import opencode
+        return opencode.handle(event, stdin, environ, store=store)
     return "", 0
 
 

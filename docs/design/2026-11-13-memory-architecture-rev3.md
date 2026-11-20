@@ -510,6 +510,27 @@ So a **true** guarantee that memory never overfills the context is possible only
   - uncertain attribution.
 - **Tool definitions (#94):** 13 tools became 10. Offload, restore and pin are now `mem_context` operations; their old names still work as aliases. The definitions are about 1,224 estimated tokens (from about 1,386), with a test-enforced budget of 1,300.
 
+### 7.9 As built (Stage 3.3, #58): OpenCode, and two agents in one project
+- **Plugin:** `plugins/opencode/index.js` is an in-process plugin that only translates. It sends each event, in
+  order, to the session server, or else to `amem hook opencode <event>`. The adapter is
+  `agent_memory/adapters/opencode.py`.
+- **How memory reaches the model (tier B), verified live on OpenCode 1.18.35:**
+  - the overview goes into the system prompt through `experimental.chat.system.transform`, and stays unchanged
+    until a compaction;
+  - offers become a synthetic text part on the user's message, added in `chat.message`;
+  - reference lines are kept through `experimental.session.compacting`;
+  - the restored memory comes after `session.compacted`.
+- **Tools:** the plugin's `config` hook registers `amem mcp`, so listing the plugin is the whole install.
+- **Two agents:**
+  - `amem mcp --session auto` follows the session most recently started by any agent.
+  - File changes name the writer that explains them (`by`), or every candidate when several do
+    (`by_candidates`).
+  - Shell commands that haven't returned stay in view across reconciles, so another agent's reconcile in the
+    middle of a long command can't take its changes.
+  - Separate worktrees keep separate stores (decision D3), so their memories and attribution don't mix.
+- **Found live:** OpenCode publishes `file.edited` before the edit tool's result. Reconciling on it recorded the
+  change as unattributed and the tool's report as a conflict, so it isn't used.
+
 ## 8. Domain neutrality: core and profiles
 
 - **The universal core:** the four trees, their generic node types, the cross-tree layer, the context manager, and the preservation classes.

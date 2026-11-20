@@ -15,9 +15,12 @@ store recorded, works out how each change came about, and records it:
    - `git_operation`: a working-tree git operation (from the reflog) changed
      it, and it now matches `HEAD`;
    - `agent_tool`: an agent tool edit reported exactly this content;
-   - `agent_bash`: a Bash command since the last reconcile names the path;
+   - `agent_bash`: a Bash command since the last reconcile, or one still running, names the path;
    - `external`: no agent activity, and the previous session ended cleanly;
    - `unattributed`: anything else.
+
+   A change an agent explains also names that agent's writer (`by`, for example `opencode:<session>`).
+   When several agents' commands name the path, `by_candidates` lists them and nothing is guessed (#58).
 4. **Group large git operations.** More than 100 files go into one
    `change_group` record, with every file still listed.
 5. **Record conflicts.** A tool edit whose before-content doesn't match the
@@ -40,8 +43,9 @@ from pathlib import Path
 
 WORKTREE_GIT = re.compile(r"^(checkout|pull|reset|merge|rebase|cherry-pick|revert|switch|am|stash)\b")
 GROUP_THRESHOLD = 100
+RUNNING_LIMIT = 50          # shell commands kept in view while they run (#58)
 LARGE_RECONCILE = 500
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "edit", "write", "apply_patch", "str_replace_editor"}
+EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "edit", "write", "multiedit", "patch", "apply_patch", "str_replace_editor"}
 SHELL_TOOLS = {"Bash", "bash", "shell", "run_shell_command", "terminal"}
 WALK_SKIP = {".git", ".agent-memory", ".hg", ".svn", "node_modules", "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache"}
 
@@ -55,6 +59,15 @@ class ReconcileError(RuntimeError):
     pass
 
 
+def _mentions(command: str) -> set[str]:
+    """The words of a shell command, as paths it might name."""
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.split()
+    return {t.lstrip("./") for t in tokens}
+
+
 @dataclass
 class Change:
     path: str
@@ -63,6 +76,8 @@ class Change:
     content: bytes | None = None
     old_path: str | None = None
     resolves_intent: str | None = None
+    by: str | None = None              # the writer (agent:session) whose tool or command explains it, when exactly one does
+    candidates: list[str] | None = None   # several writers' commands name the path: who did it isn't known
 
     @property
     def basis(self) -> str | None:
@@ -180,20 +195,44 @@ class Reconciler:
         return self.store.archive.object_id(clean)
 
     # ------------------------------------------------------------ observations from the log
-    def _observations(self, since: int) -> dict:
+    def _observations(self, since: int, still_running: list | None = None) -> dict:
+        """What agents did since the last reconcile.
+
+        `still_running`: shell commands that had started but not returned at the last reconcile. Another agent's
+        reconcile can run in the middle of a long command; the command's changes are still its own, so it stays
+        in view until its result arrives (or its session ends) (#58).
+        """
         tool_after: dict[str, str] = {}
+        tool_by: dict[str, str] = {}
         intents: dict[str, dict] = {}
         conflicts: list[dict] = []
         commands: list[str] = []
-        agent_active = False
+        command_by: list[tuple[str, str]] = []
+        running = {(r["writer"], r["id"]): r for r in (still_running or [])}
+        agent_active = bool(running)
+        for r in running.values():
+            commands.append(r["command"])
+            command_by.append((r["command"], r["writer"]))
+        ended: set[str] = set()
         last_after: dict[str, str] = {}
         for ev in self.store.events(after=since):   # only what happened since the last reconcile
             s = ev.summary_fields
+            if ev.kind == "session_end":
+                ended.add(ev.session_id)
             if ev.kind in ("tool_call", "tool_result"):
                 agent_active = True
                 tool = s.get("tool")
                 if tool in SHELL_TOOLS and s.get("command"):
-                    commands.append(s["command"])
+                    if ev.kind == "tool_call" or s["command"] not in commands:
+                        commands.append(s["command"])
+                        command_by.append((s["command"], ev.writer_id))
+                    if s.get("tool_use_id"):
+                        key = (ev.writer_id, s["tool_use_id"])
+                        if ev.kind == "tool_call":
+                            running[key] = {"writer": ev.writer_id, "id": s["tool_use_id"], "command": s["command"],
+                                            "session": ev.session_id}
+                        else:
+                            running.pop(key, None)
                 if tool in EDIT_TOOLS and s.get("path"):
                     path = s["path"]
                     if s.get("after_object"):
@@ -203,12 +242,15 @@ class Reconciler:
                                               "expected_before": known, "reported_before": s["before_object"]})
                         last_after[path] = s["after_object"]
                         tool_after[path] = s["after_object"]
+                        tool_by[path] = ev.writer_id
                     if s.get("intent") and ev.kind == "tool_call":
-                        intents[path] = {"event": ev.event_id, "after_object": s.get("after_object")}
+                        intents[path] = {"event": ev.event_id, "after_object": s.get("after_object"),
+                                         "writer": ev.writer_id}
                     elif ev.kind == "tool_result":
                         intents.pop(path, None)
-        return {"tool_after": tool_after, "intents": intents, "conflicts": conflicts, "commands": commands,
-                "agent_active": agent_active}
+        still = [r for r in running.values() if r.get("session") not in ended][-RUNNING_LIMIT:]
+        return {"tool_after": tool_after, "tool_by": tool_by, "intents": intents, "conflicts": conflicts,
+                "commands": commands, "command_by": command_by, "agent_active": agent_active, "running": still}
 
     def _baseline_id(self, path: str) -> str | None:
         current = self._current.get(path)
@@ -310,15 +352,11 @@ class Reconciler:
         if self.is_git and head != old_head and old_head and any(WORKTREE_GIT.match(e) for e in fresh):
             git_files = set(self._git("diff", "--name-only", "--no-renames", old_head, head).splitlines())
             git_files -= self._dirty()
-        obs = self._observations(since)
+        obs = self._observations(since, self._meta(conn, "running", []))
         unclean = self._previous_session_unclean()
         mentioned = set()
         for command in obs["commands"]:
-            try:
-                tokens = shlex.split(command)
-            except ValueError:
-                tokens = command.split()
-            mentioned.update(t.lstrip("./") for t in tokens)
+            mentioned |= _mentions(command)
 
         def attribute(path: str, cid: str | None, old_path: str | None = None) -> str:
             if path in git_files or (old_path and old_path in git_files):
@@ -347,6 +385,16 @@ class Reconciler:
             if intent and intent.get("after_object") == (now.get(c.path) or (None,))[0]:
                 c.resolves_intent = intent["event"]
                 c.attribution = "agent_tool"
+                c.by = intent.get("writer")
+            elif c.attribution == "agent_tool":
+                c.by = obs["tool_by"].get(c.path)
+            elif c.attribution == "agent_bash":
+                names = {c.path, c.old_path} - {None}
+                writers = sorted({w for cmd, w in obs["command_by"] if names & _mentions(cmd)})
+                if len(writers) == 1:
+                    c.by = writers[0]
+                elif writers:
+                    c.candidates = writers
         if first_run:
             for c in result.changes:
                 c.attribution = "baseline"   # the first look at the project: its existing files
@@ -365,6 +413,10 @@ class Reconciler:
         for c in result.changes:
             summary = {"path": c.path, "change": c.kind, "attribution": c.attribution, "git_commit": head,
                        "old_path": c.old_path, "size": len(c.content) if c.content is not None else None}
+            if c.by:
+                summary["by"] = c.by
+            if c.candidates:
+                summary["by_candidates"] = c.candidates
             if c.attribution == "git_operation" and result.group_event:
                 summary["group"] = result.group_event
             if c.resolves_intent:
@@ -391,6 +443,7 @@ class Reconciler:
         self._set_meta(conn, "dirty", sorted(self._dirty()) if self.is_git else [])
         last = conn.execute("SELECT COALESCE(MAX(log_position), 0) FROM events").fetchone()[0]
         self._set_meta(conn, "log_position", last)
+        self._set_meta(conn, "running", obs["running"])
         self._set_meta(conn, "ok", True)
         self._set_meta(conn, "error", None)
         conn.execute("COMMIT")

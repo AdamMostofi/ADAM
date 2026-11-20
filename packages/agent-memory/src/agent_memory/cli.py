@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("serve", help="run only the session server (hooks hand it their payload) until stdin closes")
     hk = sub.add_parser("hook", help="run one agent hook: the agent's JSON on stdin, its hook output on stdout "
                                      "(always exits 0)")
-    hk.add_argument("agent", choices=["claude-code"])
+    hk.add_argument("agent", choices=["claude-code", "opencode"])
     hk.add_argument("event")
     from agent_memory import tools
     for command, tool in TOOL_COMMANDS.items():

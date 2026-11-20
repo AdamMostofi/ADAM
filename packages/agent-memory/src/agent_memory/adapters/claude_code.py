@@ -77,10 +77,13 @@ def _outside(rel: str | None) -> bool:
 
 
 class _State:
-    """Small operational state per agent (transcript offsets, edit intents, the current session). Not history."""
+    """Small operational state per agent (transcript offsets, edit intents, the current session). Not history.
 
-    def __init__(self, store):
-        self.store = store
+    `agent="*"` holds what every agent shares: the session most recently started in the project, by any agent.
+    """
+
+    def __init__(self, store, agent: str = AGENT):
+        self.store, self.agent = store, agent
         conn = store._connect()
         try:
             conn.executescript(STATE_SCHEMA)
@@ -91,7 +94,7 @@ class _State:
         conn = self.store._connect()
         try:
             row = conn.execute("SELECT value FROM adapter_state WHERE agent = ? AND scope = ? AND key = ?",
-                               (AGENT, scope, key)).fetchone()
+                               (self.agent, scope, key)).fetchone()
         finally:
             conn.close()
         return json.loads(row[0]) if row else default
@@ -100,33 +103,44 @@ class _State:
         conn = self.store._connect()
         try:
             conn.execute("INSERT OR REPLACE INTO adapter_state VALUES (?, ?, ?, ?)",
-                         (AGENT, scope, key, json.dumps(value)))
+                         (self.agent, scope, key, json.dumps(value)))
             conn.commit()
         finally:
             conn.close()
 
 
 def current_session(store) -> str | None:
-    """The Claude Code session most recently started in this project (what `amem mcp --session auto` serves)."""
-    return _State(store).get("project", "current_session")
+    """The session most recently started in this project, by any agent (what `amem mcp --session auto` serves).
+
+    Stores written before #58 only have Claude Code's own record of it.
+    """
+    return _State(store, "*").get("project", "current_session") or _State(store).get("project", "current_session")
 
 
 class Hook:
+    agent = AGENT
+
     def __init__(self, store, project: str, event: str, payload: dict):
         self.store, self.project, self.event, self.payload = store, project, event, payload
         self.session = str(payload.get("session_id") or "unknown")
-        self.writer = f"{AGENT}:{self.session}"
-        self.state = _State(store)
+        self.writer = f"{self.agent}:{self.session}"
+        self.state = _State(store, self.agent)
         # Always assigned: a long-lived store (the session server's) serves many sessions.
         store.environment = self.state.get("session", f"env:{self.session}")
+
+    def mark_current(self) -> None:
+        """This session is now the project's current one (for `amem mcp --session auto`)."""
+        self.state.set("project", "current_session", self.session)
+        _State(self.store, "*").set("project", "current_session", self.session)
 
     def append(self, kind: str, summary: dict, payload: bytes | str | None = None, part: str = "",
                completeness: str = "captured", key: str | None = None, path: str | None = None):
         return self.store.append(EventInput(
-            kind=kind, session_id=self.session, writer_id=self.writer, agent=AGENT, adapter_version=ADAPTER_VERSION,
+            kind=kind, session_id=self.session, writer_id=self.writer, agent=self.agent,
+            adapter_version=ADAPTER_VERSION,
             summary_fields={k: v for k, v in summary.items() if v is not None}, payload=payload,
             completeness=completeness, path=path,
-            idempotency_key=key or idempotency(AGENT, self.event, self.payload, part)))
+            idempotency_key=key or idempotency(self.agent, self.event, self.payload, part)))
 
     def reconcile(self) -> None:
         try:
@@ -184,7 +198,7 @@ def session_start(h: Hook) -> str:
         pass
     h.append("session_start", {"source": source, "model": p.get("model"), "cwd": h.project, "git_branch": branch,
                                "environment": env, "capture": "hooks: prompts, tools, transcript messages, compactions"})
-    h.state.set("project", "current_session", h.session)
+    h.mark_current()
     h.reconcile()
     if source == "compact":
         text = h.store.context.compacted(h.session, budget=SESSION_BUDGET)["text"]
@@ -436,12 +450,12 @@ def _open(store_dir, environ: dict):
     return Store(store_dir, profiles=profiles)
 
 
-def _spool(store_dir, event: str, payload: dict, err: Exception) -> None:
+def _spool(store_dir, event: str, payload: dict, err: Exception, agent: str = AGENT) -> None:
     """The store can't open: leave a content-free note that becomes a capture_gap when it can."""
     try:
         Path(store_dir).mkdir(parents=True, exist_ok=True)
         session = str(payload.get("session_id") or "unknown")
-        record = {"kind": f"claude-code {event}", "session_id": session, "writer_id": f"{AGENT}:{session}", "agent": AGENT,
+        record = {"kind": f"{agent} {event}", "session_id": session, "writer_id": f"{agent}:{session}", "agent": agent,
                   "at": datetime.now(timezone.utc).isoformat(), "error": f"{type(err).__name__}: {err}"[:500],
                   "payload_size": len(json.dumps(payload)), "idempotency_key": None}
         with open(Path(store_dir) / "spool.jsonl", "a", encoding="utf-8") as f:
