@@ -4,7 +4,7 @@
 
 Memory engine design: [2026-11-06-agent-memory-engine.md](design/2026-11-06-agent-memory-engine.md), with [architecture revision 3](design/2026-11-13-memory-architecture-rev3.md) (accepted 2026-11-13), which reshaped Phase 2 from stage 2.6 on.
 
-**Rules:** phases only group stages and hold no work of their own. Each piece of work belongs to exactly one stage. On a no-go at stage 3.2, close 3.3 to 3.6 as not planned and continue at 4.1.
+**Rules:** phases only group stages and hold no work of their own. Each piece of work belongs to exactly one stage. On a no-go at stage 3.2, close 3.3 to 3.6 as not planned and continue at 4.1. (Stage 3.2 couldn't be run; see its row. Phase 3 continues without its decision.)
 
 ## Phase 0 — Stabilize the Vault ([#15](https://github.com/AdamMostofi/ADAM/issues/15))
 
@@ -59,7 +59,7 @@ Turn the engine into plugins for coding agents, and test whether it works.
 | Stage | Issue | Name | What it does |
 |---|---|---|---|
 | 3.1 | [#56](https://github.com/AdamMostofi/ADAM/issues/56) | First Plugin | Define the adapter contract and ship the first automatic-capture plugin. |
-| 3.2 | [#57](https://github.com/AdamMostofi/ADAM/issues/57) | Weigh the Thesis | Compare against compaction and git plus grep, then decide whether to continue. |
+| 3.2 | [#57](https://github.com/AdamMostofi/ADAM/issues/57) | Weigh the Thesis | **Not possible (closed 2026-11-20).** The pre-registered protocol needs Claude Code, and the project has no Claude Code plan to run it on. The owner continued at 3.3 without a go/no-go. The protocol and fixtures stay in `packages/agent-memory/benchmark/` for a later run, for example in OpenCode with free models. |
 | 3.3 | [#58](https://github.com/AdamMostofi/ADAM/issues/58) | OpenCode Plugin | Add OpenCode, and prove one project's memory works across two agents. |
 | 3.4 | [#59](https://github.com/AdamMostofi/ADAM/issues/59) | Pi Extension | Add a Pi extension, which also tests the contract against a tree-based session. |
 | 3.5 | [#60](https://github.com/AdamMostofi/ADAM/issues/60) | Other Agents | Add plugins for agents with hooks, and an honest fallback for agents without them. |

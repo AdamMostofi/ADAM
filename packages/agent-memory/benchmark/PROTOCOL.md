@@ -183,4 +183,8 @@ results is out of scope (#57).
 
 ## Deviations
 
-None yet.
+- **2026-11-20, not run.** This protocol needs a Claude Code plan for every arm, and the project has none (the
+  only Claude Code sign-in on the machine belongs to someone else, and isn't used). Stage 3.2 (#57) was closed
+  as not possible, and the owner continued at 3.3 without a go/no-go. No run was made, so no result exists.
+  Nothing above was changed. A later run on another agent (for example OpenCode with free models, once 3.3
+  exists) would record the agent and model change here, before its first run.
