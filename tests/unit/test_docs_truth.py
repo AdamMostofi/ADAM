@@ -43,9 +43,9 @@ def test_every_working_capability_names_existing_code_and_tests():
 def test_the_memory_engine_is_the_pinned_release():
     """The engine lives in its own repository (Stage 3.6, #61); ADAM pins a release and holds no copy."""
     section = README.split("## Memory engine", 1)[1].split("\n## ", 1)[0]
-    pin = re.search(r'"lossless-tree-memory @ git\+(https://github.com/[^@"]+)@(v[\d.]+)"',
+    pin = re.search(r'"yewtree @ git\+(https://github.com/[^@"]+)@(v[\d.]+)"',
                     (ROOT / "pyproject.toml").read_text())
-    assert pin, "pyproject.toml doesn't pin lossless-tree-memory to a release tag"
+    assert pin, "pyproject.toml doesn't pin yewtree to a release tag"
     repo, tag = pin.groups()
     assert repo.removesuffix(".git") in section and tag in section
     assert not (ROOT / "packages" / "agent-memory").exists() and not (ROOT / "plugins").exists()

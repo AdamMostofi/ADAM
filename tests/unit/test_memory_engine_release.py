@@ -9,9 +9,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_the_installed_engine_is_the_pinned_release():
-    tag = re.search(r'"lossless-tree-memory @ git\+https://github.com/[^@"]+@v([\d.]+)"',
+    tag = re.search(r'"yewtree @ git\+https://github.com/[^@"]+@v([\d.]+)"',
                     (ROOT / "pyproject.toml").read_text()).group(1)
-    assert metadata.version("lossless-tree-memory") == tag
+    assert metadata.version("yewtree") == tag
 
 
 def test_the_engine_stores_and_verifies_a_record(tmp_path, monkeypatch):

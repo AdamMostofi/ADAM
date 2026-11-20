@@ -20,7 +20,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "cactus-needle==3.2.1",  # newer releases need a native library no longer hosted (2026-11-05)
     # The memory engine, released on its own (Stage 3.6, #61): a pinned tag, no copy in this repository.
-    "lossless-tree-memory @ git+https://github.com/AdamMostofi/lossless-tree-memory@v0.1.0",
+    "yewtree @ git+https://github.com/AdamMostofi/yewtree@v0.2.0",
 ]
 
 [project.optional-dependencies]

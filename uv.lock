@@ -17,7 +17,6 @@ dependencies = [
     { name = "cactus-needle" },
     { name = "flask" },
     { name = "huggingface-hub" },
-    { name = "lossless-tree-memory" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "networkx", version = "3.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -29,6 +28,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "rich" },
     { name = "tokenizers" },
+    { name = "yewtree" },
 ]
 
 [package.optional-dependencies]
@@ -44,7 +44,6 @@ requires-dist = [
     { name = "flask", specifier = ">=3.0.0" },
     { name = "huggingface-hub", specifier = ">=0.20" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "lossless-tree-memory", git = "https://github.com/AdamMostofi/lossless-tree-memory?rev=v0.1.0" },
     { name = "networkx", specifier = ">=3.0" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "onnxruntime", specifier = ">=1.17" },
@@ -52,6 +51,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "tokenizers", specifier = ">=0.15" },
+    { name = "yewtree", git = "https://github.com/AdamMostofi/yewtree?rev=v0.2.0" },
 ]
 provides-extras = ["dev"]
 
@@ -722,17 +722,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115, upload-time = "2025-03-05T20:05:02.478Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899, upload-time = "2025-03-05T20:05:00.369Z" },
-]
-
-[[package]]
-name = "lossless-tree-memory"
-version = "0.1.0"
-source = { git = "https://github.com/AdamMostofi/lossless-tree-memory?rev=v0.1.0#a113057ed03633a5b5ae74526b4a8c5e3ef4abcf" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "tree-sitter" },
-    { name = "tree-sitter-python" },
-    { name = "tree-sitter-typescript" },
 ]
 
 [[package]]
@@ -1842,4 +1831,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a4/34/4dd12fc8bb7d61c91467ec3efe415ffa7d5456f799954b40c5bbaeae470e/werkzeug-3.1.9.tar.gz", hash = "sha256:55ca7c70a75689be937aa27f8ff4b018f06ff4838fc73045560bf0f5a1291060", size = 940188, upload-time = "2026-09-27T18:33:41.637Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl", hash = "sha256:6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab", size = 228700, upload-time = "2026-09-27T18:33:39.685Z" },
+]
+
+[[package]]
+name = "yewtree"
+version = "0.2.0"
+source = { git = "https://github.com/AdamMostofi/yewtree?rev=v0.2.0#48686e8670e031b38d738e058f42fc5c559735cd" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "tree-sitter" },
+    { name = "tree-sitter-python" },
+    { name = "tree-sitter-typescript" },
 ]

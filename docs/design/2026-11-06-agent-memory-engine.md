@@ -660,7 +660,7 @@ Other agent event --'
 - **A shared suite:** recorded events from every agent run through one adapter test suite.
 
 ### Support by agent
-Taken from each agent's docs on 2026-11-06. **Superseded by [docs/agents.md](https://github.com/AdamMostofi/lossless-tree-memory/blob/main/docs/agents.md)** (Stage 3.5), which says what each agent gets and how far each was tested.
+Taken from each agent's docs on 2026-11-06. **Superseded by [docs/agents.md](https://github.com/AdamMostofi/yewtree/blob/main/docs/agents.md)** (Stage 3.5), which says what each agent gets and how far each was tested.
 
 | Agent | Stage | Package | Capture | Context at session start |
 |---|---|---|---|---|
@@ -773,7 +773,7 @@ Taken from each agent's docs on 2026-11-06. **Superseded by [docs/agents.md](htt
 | D5 | Default capture | **Revised:** everything in full except secrets and explicit exclusions |
 | D6 | Benchmark budget | Agent runs cost API money; start with one model |
 | D7 | Open source | Public at release, MIT, with benchmark data public |
-| D8 | Name | **Decided 2026-11-20 (#61):** Lossless Tree Memory, published as `lossless-tree-memory` (https://github.com/AdamMostofi/lossless-tree-memory). The command stays `amem`, and the Python package stays `agent_memory` |
+| D8 | Name | **Decided 2026-11-20 (#61), then renamed by the owner the same day:** Yewtree, published as `yewtree` (https://github.com/AdamMostofi/yewtree). It was first released as `lossless-tree-memory` v0.1.0. The command stays `amem`, and the Python package stays `agent_memory` |
 | D9 | Path declaration | **New:** how strongly plugins prompt agents to declare paths and causes. Recommend a light instruction, then measure |
 | D10 | Four trees and context management | **Accepted 2026-11-13 (owner)**, with D11 (the stage plan), D12 (context budgets) and D13 (profiles): [architecture revision 3](2026-11-13-memory-architecture-rev3.md) |
 

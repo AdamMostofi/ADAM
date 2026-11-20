@@ -96,19 +96,20 @@ suite in an environment without ADAM.
 
 ## Memory engine
 
-The Lossless Tree Memory Engine (command `amem`) was built here in Phases 2 and 3, under the working name
-`agent-memory`. It is now released on its own, with its history: **[lossless-tree-memory](https://github.com/AdamMostofi/lossless-tree-memory)**.
+The memory engine (command `amem`) was built here in Phases 2 and 3, under the working name `agent-memory`. It is
+now its own project, with its history: **[Yewtree](https://github.com/AdamMostofi/yewtree)**, lossless,
+tree-structured memory for coding agents.
 
-**ADAM depends on a pinned release:** `lossless-tree-memory` v0.1.0 in `pyproject.toml`, installed from its
-tagged GitHub release. This repository holds no copy of it.
+**ADAM depends on a pinned release:** `yewtree` v0.2.0 in `pyproject.toml`, installed from its tagged GitHub
+release. This repository holds no copy of it.
 
 **The principle:** the entire history is kept permanently, but an agent loads only what it needs, from the
 right tree, at the right time.
 
 **Where things are now:**
-- **Capabilities, tests and install instructions:** in its [README](https://github.com/AdamMostofi/lossless-tree-memory#readme).
-- **What each coding agent gets:** in [docs/agents.md](https://github.com/AdamMostofi/lossless-tree-memory/blob/main/docs/agents.md).
-- **Security notes:** in [SECURITY.md](https://github.com/AdamMostofi/lossless-tree-memory/blob/main/SECURITY.md).
+- **Capabilities, tests and install instructions:** in its [README](https://github.com/AdamMostofi/yewtree#readme).
+- **What each coding agent gets:** in [docs/agents.md](https://github.com/AdamMostofi/yewtree/blob/main/docs/agents.md).
+- **Security notes:** in [SECURITY.md](https://github.com/AdamMostofi/yewtree/blob/main/SECURITY.md).
 
 Design documents (they stay here, as the record of how it was designed):
 - [architecture revision 3](docs/design/2026-11-13-memory-architecture-rev3.md), the current architecture;
