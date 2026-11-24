@@ -4,7 +4,8 @@ Usage:
     python scripts/backup_stores.py [--dest backups/<date>] [--root .]
 
 Every store that exists is copied byte for byte with timestamps preserved:
-adam_memory.engine/ (the engine store, Stage 4.1), adam_memory.db,
+adam_memory.engine/ (the engine store, Stage 4.1), adam_memory.passages.db
+(the source library's passage index, Stage 4.2), adam_memory.db,
 adam_vectors.db, the old adam_vectors.lance folder, adam_save/ and skills/.
 Every file is hashed in the source and in the copy, and the run fails unless
 they match. SQLite files get an integrity check. A manifest is written next
@@ -27,7 +28,8 @@ import shutil
 import sqlite3
 import sys
 
-STORES = ("adam_memory.engine", "adam_memory.db", "adam_vectors.db", "adam_vectors.lance", "adam_save", "skills")
+STORES = ("adam_memory.engine", "adam_memory.passages.db", "adam_memory.db", "adam_vectors.db", "adam_vectors.lance",
+          "adam_save", "skills")
 
 
 def file_hashes(path: str) -> dict[str, dict]:
@@ -95,7 +97,8 @@ def backup(root: str, dest: str) -> int:
         manifest["stores"][store] = {"files": len(before), "bytes": sum(v["size"] for v in before.values()), "hashes": before}
         print(f"copied {store}: {len(before)} files, {manifest['stores'][store]['bytes']:,} bytes, hashes match")
 
-    for db in ("adam_memory.db", "adam_vectors.db", os.path.join("adam_save", "memory.db"), os.path.join("adam_save", "vectors.db")):
+    for db in ("adam_memory.db", "adam_memory.passages.db", "adam_vectors.db", os.path.join("adam_save", "memory.db"),
+               os.path.join("adam_save", "vectors.db")):
         path = os.path.join(dest, db)
         if not os.path.isfile(path):
             continue

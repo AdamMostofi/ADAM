@@ -1,0 +1,17 @@
+{
+  "measured_at": "2026-11-24T10:01:14+0200",
+  "source_bytes": 965898,
+  "passages": 5200,
+  "ingest_seconds": 2.677,
+  "second_ingest_seconds": 0.0014,
+  "second_ingest_added": 0,
+  "search_ms": {
+    "median": 3.234,
+    "p95": 3.616
+  },
+  "index_rebuild_seconds": 0.089,
+  "engine_store_mb": 17.55,
+  "passage_index_mb": 3.56,
+  "peak_rss_mb": 97.1,
+  "models_loaded": []
+}

@@ -308,14 +308,26 @@ class EngineStore(TraceMixin):
             raise ValueError(f"record kind must be one of {RECORD_KINDS}")
         return f"adam.{kind}"
 
-    def put_record(self, kind: str, key: str, fields: dict, body: bytes | str | None = None) -> str:
-        return self._engine.put_record(self._kind(kind), key, fields, SESSION, WRITER, body=body, agent=AGENT)
+    def put_record(self, kind: str, key: str, fields: dict, body: bytes | str | None = None,
+                   index: tuple[str, ...] = ()) -> str:
+        return self._engine.put_record(self._kind(kind), key, fields, SESSION, WRITER, body=body,
+                                       index=list(index), agent=AGENT)
+
+    def put_records(self, items: list[dict]) -> list[str]:
+        """Many records in one transaction: all or none."""
+        engine_items = [{"type": self._kind(it["kind"]), "key": it["key"], "fields": it["fields"],
+                         "body": it.get("body"), "index": list(it.get("index", ()))} for it in items]
+        return self._engine.put_records(engine_items, SESSION, WRITER, agent=AGENT) if engine_items else []
 
     def get_record(self, kind: str, key: str) -> dict | None:
         return self._engine.get_record(Store.record_id(self._kind(kind), key))
 
     def records(self, kind: str) -> list[dict]:
         return self._engine.records(self._kind(kind))
+
+    def find_records(self, kind: str, **equals) -> list[dict]:
+        """Current records of a kind whose indexed fields equal the given values."""
+        return self._engine.find_records(self._kind(kind), **equals)
 
     def record_body(self, kind: str, key: str) -> bytes | None:
         return self._engine.record_body(Store.record_id(self._kind(kind), key))

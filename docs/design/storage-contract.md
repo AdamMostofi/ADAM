@@ -40,7 +40,7 @@ These were listed from the code: every call `MemorySystem` makes on its store. T
 | Derivations | `store_derived(entries)` | `settle()` and storing inferred facts: facts and their derivations in one transaction |
 | | `derivations_of(id)`, `trace(id)`, `render_trace(id)` | `/api/facts/<id>/trace`, proofs in replies |
 | | `underived()`, `count_derivations()` | the integrity check that every derived fact has a derivation |
-| Records | `put_record`, `get_record`, `records`, `record_body` | sources, passages, skills and traces: engine store only |
+| Records | `put_record`, `put_records` (one transaction), `get_record`, `records`, `find_records` (by indexed field), `record_body` | the source library (Stage 4.2); skills and traces later: engine store only |
 | The store | `backend`, `meta()`, `location()`, `close()` | the status panel, saves, tests |
 
 **Rules every store keeps** (from Stages 1.4 and 1.5, now tested on both stores):
@@ -145,8 +145,9 @@ it to the figures above.
 
 - **No migration.** The engine store starts empty, and `adam_memory.db` is left as it is. Stores are disposable
   until study begins (#46, out of scope). To keep using an existing SQLite store, set `ADAM_STORE=exact`.
-- **Records have a place but no users yet.** Book ingest and the thought trace (later Phase 4 stages) will
-  write the first sources, passages and traces. Learned skills are still files in `skills/`.
+- **Skills and traces have a place but no users yet.** Sources and passages are written by the source library
+  (Stage 4.2, [source-library.md](source-library.md)); the thought trace will write the first traces. Learned
+  skills are still files in `skills/`.
 - **`scripts/audit_store.py` audits the SQLite stores only.** For the engine store, use `EngineStore.verify()`.
 - **One process per store.** The in-memory index isn't shared, so two ADAM processes on one store would each
   miss the other's writes.

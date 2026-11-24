@@ -97,7 +97,8 @@ Outcomes are as follows:
 | #46 | DSM.1 | Generic engine; ADAM's meanings stay in ADAM. | Adopted; built in Stage 4.1 ([storage-contract.md](design/storage-contract.md)). |
 | #46 | DSM.2 | The engine gains a generic record type (Yewtree 0.3.0) rather than ADAM fitting its data into the engine's existing knowledge kinds. | Adopted (owner's choice). |
 | #46 | DSM.3 | The engine store is the default; the original SQLite store stays selectable with `ADAM_STORE=exact`. | Adopted (owner's choice). |
-| #24 | D3.1–D3.4 | Markdown first, SQLite FTS5 retrieval, CLI ingest only, console naming. | Adopted. |
+| #24 | D3.1–D3.4 | Markdown first, SQLite FTS5 retrieval, CLI ingest only, console naming. | Adopted; built in Stage 4.2 ([source-library.md](design/source-library.md)). |
+| #24 | DV.1 | Sources and passages are engine records (the truth); the FTS5 index is derived from them and rebuilt when it lacks a source. Passages are cut from the text as the engine keeps it, after secret redaction. | Adopted. |
 | #34 | DS.1 | Templates before generation for facts. | Proposed (owner's call). |
 | #77 | DE.2 | Decide EQ's value before adding sophistication. | Adopted. |
 | #25 | D4.1–D4.4 | Additive citations API, web chat only, console naming, evidence gate. | Adopted. |

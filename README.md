@@ -57,6 +57,7 @@ python -m interface.web.app             # web UI on http://localhost:7860
 |---|---|---|
 | One storage contract, two stores: the [Yewtree](https://github.com/AdamMostofi/yewtree) engine (default) and the original SQLite store (`ADAM_STORE=exact`), held to the same tests | `memory/store_contract.py`, `memory/engine_store.py`, [storage-contract.md](docs/design/storage-contract.md) | `tests/contract/test_store_contract.py` |
 | Only `memory/engine_store.py` imports the engine; the kernel imports neither it nor the memory layer; core and routes never reach into a store | `memory/` | `tests/contract/test_storage_boundary.py` |
+| Source library (Data-Vault): Markdown ingested once from the command line, cut into paragraphs with exact character offsets and SHA-256, searched with SQLite FTS5 (BM25); no model | `memory/source_library.py`, [source-library.md](docs/design/source-library.md) | `tests/integration/test_source_library.py` |
 | Fact store: one fact per triple and source (deduplicated on write), provenance origins | `memory/engine_store.py`, `memory/exact_store.py` | `tests/contract/test_store_contract.py`, `tests/integration/test_dedupe_and_meta.py` |
 | 15 Layer 1 rules plus contradiction detection, each checked for soundness | `kernel/foundations.py`, [kernel-rules.md](docs/design/kernel-rules.md) | `tests/unit/test_rule_soundness.py`, `tests/unit/test_kernel_edge_cases.py` |
 | Forward inference that gives the same beliefs whatever order facts arrive in | `kernel/engine.py` | `tests/integration/test_order_independence.py` |
@@ -97,10 +98,12 @@ suite in an environment without ADAM.
   a half times as long as in the original SQLite store, and the store is about six
   times larger on disk; reads are faster. The figures are in
   [storage-contract.md](docs/design/storage-contract.md).
-- **Sources, passages, skills and traces have a place but no users yet.**
-  The engine store keeps them as records; book ingest and the thought trace
-  (later Phase 4 stages) will be the first to write them. Learned skills
-  are still files in `skills/`.
+- **The source library is command-line only, Markdown only, and not used
+  in answers yet.** Sources are ingested and searched from the command
+  line ([source-library.md](docs/design/source-library.md)); answering
+  only from passages is Stage 4.3. Its search index keeps passage text
+  unencrypted on disk. Skills and traces have a place in the store but no
+  users yet; learned skills are still files in `skills/`.
 
 ---
 
@@ -371,6 +374,7 @@ ADAM/
 │   ├── store_contract.py   # the storage contract every store follows
 │   ├── engine_store.py     # the store on the Yewtree engine (default); the only engine import
 │   ├── exact_store.py      # the original SQLite store (ADAM_STORE=exact)
+│   ├── source_library.py   # Markdown sources, passages, FTS5 passage search
 │   ├── semantic_index.py   # MiniLM embeddings in SQLite
 │   ├── connection_graph.py # NetworkX
 │   └── attention.py        # STI/LTI ranking

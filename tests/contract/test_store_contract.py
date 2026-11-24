@@ -191,3 +191,21 @@ def test_records_are_the_engine_stores_and_the_original_store_says_so(store):
     assert [r["key"] for r in store.records("passage")] == ["plato/apology.md#1"]
     with pytest.raises(ValueError):
         store.put_record("unknown_kind", "k", {})
+
+
+def test_records_go_in_together_and_are_found_by_their_indexed_fields(store):
+    items = [{"kind": "passage", "key": f"book#{i}", "fields": {"source": "book", "ordinal": i},
+              "index": ["source"]} for i in range(3)]
+    if not store.supports_records:
+        with pytest.raises(RecordsNotSupported):
+            store.put_records(items)
+        with pytest.raises(RecordsNotSupported):
+            store.find_records("passage", source="book")
+        return
+    store.put_records(items)
+    assert sorted(r["fields"]["ordinal"] for r in store.find_records("passage", source="book")) == [0, 1, 2]
+    assert store.find_records("passage", source="other") == []
+    with pytest.raises(ValueError):    # one bad item: nothing in the batch is stored
+        store.put_records([{"kind": "passage", "key": "next#0", "fields": {"source": "next"}, "index": ["source"]},
+                           {"kind": "unknown_kind", "key": "k", "fields": {}}])
+    assert store.find_records("passage", source="next") == []

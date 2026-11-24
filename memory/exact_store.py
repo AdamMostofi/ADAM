@@ -359,14 +359,20 @@ class ExactStore(TraceMixin):
         return {source: count for source, count in rows}
 
     # Records (sources, passages, skills, traces) need the engine store.
-    def put_record(self, kind, key, fields, body=None):
+    def put_record(self, kind, key, fields, body=None, index=()):
         raise RecordsNotSupported("the original SQLite store keeps facts and derivations only; "
                                   "records need the engine store (ADAM_STORE=engine)")
+
+    def put_records(self, items):
+        raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
 
     def get_record(self, kind, key):
         raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
 
     def records(self, kind):
+        raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
+
+    def find_records(self, kind, **equals):
         raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
 
     def record_body(self, kind, key):
