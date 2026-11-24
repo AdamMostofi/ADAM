@@ -200,8 +200,14 @@ def test_the_cli_reports_a_second_ingest_and_refuses_bad_paths(tmp_path, workspa
 
 
 # ------------------------------------------------------------ paragraphs
-@settings(max_examples=300, deadline=None)
-@given(st.text(alphabet=st.sampled_from(list("ab \t\n\r#-é")), max_size=80))
+def test_a_line_of_any_whitespace_separates_paragraphs():
+    assert paragraphs("a\n\r \na") == [(0, 1), (5, 6)]                  # found by the property below
+    assert paragraphs("a\r\n\r\nb") == [(0, 1), (5, 6)]
+    assert paragraphs("a\n \nb\nc") == [(0, 1), (4, 7)]
+
+
+@settings(max_examples=500, deadline=None)
+@given(st.text(alphabet=st.sampled_from(list("ab \t\n\r#-é ")), max_size=80))
 def test_paragraph_spans_are_exact_ordered_and_trimmed(text):
     spans = paragraphs(text)
     assert all(a[1] <= b[0] for a, b in zip(spans, spans[1:]))

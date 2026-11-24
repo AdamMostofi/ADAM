@@ -61,8 +61,8 @@ guard, backups and reset like the other stores.
 
 ## Passages
 
-A passage is a paragraph: a run of lines between blank lines (a blank line may hold spaces or tabs, and
-`\r\n` line endings count). It doesn't include its surrounding whitespace. Offsets count characters (Python
+A passage is a paragraph: a run of lines between blank lines. A blank line is any line of whitespace only
+(spaces, tabs, a `\r` from `\r\n` endings, Unicode spaces). It doesn't include its surrounding whitespace. Offsets count characters (Python
 string positions), not bytes.
 
 - **Headings and list items.** A heading followed by a blank line is its own passage. A list without blank

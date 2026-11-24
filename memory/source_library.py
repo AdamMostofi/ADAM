@@ -48,7 +48,7 @@ SOURCE, PASSAGE = "source", "passage"
 MARKDOWN_SUFFIXES = (".md", ".markdown")
 MAX_SOURCE_BYTES = 64 * 1024 * 1024
 MAX_LIMIT = 100
-_BLANK_LINE = re.compile(r"\n[ \t]*\r?\n")
+_BLANK_LINE = re.compile(r"\n[^\S\n]*\n")      # a line of nothing but whitespace (\r, tabs, Unicode spaces)
 _WORD = re.compile(r"\w+")
 
 
