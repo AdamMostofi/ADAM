@@ -9,7 +9,8 @@
 
 ADAM is a local-first neuro-symbolic system. It has four parts:
 - a symbolic kernel that reasons over subject–predicate–object facts;
-- SQLite-backed memory that keeps those facts with the proofs behind them;
+- memory, on the [Yewtree](https://github.com/AdamMostofi/yewtree) engine, that keeps those facts with the
+  proofs behind them;
 - a keyword-based reading of the user's tone;
 - a 15M-parameter language model, used only to phrase small talk.
 
@@ -54,14 +55,16 @@ python -m interface.web.app             # web UI on http://localhost:7860
 
 | Capability | Where | Tested by |
 |---|---|---|
-| Fact store: one row per fact (deduplicated on write), schema migrations, provenance origins | `memory/exact_store.py` | `tests/integration/test_dedupe_and_meta.py`, `tests/integration/test_derivations.py` |
+| One storage contract, two stores: the [Yewtree](https://github.com/AdamMostofi/yewtree) engine (default) and the original SQLite store (`ADAM_STORE=exact`), held to the same tests | `memory/store_contract.py`, `memory/engine_store.py`, [storage-contract.md](docs/design/storage-contract.md) | `tests/contract/test_store_contract.py` |
+| Only `memory/engine_store.py` imports the engine; the kernel imports neither it nor the memory layer; core and routes never reach into a store | `memory/` | `tests/contract/test_storage_boundary.py` |
+| Fact store: one fact per triple and source (deduplicated on write), provenance origins | `memory/engine_store.py`, `memory/exact_store.py` | `tests/contract/test_store_contract.py`, `tests/integration/test_dedupe_and_meta.py` |
 | 15 Layer 1 rules plus contradiction detection, each checked for soundness | `kernel/foundations.py`, [kernel-rules.md](docs/design/kernel-rules.md) | `tests/unit/test_rule_soundness.py`, `tests/unit/test_kernel_edge_cases.py` |
 | Forward inference that gives the same beliefs whatever order facts arrive in | `kernel/engine.py` | `tests/integration/test_order_independence.py` |
 | Goal-directed proof that agrees with forward inference | `kernel/prove.py` | `tests/integration/test_prove_agreement.py` |
 | Membership (`instance_of`) separate from subclassing (`subclass_of`); ambiguous `is` kept for review, never guessed | `kernel/foundations.py` | `tests/unit/test_class_rules.py` |
-| Every derived fact stored with its derivations, and walkable back to its inputs (`/api/facts/<id>/trace`) | `kernel/facts.py`, `memory/exact_store.py` | `tests/integration/test_derivations.py` |
+| Every derived fact stored with its derivations, and walkable back to its inputs (`/api/facts/<id>/trace`); in the engine store, a derivation is a record linked to its premises and conclusion | `kernel/facts.py`, `memory/store_contract.py` | `tests/integration/test_derivations.py`, `tests/contract/test_store_contract.py` |
 | Contradictions recorded as state; defaults (`typically`) that yield to more specific evidence; per-source attribution | `kernel/conflicts.py`, `kernel/defaults.py` | `tests/integration/test_conflicts.py` |
-| A restart rebuilds the engine and graph from SQLite and writes nothing | `memory/system.py`, [restart.md](docs/design/restart.md) | `tests/integration/test_restart.py` |
+| A restart rebuilds the engine and graph from the store and writes nothing | `memory/system.py`, [restart.md](docs/design/restart.md) | `tests/integration/test_restart.py` |
 | Semantic recall: MiniLM-L6-v2 (int8 ONNX) embeddings in SQLite, searched with numpy | `memory/semantic_index.py`, [vector-index.md](docs/design/vector-index.md) | `tests/integration/test_vector_index.py` |
 | Relationship graph (NetworkX) | `memory/connection_graph.py` | `tests/integration/test_graph.py` |
 | Attention ranking of recalled facts (per session) | `memory/attention.py` | `tests/unit/test_attention.py` |
@@ -89,8 +92,15 @@ suite in an environment without ADAM.
 - **EQ reads explicit wording only.** It misses sarcasm, questions and
   litotes; its accuracy is recorded in
   [eq-appraisal.md](docs/design/eq-appraisal.md). A revisit is Stage 4.4.
-- **ADAM doesn't use the memory engine yet.** Its facts still live in
-  `memory/`. Connecting the two is Stage 4.1.
+- **The engine store is slower to write.** Since Stage 4.1, ADAM keeps
+  its facts in the memory engine. Writing a fact there takes about two and
+  a half times as long as in the original SQLite store, and the store is about six
+  times larger on disk; reads are faster. The figures are in
+  [storage-contract.md](docs/design/storage-contract.md).
+- **Sources, passages, skills and traces have a place but no users yet.**
+  The engine store keeps them as records; book ingest and the thought trace
+  (later Phase 4 stages) will be the first to write them. Learned skills
+  are still files in `skills/`.
 
 ---
 
@@ -100,7 +110,7 @@ The memory engine (command `amem`) was built here in Phases 2 and 3, under the w
 now its own project, with its history: **[Yewtree](https://github.com/AdamMostofi/yewtree)**, lossless,
 tree-structured memory for coding agents.
 
-**ADAM depends on a pinned release:** `yewtree` v0.2.0 in `pyproject.toml`, installed from its tagged GitHub
+**ADAM depends on a pinned release:** `yewtree` v0.3.0 in `pyproject.toml`, installed from its tagged GitHub
 release. This repository holds no copy of it.
 
 **The principle:** the entire history is kept permanently, but an agent loads only what it needs, from the
@@ -153,7 +163,7 @@ affect. The Mouth renders the answer.*
   - **Proof:** goal-directed, over the facts connected to the goal.
   - **Queries:** `?variable` patterns.
   - **Records:** structured derivations, and conflicts with defaults.
-- **Memory** — SQLite for facts, derivations and origins; MiniLM embeddings in
+- **Memory** — the Yewtree engine for facts, derivations and origins; MiniLM embeddings in
   SQLite for semantic recall; NetworkX for relationships; attention for
   ranking.
 - **Learning** — pattern extraction and skill compilation; compiled skills run
@@ -221,13 +231,18 @@ curl -s http://localhost:7860/api/chat \
 *A fact is written to all three stores; recall starts exact, falls back to
 semantic, then re-ranks by attention.*
 
-- **Exact** — SQLite (schema 3) stores:
+- **Exact** — the store, behind one contract
+  ([storage-contract.md](docs/design/storage-contract.md)), keeps:
   - every fact verbatim;
   - every derivation, meaning the rule, its version, the premises and the
     confidence;
   - where each fact came from.
 
-  A derived fact can't be stored without its derivation.
+  A derived fact can't be stored without its derivation. By default the
+  store is the Yewtree engine (`adam_memory.engine/`): each fact is a
+  versioned record, and each derivation a record linked to its premises
+  and its conclusion, so nothing is ever overwritten. `ADAM_STORE=exact`
+  selects the original SQLite store (`adam_memory.db`, schema 3).
 - **Semantic** — MiniLM-L6-v2 embeddings, int8 ONNX run directly with
   onnxruntime, stored in one SQLite file and searched with numpy. They are
   used when exact text search finds nothing.
@@ -237,7 +252,7 @@ semantic, then re-ranks by attention.*
 
 Attention is per session by design: it is the focus of the current
 conversation. Everything else comes back on restart: facts, proofs,
-conflicts, sources and the graph are rebuilt from SQLite
+conflicts, sources and the graph are rebuilt from the store
 ([restart.md](docs/design/restart.md)).
 
 ---
@@ -324,7 +339,7 @@ locally within 400 MB, where every conclusion has a proof back to its sources.
 |-----------|-----------|
 | Language | Python 3.10+, dependencies pinned in `uv.lock` |
 | Inference | Semi-naive, term-indexed forward chaining; goal-directed proof |
-| Exact storage | SQLite |
+| Exact storage | The Yewtree engine (records, `adam_memory.engine/`); the original SQLite store with `ADAM_STORE=exact` |
 | Vector store | Embeddings as blobs in SQLite, searched with numpy |
 | Embeddings | `all-MiniLM-L6-v2` int8 ONNX (`Xenova/all-MiniLM-L6-v2`, pinned revision) via onnxruntime |
 | Graph | NetworkX `MultiDiGraph` |
@@ -353,7 +368,9 @@ ADAM/
 │   └── facts.py            # Fact, Belief, Derivation
 ├── memory/                 # exact, semantic, graph, attention
 │   ├── system.py           # MemorySystem facade and restore
-│   ├── exact_store.py      # SQLite facts, derivations, origins
+│   ├── store_contract.py   # the storage contract every store follows
+│   ├── engine_store.py     # the store on the Yewtree engine (default); the only engine import
+│   ├── exact_store.py      # the original SQLite store (ADAM_STORE=exact)
 │   ├── semantic_index.py   # MiniLM embeddings in SQLite
 │   ├── connection_graph.py # NetworkX
 │   └── attention.py        # STI/LTI ranking

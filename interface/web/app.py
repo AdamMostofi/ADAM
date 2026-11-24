@@ -53,7 +53,7 @@ def create_app(core: ADAMCore | None = None) -> Flask:
         return jsonify([
             {"id": fact_id, "subject": f.subject, "predicate": f.predicate, "object": f.object,
              "confidence": f.confidence, "source": f.source.value}
-            for fact_id, f in get_core().memory.exact.get_all_with_ids()
+            for fact_id, f in get_core().memory.facts_with_ids()
         ])
 
     @app.route("/api/facts/<int:fact_id>/trace", methods=["GET"])

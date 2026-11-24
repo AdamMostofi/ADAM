@@ -8,6 +8,7 @@ build/
 *.lance/
 adam_vectors.lance/
 adam_memory.db
+*.engine/
 skills/
 # ...but not the Claude Code plugin skill, which ships with the plugin (Stage 3.1).
 !plugins/claude-code/skills/

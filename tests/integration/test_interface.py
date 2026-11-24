@@ -204,7 +204,10 @@ def test_create_app_default_core_uses_env_paths(tmp_path, monkeypatch):
     app = create_app()
     with app.test_client() as client:
         client.post("/api/facts", json={"subject": "dog", "predicate": "is", "object": "animal"})
-    assert (tmp_path / "env.db").exists()
+    # The store sits at ADAM_DB (exact) or beside it (engine: env.engine), never anywhere else.
+    location = Path(app.config["core"].memory.fact_store.location()) if "core" in app.config else None
+    assert (tmp_path / "env.db").exists() or (tmp_path / "env.engine").exists()
+    assert location is None or tmp_path in location.parents
 
 
 def test_flask_reports_and_classifies_an_ambiguous_is(app):

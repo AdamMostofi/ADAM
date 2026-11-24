@@ -10,11 +10,12 @@ Steps:
    whose file hashes match the current stores exactly, otherwise make a new
    backup with scripts/backup_stores.py. Skipped only when the stores are
    already fresh and empty, since there is nothing to lose.
-3. Delete adam_memory.db, adam_vectors.db, the old adam_vectors.lance folder,
-   adam_save/ and skills/.
-4. Create an empty fact store (schema version 1, meta table) and an empty
-   vector index (model and dimension recorded in its meta table). No
-   placeholder rows.
+3. Delete adam_memory.engine/ (the engine store), adam_memory.db,
+   adam_vectors.db, the old adam_vectors.lance folder, adam_save/ and skills/.
+4. Create an empty SQLite fact store (schema version 1, meta table) and an
+   empty vector index (model and dimension recorded in its meta table). No
+   placeholder rows. The engine store isn't created here: ADAM creates it,
+   empty, the first time it starts. Its key, outside the repository, is kept.
 
 Running it again on fresh stores changes nothing (idempotent).
 """
@@ -38,7 +39,8 @@ import backup_stores  # noqa: E402
 
 FACTS_DB = "adam_memory.db"
 VECTORS_DB = "adam_vectors.db"
-DELETE = (FACTS_DB, VECTORS_DB, "adam_vectors.lance", "adam_save", "skills")
+ENGINE_STORE = "adam_memory.engine"
+DELETE = (ENGINE_STORE, FACTS_DB, VECTORS_DB, "adam_vectors.lance", "adam_save", "skills")
 SQLITE_SIDECARS = ("-journal", "-wal", "-shm")
 
 
@@ -60,7 +62,7 @@ def adam_processes() -> list[str]:
 
 def is_fresh(root: str) -> bool:
     """True when the stores are exactly a fresh reset: no facts, no vectors, nothing else."""
-    if any(os.path.exists(os.path.join(root, s)) for s in ("adam_vectors.lance", "adam_save", "skills")):
+    if any(os.path.exists(os.path.join(root, s)) for s in (ENGINE_STORE, "adam_vectors.lance", "adam_save", "skills")):
         return False
     facts, vectors = os.path.join(root, FACTS_DB), os.path.join(root, VECTORS_DB)
     if not (os.path.isfile(facts) and os.path.isfile(vectors)):

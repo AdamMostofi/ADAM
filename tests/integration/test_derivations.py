@@ -177,8 +177,9 @@ def test_proof_text_is_rendered_from_the_records(tmp_path):
     _, lines = memory.exact.get_with_proof(fact_id)
     assert lines[-1] == "[inheritance_implies] man implies mortal + socrates instance_of man -> socrates instance_of mortal"
     assert all(line.startswith("[given] ") for line in lines[:-1])
-    with sqlite3.connect(memory.exact.db_path) as conn:
-        assert conn.execute("SELECT proof_chain FROM facts WHERE id = ?", (fact_id,)).fetchone()[0] is None
+    if memory.backend == "exact":   # the original store: no proof text written for derived facts
+        with sqlite3.connect(memory.exact.db_path) as conn:
+            assert conn.execute("SELECT proof_chain FROM facts WHERE id = ?", (fact_id,)).fetchone()[0] is None
 
 
 # ---------------------------------------------------- engine walk-back

@@ -17,32 +17,25 @@ import sqlite3
 import time
 
 from kernel.facts import Fact, Source
+# The contract's shared pieces, still importable from here (Stage 4.1, #46).
+from memory.store_contract import (DERIVED, RecordsNotSupported, TraceMixin, UnderivedFactError, check_derived,
+                                   fact_key, normalize_term)
 
 SCHEMA_VERSION = 3
-DERIVED = Source.DEDUCED
-
-
-class UnderivedFactError(ValueError):
-    """A derived fact was stored without any derivation."""
-
-
-def normalize_term(term: str) -> str:
-    """Case- and whitespace-insensitive form of a term, used only for the uniqueness key."""
-    return " ".join(term.split()).lower()
-
-
-def fact_key(fact: Fact) -> str:
-    """One key per (subject, predicate, object, source), ignoring case and extra spaces."""
-    parts = (normalize_term(fact.subject), normalize_term(fact.predicate),
-             normalize_term(fact.object), fact.source.value)
-    return "\x1f".join(parts)
+__all__ = ["ExactStore", "DERIVED", "SCHEMA_VERSION", "UnderivedFactError", "OldSchemaError", "fact_key",
+           "normalize_term"]
 
 
 class OldSchemaError(RuntimeError):
     """The database predates schema version 1 and must be reset."""
 
 
-class ExactStore:
+class ExactStore(TraceMixin):
+    """The original SQLite store (Stages 1.4 to 1.6). It keeps facts and derivations, not records."""
+
+    backend = "exact"
+    supports_records = False
+
     def __init__(self, db_path: str = "adam_memory.db"):
         self.db_path = db_path
         self._init_db()
@@ -172,17 +165,10 @@ class ExactStore:
         derivation. Storing the same derivation again adds no row (it keeps
         the higher confidence).
         """
+        check_derived(entries)
         conn = sqlite3.connect(self.db_path, isolation_level=None)
         try:
             conn.execute("BEGIN IMMEDIATE")
-            derived_keys = {fact_key(f) for f, derivations in entries if derivations}
-            for fact, derivations in entries:
-                if fact.source == DERIVED and not derivations:
-                    raise UnderivedFactError(f"{fact} is derived but has no derivation")
-                for d in derivations:
-                    for premise in d["premises"]:
-                        if premise.source == DERIVED and fact_key(premise) not in derived_keys:
-                            raise UnderivedFactError(f"premise {premise} of {fact} is derived but not stored with it")
             results = [self._upsert_row(conn, fact) for fact, _ in entries]
             now = time.time()
             for (fact, derivations), (conclusion_id, _) in zip(entries, results):
@@ -212,67 +198,6 @@ class ExactStore:
                 "WHERE conclusion_id = ? ORDER BY id", (fact_id,)).fetchall()
         return [{"id": r[0], "rule": r[1], "rule_version": r[2], "premise_ids": json.loads(r[3]),
                  "confidence": r[4], "timestamp": r[5]} for r in rows]
-
-    def trace(self, fact_id: int) -> list[dict] | None:
-        """Walk a fact back to the inputs it rests on.
-
-        Returns steps, inputs first: {"id", "fact", "derivation"} where
-        "derivation" is None for an input (any fact not derived) and
-        otherwise the derivation used, whose premises all appear earlier.
-        The walk is well-founded, so cycles among derivations can't trap it.
-        Returns None if the fact doesn't exist, or if a derived fact has no
-        derivation that reaches inputs (see underived()).
-        """
-        facts: dict[int, Fact] = {}
-        derivations: dict[int, list[dict]] = {}
-        stack = [fact_id]
-        while stack:
-            current = stack.pop()
-            if current in facts:
-                continue
-            fact = self.get(current)
-            if fact is None:
-                return None
-            facts[current] = fact
-            if fact.source == DERIVED:
-                derivations[current] = self.derivations_of(current)
-                for d in derivations[current]:
-                    stack.extend(d["premise_ids"])
-        explained: dict[int, dict | None] = {i: None for i, f in facts.items() if f.source != DERIVED}
-        order = sorted(explained)
-        while fact_id not in explained:
-            ready = []
-            for i in sorted(set(facts) - set(explained)):
-                usable = [d for d in derivations[i] if all(p in explained for p in d["premise_ids"])]
-                if usable:
-                    ready.append((i, max(usable, key=lambda d: (d["confidence"], -d["id"]))))
-            if not ready:
-                return None
-            for i, d in ready:
-                explained[i] = d
-                order.append(i)
-        used, stack = set(), [fact_id]
-        while stack:
-            i = stack.pop()
-            if i not in used:
-                used.add(i)
-                if explained[i] is not None:
-                    stack.extend(explained[i]["premise_ids"])
-        return [{"id": i, "fact": facts[i], "derivation": explained[i]} for i in order if i in used]
-
-    def render_trace(self, fact_id: int) -> list[str]:
-        """trace() as readable lines, rendered from the records."""
-        steps = self.trace(fact_id) or []
-        by_id = {s["id"]: s["fact"] for s in steps}
-        lines = []
-        for step in steps:
-            d = step["derivation"]
-            if d is None:
-                lines.append(f"[given] {step['fact']}")
-            else:
-                premises = " + ".join(str(by_id[p]) for p in d["premise_ids"])
-                lines.append(f"[{d['rule']}] {premises} -> {step['fact']}")
-        return lines
 
     def underived(self) -> list[int]:
         """IDs of derived facts with no derivation (only possible for rows written before schema 2)."""
@@ -432,6 +357,23 @@ class ExactStore:
         with sqlite3.connect(self.db_path) as conn:
             rows = conn.execute("SELECT source, COUNT(*) FROM facts GROUP BY source").fetchall()
         return {source: count for source, count in rows}
+
+    # Records (sources, passages, skills, traces) need the engine store.
+    def put_record(self, kind, key, fields, body=None):
+        raise RecordsNotSupported("the original SQLite store keeps facts and derivations only; "
+                                  "records need the engine store (ADAM_STORE=engine)")
+
+    def get_record(self, kind, key):
+        raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
+
+    def records(self, kind):
+        raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
+
+    def record_body(self, kind, key):
+        raise RecordsNotSupported("records need the engine store (ADAM_STORE=engine)")
+
+    def location(self) -> str:
+        return self.db_path
 
     def close(self) -> None:
         pass

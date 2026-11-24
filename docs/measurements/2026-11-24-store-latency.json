@@ -1,0 +1,71 @@
+{
+  "measured_at": "2026-11-24T09:47:20+0200",
+  "results": [
+    {
+      "backend": "exact",
+      "given_facts": 260,
+      "rows_after_settle": 772,
+      "derived_stored": 512,
+      "derivations": 1042,
+      "write_per_fact": {
+        "median_ms": 0.605,
+        "p95_ms": 1.435
+      },
+      "settle_seconds": 0.539,
+      "settle_ms_per_stored_fact": 1.053,
+      "restart_seconds": 0.038,
+      "reads": {
+        "get": {
+          "median_ms": 0.073,
+          "p95_ms": 0.118
+        },
+        "find_by_subject": {
+          "median_ms": 0.086,
+          "p95_ms": 0.189
+        },
+        "search_text": {
+          "median_ms": 0.162,
+          "p95_ms": 0.204
+        },
+        "trace": {
+          "median_ms": 0.507,
+          "p95_ms": 1.898
+        }
+      },
+      "disk_mb": 1.99
+    },
+    {
+      "backend": "engine",
+      "given_facts": 260,
+      "rows_after_settle": 772,
+      "derived_stored": 512,
+      "derivations": 1042,
+      "write_per_fact": {
+        "median_ms": 1.61,
+        "p95_ms": 2.23
+      },
+      "settle_seconds": 1.683,
+      "settle_ms_per_stored_fact": 3.286,
+      "restart_seconds": 0.125,
+      "reads": {
+        "get": {
+          "median_ms": 0.002,
+          "p95_ms": 0.003
+        },
+        "find_by_subject": {
+          "median_ms": 0.009,
+          "p95_ms": 0.014
+        },
+        "search_text": {
+          "median_ms": 0.042,
+          "p95_ms": 0.066
+        },
+        "trace": {
+          "median_ms": 0.03,
+          "p95_ms": 0.048
+        }
+      },
+      "disk_mb": 12.98
+    }
+  ]
+}

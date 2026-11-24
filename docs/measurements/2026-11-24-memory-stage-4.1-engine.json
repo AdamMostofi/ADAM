@@ -1,0 +1,213 @@
+{
+ "budget_mb": 400.0,
+ "enforced_states": [
+  "startup",
+  "chat"
+ ],
+ "states_total_rss_mb": {
+  "startup": 136.8,
+  "chat": 337.8,
+  "ingest": 338.5,
+  "peak": 338.5
+ },
+ "lifecycle": [
+  {
+   "step": "python_started",
+   "total_rss_mb": 16.6,
+   "total_pss_mb": 11.0,
+   "main_rss_mb": 16.6,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 16.6,
+     "pss_mb": 11.0,
+     "hwm_mb": 16.6
+    }
+   ]
+  },
+  {
+   "step": "libraries_imported",
+   "total_rss_mb": 55.7,
+   "total_pss_mb": 49.0,
+   "main_rss_mb": 55.7,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 55.7,
+     "pss_mb": 49.0,
+     "hwm_mb": 55.7
+    }
+   ]
+  },
+  {
+   "step": "adam_imported",
+   "total_rss_mb": 65.1,
+   "total_pss_mb": 58.4,
+   "main_rss_mb": 65.1,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 65.1,
+     "pss_mb": 58.4,
+     "hwm_mb": 65.1
+    }
+   ]
+  },
+  {
+   "step": "startup",
+   "total_rss_mb": 136.8,
+   "total_pss_mb": 129.7,
+   "main_rss_mb": 136.8,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 136.8,
+     "pss_mb": 129.7,
+     "hwm_mb": 164.9
+    }
+   ],
+   "seconds": 1.53
+  },
+  {
+   "step": "first_facts_stored",
+   "total_rss_mb": 205.1,
+   "total_pss_mb": 198.1,
+   "main_rss_mb": 205.1,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 205.1,
+     "pss_mb": 198.1,
+     "hwm_mb": 205.1
+    }
+   ],
+   "seconds": 0.14
+  },
+  {
+   "step": "chat",
+   "total_rss_mb": 337.8,
+   "total_pss_mb": 325.3,
+   "main_rss_mb": 209.4,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 209.4,
+     "pss_mb": 202.0,
+     "hwm_mb": 209.4
+    },
+    {
+     "pid": 149853,
+     "name": "llama-server",
+     "rss_mb": 128.3,
+     "pss_mb": 123.3,
+     "hwm_mb": 128.3
+    }
+   ],
+   "seconds": 3.14,
+   "turns": 3,
+   "first_reply": "do you think it is the way to join them in?"
+  },
+  {
+   "step": "ingest",
+   "total_rss_mb": 338.5,
+   "total_pss_mb": 326.0,
+   "main_rss_mb": 210.2,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 210.2,
+     "pss_mb": 202.7,
+     "hwm_mb": 210.2
+    },
+    {
+     "pid": 149853,
+     "name": "llama-server",
+     "rss_mb": 128.3,
+     "pss_mb": 123.3,
+     "hwm_mb": 128.3
+    }
+   ],
+   "seconds": 1.13,
+   "facts": 200
+  },
+  {
+   "step": "after_ingest_idle",
+   "total_rss_mb": 338.5,
+   "total_pss_mb": 326.0,
+   "main_rss_mb": 210.2,
+   "processes": [
+    {
+     "pid": 149790,
+     "name": "python",
+     "rss_mb": 210.2,
+     "pss_mb": 202.7,
+     "hwm_mb": 210.2
+    },
+    {
+     "pid": 149853,
+     "name": "llama-server",
+     "rss_mb": 128.3,
+     "pss_mb": 123.3,
+     "hwm_mb": 128.3
+    }
+   ]
+  }
+ ],
+ "isolated": {
+  "ear_only": {
+   "baseline_mb": 16.4,
+   "total_rss_mb": 101.3,
+   "total_pss_mb": 95.1,
+   "main_rss_mb": 101.3,
+   "processes": [
+    {
+     "pid": 149914,
+     "name": "python",
+     "rss_mb": 101.3,
+     "pss_mb": 95.1,
+     "hwm_mb": 125.0
+    }
+   ]
+  },
+  "embedding_only": {
+   "baseline_mb": 16.3,
+   "total_rss_mb": 117.7,
+   "total_pss_mb": 110.9,
+   "main_rss_mb": 117.7,
+   "processes": [
+    {
+     "pid": 149944,
+     "name": "python",
+     "rss_mb": 117.7,
+     "pss_mb": 110.9,
+     "hwm_mb": 117.7
+    }
+   ]
+  },
+  "vector_index_only": {
+   "baseline_mb": 16.5,
+   "total_rss_mb": 39.1,
+   "total_pss_mb": 32.4,
+   "main_rss_mb": 39.1,
+   "processes": [
+    {
+     "pid": 149974,
+     "name": "python",
+     "rss_mb": 39.1,
+     "pss_mb": 32.4,
+     "hwm_mb": 39.1
+    }
+   ]
+  }
+ },
+ "python": "3.11.15",
+ "time": "2026-11-24T09:41:06",
+ "violations": []
+}

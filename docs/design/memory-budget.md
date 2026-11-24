@@ -2,7 +2,21 @@
 
 **Status:** Current. This is the one definition of ADAM's memory budget; other documents point here.
 **Decided:** 2026-11-09 by the owner (Option A in [#33](https://github.com/AdamMostofi/ADAM/issues/33)).
-**Last measured:** 2026-11-11, after the Stage 0.6 reset ([raw report](../measurements/2026-11-11-memory-after-reset.json)). **Status: within budget**: startup 127.1 MB, chat 331.6 MB. The measurement uses temporary stores, so the reset itself doesn't change these figures; they confirm the baseline on the final Phase 0 code.
+**Last measured:** 2026-11-24, Stage 4.1, with each store ([engine](../measurements/2026-11-24-memory-stage-4.1-engine.json), [original](../measurements/2026-11-24-memory-stage-4.1-exact.json)). **Status: within budget**: with the engine store (the default), startup 136.8 MB and chat 337.8 MB; with the original SQLite store, startup 127.6 MB and chat 333.3 MB.
+
+## Stage 4.1: the engine store
+
+The engine store reads every fact and derivation into an in-memory index when it opens ([storage-contract.md](./storage-contract.md)). That, and the engine's own modules, cost about 9 MB at startup and 4.5 MB in `chat`:
+
+| State | Original store (MB) | Engine store (MB) |
+|---|---|---|
+| `startup` | 127.6 | 136.8 |
+| First facts stored | 195.6 | 205.1 |
+| `chat` | 333.3 | 337.8 |
+| `ingest` (200 facts) | 336.1 | 338.5 |
+| `peak` | 336.1 | 338.5 |
+
+**Result: within budget, with 62 MB of headroom in `chat`.** The index grows with the store: at 200 facts it is small, and it should be re-measured when study begins and the store grows.
 
 ## The definition
 
@@ -31,11 +45,15 @@ FASTEMBED_CACHE_PATH=~/.cache/fastembed ADAM_LLAMA_SERVER=~/.local/bin/llama-ser
   .venv/bin/python scripts/measure_memory.py --out report.json
 ```
 
+It measures the default store; set `ADAM_STORE=exact` to measure the original one. Run it with temporary
+`XDG_CONFIG_HOME`, `XDG_DATA_HOME` and `XDG_RUNTIME_DIR` folders, so the engine store's key is made there and
+not in your own key folder.
+
 The script runs every measurement in a fresh process with temporary stores, so production data is never opened. It prints a table and **exits with code 1 when an enforced state is over budget**. `scripts/memory_probe.py` is the standard-library probe it uses, reading `/proc`.
 
 It needs the real models, so it isn't part of CI. Run it after any change that adds or swaps a component.
 
-## Current measurements, after Stage 0.5
+## Measurements after Stage 0.5 (the original store)
 
 Locked environment, Python 3.11.15, 200 facts ingested. The embedding model is MiniLM int8 run directly with onnxruntime; the vector index is numpy in SQLite ([decision](./vector-index.md)).
 

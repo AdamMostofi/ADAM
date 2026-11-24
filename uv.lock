@@ -51,7 +51,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "tokenizers", specifier = ">=0.15" },
-    { name = "yewtree", git = "https://github.com/AdamMostofi/yewtree?rev=v0.2.0" },
+    { name = "yewtree", git = "https://github.com/AdamMostofi/yewtree?rev=v0.3.0" },
 ]
 provides-extras = ["dev"]
 
@@ -1835,8 +1835,8 @@ wheels = [
 
 [[package]]
 name = "yewtree"
-version = "0.2.0"
-source = { git = "https://github.com/AdamMostofi/yewtree?rev=v0.2.0#48686e8670e031b38d738e058f42fc5c559735cd" }
+version = "0.3.0"
+source = { git = "https://github.com/AdamMostofi/yewtree?rev=v0.3.0#8aa386b485c9b7be78921e704ffe2f8d56555914" }
 dependencies = [
     { name = "cryptography" },
     { name = "tree-sitter" },

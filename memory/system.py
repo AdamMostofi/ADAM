@@ -1,18 +1,27 @@
-"""MemorySystem — main API wrapping all 3 storage layers.
+"""MemorySystem: ADAM's memory, over one store that follows the storage contract (Stage 4.1, #46).
 
-Provides perfect recall, semantic search, and auto-connection.
+Provides perfect recall, semantic search, and auto-connection. The store is chosen by `ADAM_STORE`:
+- `engine` (the default): the Yewtree memory engine (`memory.engine_store`), in a folder beside the
+  database path (`adam_memory.engine` for `adam_memory.db`);
+- `exact`: the original SQLite store (`memory.exact_store`), at the database path.
+
+ADAM's core and routes use this class and the contract (`memory.store_contract`); nothing else reaches into
+a store.
 """
 from __future__ import annotations
 
 from dataclasses import replace
 
 import collections
+import os
 import threading
 import time
+from pathlib import Path
 
 from kernel.facts import Fact, Source
 from kernel.engine import InferenceEngine, key_of
 from memory.exact_store import ExactStore
+from memory.store_contract import FactStore, fact_key
 from memory.semantic_index import DEFAULT_MODEL, SemanticIndex
 from memory.connection_graph import ConnectionGraph
 from memory.attention import AttentionBank
@@ -31,6 +40,25 @@ def _embedding_similarity(semantic_index: SemanticIndex, text_a: str, text_b: st
     return float(dot / norm)
 
 
+BACKENDS = ("engine", "exact")
+
+
+def engine_path_for(db_path: str) -> str:
+    """Where the engine store lives for a database path: beside it, x.db -> x.engine. One path, one store."""
+    return str(Path(db_path).with_suffix(".engine"))
+
+
+def open_store(db_path: str = "adam_memory.db", backend: str | None = None) -> FactStore:
+    """The store ADAM_STORE chooses (engine unless it says exact)."""
+    backend = backend or os.environ.get("ADAM_STORE", "engine")
+    if backend not in BACKENDS:
+        raise ValueError(f"ADAM_STORE must be one of {BACKENDS}, not {backend!r}")
+    if backend == "exact":
+        return ExactStore(db_path)
+    from memory.engine_store import EngineStore
+    return EngineStore(engine_path_for(db_path))
+
+
 # Agenda entries a restart may process (Stage 1.6, #36). Enough to saturate stores far larger than
 # today's (20,000 given facts take ~60,000), so a restarted ADAM knows all it knew; a pathological
 # store stops here with a warning and continues during chat turns.
@@ -44,8 +72,10 @@ class MemorySystem:
         lance_path: str = "adam_vectors.db",
         embedding_model: str = DEFAULT_MODEL,
         restore: bool = True,
+        backend: str | None = None,
+        store: FactStore | None = None,
     ):
-        self.exact = ExactStore(db_path)
+        self.fact_store = store if store is not None else open_store(db_path, backend)
         self.semantic = SemanticIndex(lance_path, embedding_model)
         self.graph = ConnectionGraph()
         self.engine = InferenceEngine()
@@ -57,6 +87,15 @@ class MemorySystem:
         self._stored_keys: set[str] | None = None  # cache of stored fact keys, loaded on first use
         if restore:
             self.restore()
+
+    @property
+    def exact(self) -> FactStore:
+        """The store, under its name from before Stage 4.1 (kept for existing tests and scripts)."""
+        return self.fact_store
+
+    @property
+    def backend(self) -> str:
+        return self.fact_store.backend
 
     def restore(self) -> dict:
         """Rebuild the graph and the engine from the store (DS1: SQLite is the source of truth).
@@ -79,9 +118,9 @@ class MemorySystem:
         with self.lock:
             self.engine = InferenceEngine()
             self.graph = ConnectionGraph()
-            rows = self.exact.get_all_with_ids()
-            superseded = self.exact.superseded_ids()
-            origins = self.exact.all_origins()
+            rows = self.fact_store.get_all_with_ids()
+            superseded = self.fact_store.superseded_ids()
+            origins = self.fact_store.all_origins()
             by_subject: dict[str, list[Fact]] = collections.defaultdict(list)
             by_object: dict[str, list[Fact]] = collections.defaultdict(list)
             for fact_id, fact in rows:
@@ -100,7 +139,7 @@ class MemorySystem:
             given_rows = [(i, f) for i, f in rows if f.source != Source.DEDUCED and i not in superseded]
             self.engine.add_facts([replace(f, origin=o) for i, f in given_rows for o in (origins.get(i) or [""])])
             inferred = self.engine.infer(max_iterations=STARTUP_INFERENCE_BUDGET)
-            self._stored_keys = self.exact.all_keys()
+            self._stored_keys = self.fact_store.all_keys()
             self.startup = {
                 "rows": len(rows), "given_facts": len(given_rows), "superseded": len(superseded),
                 "beliefs": len(self.engine.beliefs), "inferred": len(inferred),
@@ -111,12 +150,11 @@ class MemorySystem:
 
     def _known_keys(self) -> set[str]:
         if self._stored_keys is None:
-            self._stored_keys = self.exact.all_keys()
+            self._stored_keys = self.fact_store.all_keys()
         return self._stored_keys
 
     def unstored(self, engine) -> list:
         """Keys of engine beliefs the store doesn't have yet."""
-        from memory.exact_store import fact_key
         known = self._known_keys()
         return sorted(k for k, b in engine.beliefs.items() if fact_key(b.fact) not in known)
 
@@ -139,10 +177,8 @@ class MemorySystem:
 
         Derived facts go through store_beliefs(), which keeps their derivations.
         """
-        from memory.exact_store import fact_key
-
         with self.lock:
-            fact_id, created = self.exact.upsert(fact)
+            fact_id, created = self.fact_store.upsert(fact)
             if self._stored_keys is not None:
                 self._stored_keys.add(fact_key(fact))
             self._index_new(fact_id, fact, created)
@@ -182,9 +218,8 @@ class MemorySystem:
             keys = list(keys)
             for k in keys:
                 visit(k)
-            results = self.exact.store_derived(entries)
+            results = self.fact_store.store_derived(entries)
             if self._stored_keys is not None:
-                from memory.exact_store import fact_key
                 self._stored_keys.update(fact_key(fact) for fact, _ in entries)
             for (fact, _), (fact_id, created) in zip(entries, results):
                 self._index_new(fact_id, fact, created)
@@ -196,34 +231,58 @@ class MemorySystem:
         return self.store_beliefs(engine, [key_of(f) for f in facts])
 
     def explain(self, fact_id: int) -> list[dict] | None:
-        """Walk a stored fact back to the inputs it rests on (ExactStore.trace)."""
-        return self.exact.trace(fact_id)
+        """Walk a stored fact back to the inputs it rests on (the store's trace)."""
+        return self.fact_store.trace(fact_id)
+
+    def supersede(self, original: Fact, by_id: int) -> int | None:
+        """Mark a stored fact as replaced by another row, and take it out of the graph. Nothing is deleted."""
+        with self.lock:
+            old_id = self.fact_store.supersede(original, by_id)
+            self.graph.remove_fact(original)
+            return old_id
+
+    def facts_with_ids(self) -> list[tuple[int, Fact]]:
+        """Every stored fact with its id, in id order."""
+        with self.lock:
+            return self.fact_store.get_all_with_ids()
+
+    def graph_edges(self) -> list[tuple[str, str, dict]]:
+        """The relationship graph's edges, (from, to, data), for the graph view."""
+        with self.lock:
+            return list(self.graph.get_all_edges())
+
+    def stats(self) -> dict:
+        """Counts for the status panel: facts by source, derivations, graph size, and the store in use."""
+        with self.lock:
+            return {"facts": self.fact_store.count(), "by_source": self.fact_store.count_by_source(),
+                    "derivations": self.fact_store.count_derivations(), "nodes": len(self.graph.get_all_nodes()),
+                    "edges": len(self.graph.get_all_edges()), "store": self.fact_store.backend}
 
     def _index_new(self, fact_id: int, fact: Fact, created: bool) -> None:
         """Graph and vectors for a stored row, as store() does."""
         if not created:
-            self.semantic.store(fact_id, self.exact.get(fact_id) or fact)
+            self.semantic.store(fact_id, self.fact_store.get(fact_id) or fact)
             return
         self.graph.add_fact(fact)
         self.semantic.store(fact_id, fact)
         if self.graph.similarity_fn is None:
             self.graph.similarity_fn = lambda a, b: _embedding_similarity(self.semantic, a, b)
             self.graph.similarity_threshold = 0.7
-        related = self.exact.find_by_subject(fact.subject)
-        related.extend(self.exact.find_by_object(fact.object))
+        related = self.fact_store.find_by_subject(fact.subject)
+        related.extend(self.fact_store.find_by_object(fact.object))
         self.graph.auto_connect(fact, related)
 
     def store_with_proof(self, fact: Fact, proof_chain: list[str]) -> int:
         with self.lock:
-            fact_id, created = self.exact.upsert(fact, proof_chain)
+            fact_id, created = self.fact_store.upsert(fact, proof_chain)
             if created:
                 self.graph.add_fact(fact)
-            self.semantic.store(fact_id, self.exact.get(fact_id) or fact)
+            self.semantic.store(fact_id, self.fact_store.get(fact_id) or fact)
             return fact_id
 
     def recall(self, query: str, limit: int = 10) -> list[Fact]:
         with self.lock:
-            results = self.exact.search_text(query)
+            results = self.fact_store.search_text(query)
             if not results:
                 semantic_results = self.semantic.search(query, limit)
                 results = []
@@ -232,7 +291,7 @@ class MemorySystem:
                         fact_id = int(r["id"])
                     except (ValueError, KeyError):
                         continue
-                    fact = self.exact.get(fact_id)
+                    fact = self.fact_store.get(fact_id)
                     if fact:
                         results.append(fact)
             self.attention.decay()
@@ -250,20 +309,23 @@ class MemorySystem:
         self.graph.add_connection(fact_a.subject, fact_b.object, "related", 1.0)
 
     def get_related_facts(self, subject: str) -> list[Fact]:
-        return self.exact.find_by_subject(subject)
+        return self.fact_store.find_by_subject(subject)
 
     def get_all_facts(self) -> list[Fact]:
-        return self.exact.get_all()
+        return self.fact_store.get_all()
 
     def count(self) -> int:
         with self.lock:
-            return self.exact.count()
+            return self.fact_store.count()
 
     def save(self, path: str, include_vectors: bool = True) -> None:
-        import shutil, os, json
+        import shutil, json
         with self.lock:
             os.makedirs(path, exist_ok=True)
-            shutil.copy(self.exact.db_path, os.path.join(path, "memory.db"))
+            if self.fact_store.backend == "engine":
+                self.fact_store.export_to(os.path.join(path, "memory.engine.tar.gz"))
+            else:
+                shutil.copy(self.fact_store.db_path, os.path.join(path, "memory.db"))
             if include_vectors and os.path.isfile(self.semantic.db_path):
                 shutil.copy(self.semantic.db_path, os.path.join(path, "vectors.db"))
             graph_data = {"nodes": list(self.graph.get_all_nodes()), "edges": [(u, v, d) for u, v, d in self.graph.get_all_edges()]}
@@ -272,19 +334,24 @@ class MemorySystem:
 
     @classmethod
     def load(cls, path: str, lance_path: str | None = None) -> "MemorySystem":
-        import os
+        """Open a save: an engine backup (memory.engine.tar.gz) or an original database (memory.db)."""
         db_path = os.path.join(path, "memory.db")
+        backup = os.path.join(path, "memory.engine.tar.gz")
         if lance_path is None:
             lance_path = os.path.join(path, "vectors.db")
+        if os.path.exists(backup):
+            from memory.engine_store import EngineStore
+            store = EngineStore.import_from(backup, os.path.join(path, "memory.engine"))
+            return cls(db_path=db_path, lance_path=lance_path, store=store)   # restores engine and graph
         if not os.path.exists(db_path):
-            raise FileNotFoundError(f"Database file not found: {db_path}")
-        return cls(db_path=db_path, lance_path=lance_path)  # restores engine and graph
+            raise FileNotFoundError(f"No save found in {path} (memory.engine.tar.gz or memory.db)")
+        return cls(db_path=db_path, lance_path=lance_path, backend="exact")
 
     def rebuild_index(self) -> int:
         """Recreate the semantic index from the fact store. Returns the number of vectors."""
         with self.lock:
-            return self.semantic.rebuild(self.exact.get_all_with_ids())
+            return self.semantic.rebuild(self.fact_store.get_all_with_ids())
 
     def close(self) -> None:
-        self.exact.close()
+        self.fact_store.close()
         self.semantic.close()

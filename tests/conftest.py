@@ -127,6 +127,9 @@ def isolated_environment(tmp_path, monkeypatch, request):
     monkeypatch.setenv("ADAM_DB", str(tmp_path / "adam_memory.db"))
     monkeypatch.setenv("ADAM_VECTORS", str(tmp_path / "adam_vectors.db"))
     monkeypatch.setenv("ADAM_LANCE", str(tmp_path / "adam_vectors.db"))
+    # The engine store keeps its key in the XDG config folder: never the user's real one (Stage 4.1).
+    for name in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_RUNTIME_DIR"):
+        monkeypatch.setenv(name, str(tmp_path / "xdg" / name.lower()))
     monkeypatch.setenv("HF_HUB_OFFLINE", "1")
 
     if "real_model" not in request.keywords:

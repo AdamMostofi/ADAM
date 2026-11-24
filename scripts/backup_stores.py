@@ -4,11 +4,17 @@ Usage:
     python scripts/backup_stores.py [--dest backups/<date>] [--root .]
 
 Every store that exists is copied byte for byte with timestamps preserved:
-adam_memory.db, adam_vectors.db, the old adam_vectors.lance folder,
-adam_save/ and skills/. Every file is hashed in the source and in the copy,
-and the run fails unless they match. SQLite files get an integrity check.
-A manifest is written next to the copy. The source stores are only read.
-Stop any running ADAM process first, so the copy is consistent.
+adam_memory.engine/ (the engine store, Stage 4.1), adam_memory.db,
+adam_vectors.db, the old adam_vectors.lance folder, adam_save/ and skills/.
+Every file is hashed in the source and in the copy, and the run fails unless
+they match. SQLite files get an integrity check. A manifest is written next
+to the copy. The source stores are only read. Stop any running ADAM process
+first, so the copy is consistent.
+
+The engine store is encrypted, and its key (`adam.key`) is kept outside the
+repository, in the engine's key folder. It is not copied here: a backup
+opens on this machine, and needs that key copied separately to open
+anywhere else.
 """
 from __future__ import annotations
 
@@ -21,7 +27,7 @@ import shutil
 import sqlite3
 import sys
 
-STORES = ("adam_memory.db", "adam_vectors.db", "adam_vectors.lance", "adam_save", "skills")
+STORES = ("adam_memory.engine", "adam_memory.db", "adam_vectors.db", "adam_vectors.lance", "adam_save", "skills")
 
 
 def file_hashes(path: str) -> dict[str, dict]:
@@ -102,6 +108,8 @@ def backup(root: str, dest: str) -> int:
 
     with open(os.path.join(dest, "MANIFEST.json"), "w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=1)
+    if "adam_memory.engine" in stores:
+        print("note: the engine store's key (adam.key, in the engine's key folder) is not in the backup")
     print(f"backup complete: {dest}")
     return 0
 

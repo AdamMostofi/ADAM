@@ -5,7 +5,7 @@ are rebuilt from it; nothing else is persisted as a second truth.
 """
 from __future__ import annotations
 
-import sqlite3
+from pathlib import Path
 
 from interface.core import ADAMCore
 from interface.web.app import create_app
@@ -31,11 +31,11 @@ def teach(core: ADAMCore) -> None:
 
 
 def snapshot(core: ADAMCore) -> dict:
-    db = core.memory.exact.db_path
-    with sqlite3.connect(db) as conn:
-        rows = conn.execute("SELECT id, subject, predicate, object, source FROM facts ORDER BY id").fetchall()
-        derivations = conn.execute(
-            "SELECT conclusion_id, rule, premise_ids FROM derivations ORDER BY id").fetchall()
+    """What the store holds, read through the storage contract, so it works on either store (Stage 4.1)."""
+    store = core.memory.fact_store
+    facts = store.get_all_with_ids()
+    rows = [(i, f.subject, f.predicate, f.object, f.source.value) for i, f in facts]
+    derivations = sorted((i, d["rule"], tuple(d["premise_ids"])) for i, _ in facts for d in store.derivations_of(i))
     edges = sorted((u, v, d.get("predicate"), d.get("source")) for u, v, d in core.memory.graph.get_all_edges())
     beliefs = {k: (b.given, frozenset(b.derivations)) for k, b in core.engine.beliefs.items()}
     return {"rows": rows, "derivations": derivations, "edges": edges, "beliefs": beliefs,
@@ -135,9 +135,7 @@ def test_startup_is_read_only_and_the_next_write_stores_new_conclusions(tmp_path
     # Facts stored without inference, as if the previous session stopped before inferring.
     core.memory.store(Fact("a", "subclass_of", "b"))
     core.memory.store(Fact("b", "subclass_of", "c"))
-    db = tmp_path / "adam_memory.db"
-    with sqlite3.connect(db) as conn:
-        before = conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
+    before = core.memory.count()
     restarted = start(tmp_path)
     assert restarted.engine.query("a", "subclass_of", "c")  # known in memory at once
     assert restarted.memory.count() == before  # but startup wrote nothing
@@ -151,12 +149,15 @@ def test_startup_is_read_only_and_the_next_write_stores_new_conclusions(tmp_path
 
 def test_a_restart_leaves_the_store_files_unchanged(tmp_path):
     import hashlib
-    teach(start(tmp_path))
+    core = start(tmp_path)
+    teach(core)
+    location = Path(core.memory.fact_store.location())      # a file (exact) or a folder (engine)
     start(tmp_path)  # a first restart may migrate the schema; after that, starting must not write
 
     def digest():
-        return {name: hashlib.sha1((tmp_path / name).read_bytes()).hexdigest()
-                for name in ("adam_memory.db", "adam_vectors.db")}
+        files = [location] if location.is_file() else sorted(p for p in location.rglob("*") if p.is_file())
+        files.append(tmp_path / "adam_vectors.db")
+        return {str(f): hashlib.sha1(f.read_bytes()).hexdigest() for f in files}
 
     before = digest()
     start(tmp_path)

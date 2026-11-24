@@ -94,7 +94,9 @@ Outcomes are as follows:
 
 | Issue | ID | Decision | Outcome |
 |---|---|---|---|
-| #46 | DSM.1 | Generic engine; ADAM's meanings stay in ADAM. | Adopted. |
+| #46 | DSM.1 | Generic engine; ADAM's meanings stay in ADAM. | Adopted; built in Stage 4.1 ([storage-contract.md](design/storage-contract.md)). |
+| #46 | DSM.2 | The engine gains a generic record type (Yewtree 0.3.0) rather than ADAM fitting its data into the engine's existing knowledge kinds. | Adopted (owner's choice). |
+| #46 | DSM.3 | The engine store is the default; the original SQLite store stays selectable with `ADAM_STORE=exact`. | Adopted (owner's choice). |
 | #24 | D3.1–D3.4 | Markdown first, SQLite FTS5 retrieval, CLI ingest only, console naming. | Adopted. |
 | #34 | DS.1 | Templates before generation for facts. | Proposed (owner's call). |
 | #77 | DE.2 | Decide EQ's value before adding sophistication. | Adopted. |

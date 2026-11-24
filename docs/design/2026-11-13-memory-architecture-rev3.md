@@ -652,6 +652,11 @@ Stages 2.1 to 2.5 are kept as built. The order follows the agreed priority: foun
 | 3.3 to 3.6 | OpenCode, Pi, others, release | As planned, each adapter declaring its tier | #58 to #61 |
 | 4.1 | Connect the Engine | ADAM at **tier A**: ADAM assembles every request through the context manager | #46 |
 
+**Note (Stage 4.1, 2026-11-24):** #46 was scoped to storage, and it delivered that: ADAM's facts, derivations and
+records on the engine, behind one contract ([storage-contract.md](storage-contract.md)). Assembling every request
+through the context manager, the tier A part of this row, wasn't in #46's scope or acceptance and hasn't been
+built.
+
 **Issues:** when this plan is accepted:
 - #55 becomes 2.9;
 - #76 becomes 2.11;

@@ -115,8 +115,7 @@ class ADAMCore:
         classified = self.engine.classify(original, meaning)
         new_id = self.memory.store(classified)
         # The original row is kept but marked, so a restart doesn't bring the ambiguous fact back.
-        self.memory.exact.supersede(original, new_id)
-        self.memory.graph.remove_fact(original)
+        self.memory.supersede(original, new_id)
         self.memory.settle(self.engine)  # store what the classification lets ADAM conclude
         return {"subject": classified.subject, "predicate": classified.predicate, "object": classified.object}
 
@@ -135,15 +134,15 @@ class ADAMCore:
         ]
 
     def get_graph_data(self) -> dict:
-        graph = self.memory.graph
+        graph_edges = self.memory.graph_edges()
         nodes = {}
-        for u, v, d in graph.get_all_edges():
+        for u, v, d in graph_edges:
             source = d.get("source", "user")
             nodes.setdefault(u, {"id": u, "label": u, "source": source})
             nodes.setdefault(v, {"id": v, "label": v, "source": source})
         edges = [
             {"from": u, "to": v, "label": d.get("predicate", "")}
-            for u, v, d in graph.get_all_edges()
+            for u, v, d in graph_edges
         ]
         return {"nodes": list(nodes.values()), "edges": edges}
 
@@ -163,12 +162,14 @@ class ADAMCore:
         ]
 
     def get_stats(self) -> dict:
-        by_source = self.memory.exact.count_by_source()
+        memory = self.memory.stats()
+        by_source = memory["by_source"]
         return {
-            "facts": self.memory.count(),
+            "facts": memory["facts"],
             "skills": len(self.learning.skill_compiler.skills),
-            "nodes": len(self.memory.graph.get_all_nodes()),
-            "edges": len(self.memory.graph.get_all_edges()),
+            "nodes": memory["nodes"],
+            "edges": memory["edges"],
+            "store": memory["store"],
             "baseline": self.eq.get_baseline(),
             "mood_shift": self.eq.detect_mood_shift(),
             "by_source": by_source,

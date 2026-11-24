@@ -93,6 +93,21 @@ def test_reset_refuses_while_adam_is_running(tmp_path, monkeypatch):
     assert backup_stores.current_hashes(str(tmp_path)) == before
 
 
+def test_the_engine_store_is_backed_up_and_reset_too(tmp_path):
+    """Stage 4.1: the default store is the engine's folder, adam_memory.engine/."""
+    from kernel.facts import Fact
+    from memory.engine_store import EngineStore
+    make_old_stores(tmp_path)
+    EngineStore(tmp_path / "adam_memory.engine").upsert(Fact("cat", "is", "animal"))
+    before = backup_stores.current_hashes(str(tmp_path))
+    assert any(k.startswith("adam_memory.engine") for k in before)
+    assert reset_store.reset(str(tmp_path), yes=True) == 0
+    (backup,) = (tmp_path / "backups").iterdir()
+    assert backup_stores.current_hashes(str(backup)) == before          # the engine store is in the backup
+    assert not (tmp_path / "adam_memory.engine").exists()
+    assert EngineStore(backup / "adam_memory.engine").count() == 1     # and the copy opens on this machine
+
+
 def test_fresh_stores_work_with_adam(tmp_path):
     make_old_stores(tmp_path)
     reset_store.reset(str(tmp_path), yes=True)

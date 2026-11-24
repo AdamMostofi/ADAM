@@ -6,9 +6,12 @@ How a restarted ADAM rebuilds what it knew (Stage 1.6, #36).
 
 ## The rule
 
-**DS1: SQLite is the source of truth; memory is rebuilt.** Nothing in the
+**DS1: the store is the source of truth; memory is rebuilt.** Nothing in the
 engine or the graph is saved as a second truth. At startup,
-`MemorySystem.restore()` rebuilds both from the store.
+`MemorySystem.restore()` rebuilds both from the store. Since Stage 4.1 the
+store is the Yewtree engine by default, or the original SQLite store with
+`ADAM_STORE=exact` ([storage-contract.md](storage-contract.md)); both follow
+the same contract, so everything below holds for either.
 
 | What | How it comes back |
 |---|---|
@@ -94,6 +97,18 @@ loaded, because restore doesn't embed.
 
 Before the linear replay, the 20,060-fact graph took 4.6 s on its own: the
 old store-time connection logic is quadratic in facts that share an object.
+
+**Stage 4.1, with each store** (`scripts/measure_startup.py --store`,
+2026-11-24; [engine](../measurements/2026-11-24-startup-engine.json),
+[original](../measurements/2026-11-24-startup-exact.json)):
+
+| Given facts | Original store | Engine store |
+|---|---|---|
+| 1,060 | 0.11 s | 0.11 s |
+| 5,060 | 0.64 s | 0.71 s |
+| 20,060 | 3.05 s | 3.72 s |
+
+Both stay within the figures above.
 
 ## Limits
 
