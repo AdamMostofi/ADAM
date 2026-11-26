@@ -10,7 +10,9 @@ from memory.system import MemorySystem
 from learning.engine import LearningEngine
 from learning.eq.engine import EQEngine
 from interface.ear import Ear
-from interface.mouth import Mouth
+from interface.evidence import Answerer
+from interface.mouth import Mouth, small_talk
+from memory.source_library import SourceError
 
 # Agenda entries one chat turn may process (Stage 1.2, #28). Inference is
 # incremental, so a turn only pays for consequences of what it added; work
@@ -50,12 +52,14 @@ class ADAMCore:
             self.memory.settle(self.engine, max_iterations=CHAT_INFERENCE_BUDGET)
             memories = self.memory.recall(message, limit=10)
 
-        context_text = "\n".join(f"{f.subject} {f.predicate} {f.object}" for f in memories)
-        response = self.mouth.format_response(message, {
+        # Stage 4.3 (#34): the reply comes from evidence. Facts are worded from proofs, passages are quoted,
+        # and the Mouth speaks only where nothing factual is at stake (interface/evidence.py).
+        answer = Answerer(self.engine, self._library(), self.mouth, small_talk).answer(message, {
             "warmth": params.warmth,
             "depth": params.depth,
             "tone": user_state.emotional_tone.value,
-        }, context=context_text)
+        })
+        response = answer.text
 
         # process_input() already recorded this turn in the tracker and the baseline (Stage 1.7, #37).
         self.eq.save()
@@ -82,7 +86,16 @@ class ADAMCore:
                 "encouraging_closing": params.encouraging_closing,
             },
             "memories_used": len(memories),
+            "answer_source": answer.answer_source,
+            "evidence": answer.evidence,
         }
+
+    def _library(self):
+        """The source library, or None when the store keeps no records or the library can't open."""
+        try:
+            return self.memory.source_library()
+        except SourceError:
+            return None
 
     def add_fact(self, subject: str, predicate: str, obj: str) -> int:
         fact = Fact(

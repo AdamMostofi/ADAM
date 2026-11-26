@@ -64,14 +64,28 @@ def _key(f: Fact) -> tuple[str, str, str]:
     return (f.subject, f.predicate, f.object)
 
 
+Key = tuple[str, str, str]
+# One proof step: (rule, premise keys, conclusion key); rule is None for a fact the proof starts from.
+ProofStep = tuple["str | None", tuple[Key, ...], Key]
+
+
 def prove(engine, subject: str, predicate: str, object: str, max_depth: int = 6) -> list[str] | None:
-    """Return the proof of (subject, predicate, object), or None if it can't be shown within the bounds."""
+    """Return the proof of (subject, predicate, object) as text, or None if it can't be shown within the bounds."""
+    steps = proof_steps(engine, subject, predicate, object, max_depth)
+    if steps is None:
+        return None
+    return [f"[given] {' '.join(k)}" if rule is None else
+            f"[{rule}] {' + '.join(' '.join(p) for p in premises)} -> {' '.join(k)}" for rule, premises, k in steps]
+
+
+def proof_steps(engine, subject: str, predicate: str, object: str, max_depth: int = 6) -> list[ProofStep] | None:
+    """prove() as data: the steps, premises first (Stage 4.3, so answers can be worded from them)."""
     goal_fact = canonical_fact(Fact(subject, predicate, object))
     subject, predicate, object = goal_fact.subject, goal_fact.predicate, goal_fact.object
     goal = (subject, predicate, object)
     facts = engine.strict_facts()  # defaults are not proofs (Stage 1.5)
     if goal in {_key(f) for f in facts}:
-        return [f"[given] {subject} {predicate} {object}"]
+        return [(None, (), goal)]
 
     seeds = {subject, object} - _UNLINKED
     relevant = _connected(facts, seeds) if {_base(s) for s in seeds} - _UNLINKED else facts
@@ -125,13 +139,12 @@ def _explain(goal, how) -> list[str]:
             return
         done.add(k)
         if k not in how:
-            ordered.append(f"[given] {' '.join(k)}")
+            ordered.append((None, (), k))
             return
         rule_name, args = how[k]
         for a in args:
             visit(_key(a))
-        premises = " + ".join(str(a) for a in args)
-        ordered.append(f"[{rule_name}] {premises} -> {' '.join(k)}")
+        ordered.append((rule_name, tuple(_key(a) for a in args), k))
 
     visit(goal)
     return ordered

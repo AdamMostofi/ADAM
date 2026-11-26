@@ -1,0 +1,49 @@
+{
+  "individuals": 20000,
+  "beliefs": 60173,
+  "infer_seconds": 2.49,
+  "answers": {
+    "yes/no, derived": {
+      "median_ms": 0.09,
+      "max_ms": 92.03,
+      "answer_source": [
+        "proof"
+      ]
+    },
+    "yes/no, unknown": {
+      "median_ms": 0.05,
+      "max_ms": 0.17,
+      "answer_source": [
+        "no_evidence"
+      ]
+    },
+    "what is": {
+      "median_ms": 16.1,
+      "max_ms": 19.93,
+      "answer_source": [
+        "proof"
+      ]
+    },
+    "statement": {
+      "median_ms": 0.05,
+      "max_ms": 0.15,
+      "answer_source": [
+        "proof"
+      ]
+    },
+    "no evidence": {
+      "median_ms": 0.01,
+      "max_ms": 0.03,
+      "answer_source": [
+        "no_evidence"
+      ]
+    },
+    "small talk": {
+      "median_ms": 0.0,
+      "max_ms": 0.0,
+      "answer_source": [
+        "small_talk"
+      ]
+    }
+  }
+}

@@ -70,6 +70,7 @@ python -m interface.web.app             # web UI on http://localhost:7860
 | Relationship graph (NetworkX) | `memory/connection_graph.py` | `tests/integration/test_graph.py` |
 | Attention ranking of recalled facts (per session) | `memory/attention.py` | `tests/unit/test_attention.py` |
 | Learned skills run as Layer 2 rules, with fitness tracking | `learning/skill_compiler.py` | `tests/unit/test_rules_registry.py`, `tests/unit/test_skill_fitness.py` |
+| Answers only from evidence: facts worded from proofs, passages quoted with citations, no answer without evidence; the Mouth's text shown only when it asserts nothing | `interface/evidence.py`, [evidence-answers.md](docs/design/evidence-answers.md) | `tests/integration/test_evidence_answers.py` |
 | Ear (Cactus Needle, with a keyword fallback) and Mouth (TinyChat15M via `llama-server`) | `interface/ear.py`, `interface/mouth.py` | `tests/integration/test_ear_mouth.py` |
 | EQ: keyword appraisal of tone, with word-boundary matching and negation | `learning/eq/`, [eq-appraisal.md](docs/design/eq-appraisal.md) | `tests/unit/test_eq_appraisal_matching.py`, `tests/integration/test_eq_comprehensive.py` |
 | Web UI and JSON API (Flask, vanilla HTML/CSS/JS, no build step) | `interface/web/` | `tests/integration/test_interface.py` |
@@ -82,11 +83,14 @@ suite in an environment without ADAM.
 
 ### What it does not do yet
 
-- **Chat runs forward inference, not proof.** `chat()` recalls facts, adds
-  them to the engine and infers; it doesn't call `prove()`.
-- **Factual answers aren't grounded in evidence yet.** The Mouth phrases the
-  reply from recalled facts, and TinyChat15M can still make things up.
-  Answering only from evidence is Stage 4.3.
+- **ADAM understands a few question shapes.** It answers "is X Y?",
+  "what/who is X?", "tell me about X" and statements like "X is Y" from
+  proofs, and other questions only from passages that hold most of their
+  words. Anything else gets "I won't guess" rather than an answer
+  ([evidence-answers.md](docs/design/evidence-answers.md)).
+- **The Mouth rarely speaks.** Its text is shown only when it asserts
+  nothing (a conversational reply to chatter). TinyChat15M can't restate
+  facts, so factual sentences are worded from the proof instead.
 - **The learning loop isn't connected to chat.** Pattern extraction and
   skill compilation work as a library and in tests; skills compiled earlier
   are loaded at startup. Learning from chat is Stage 5.7.
@@ -173,7 +177,11 @@ affect. The Mouth renders the answer.*
   as Layer 2 rules.
 - **EQ** — keyword appraisal along appraisal-theory dimensions, producing a
   tone, a goal status and response parameters.
-- **Mouth** — TinyChat15M served through `llama-server`.
+- **Answers** — from evidence only (Stage 4.3): facts worded from their proofs,
+  passages quoted with their source, and "I won't guess" when nothing backs an
+  answer. Each reply carries its `answer_source` and `evidence`.
+- **Mouth** — TinyChat15M served through `llama-server`, for chatter only, and
+  only when its words assert nothing.
 - **Interface** — a `rich` CLI and a Flask web UI.
 
 The Layer 1 rule floor is fixed in code, and learning only adds Layer 2 rules.
@@ -207,15 +215,20 @@ The Vox, Data-Vaults, and Rites names are interface labels, not separate service
 
 ![ADAM request sequence](docs/diagrams/request-sequence.svg)
 
-*A browser message becomes an intent, a memory query, inference, and a voice.*
+*A browser message becomes an intent, a memory query, inference, and an answer from evidence.*
 
 `POST /api/chat` is synchronous. The core:
-1. calls the Ear;
+1. calls the Ear (its intent is returned, but doesn't route the message);
 2. appraises the message;
 3. recalls facts;
 4. runs forward inference, storing any new conclusions with their
    derivations;
-5. formats the response.
+5. answers from evidence: small talk, a proof, a quoted passage, or "I won't
+   guess" ([evidence-answers.md](docs/design/evidence-answers.md)).
+
+The JSON keeps every key it had and adds `answer_source` (`proof`, `passage`,
+`no_evidence`, `small_talk`, `model` or `acknowledgement`) and `evidence`: each
+proof's steps, or each passage with its source, offsets and hash.
 
 The browser receives JSON and handles the word-by-word reveal locally.
 

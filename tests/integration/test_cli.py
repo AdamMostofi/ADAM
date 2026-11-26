@@ -16,4 +16,6 @@ def test_single_shot_message_prints_a_response(monkeypatch, capsys):
     monkeypatch.setattr(cli, "ADAMCore", lambda: real_core(mouth=QuietMouth()))
     monkeypatch.setattr(sys, "argv", ["cli", "what", "is", "a", "fact"])
     cli.main()
-    assert "hello from the test mouth" in capsys.readouterr().out
+    # Stage 4.3: a question nothing answers gets a plain "I won't guess", never the Mouth's words.
+    out = capsys.readouterr().out
+    assert "won't guess" in out and "hello from the test mouth" not in out

@@ -30,6 +30,14 @@ _SMALL_TALK = {
     "thank you": "You are welcome.",
     "bye": "Goodbye.",
     "goodbye": "Goodbye.",
+    "how are you": "I'm well, thank you. What shall we look into?",
+    "how are you today": "I'm well, thank you. What shall we look into?",
+    "how is it going": "Well, thank you. What shall we look into?",
+    "nice to meet you": "Nice to meet you too.",
+    "good night": "Good night.",
+    "good afternoon": "Good afternoon. What shall we work on?",
+    "what can you do": "I answer questions from what I know: facts I can prove, and passages from the sources "
+                       "in my library. When I can't back an answer, I say so.",
 }
 
 _DEFAULT_LLAMA_DIR = "~/llama.cpp"
@@ -163,3 +171,6 @@ def _clean(text: str) -> str:
 def _small_talk(message: str) -> str | None:
     key = " ".join(message.lower().strip().rstrip("!.,? ").split())
     return _SMALL_TALK.get(key)
+
+
+small_talk = _small_talk   # the fixed small-talk replies, for the evidence router (Stage 4.3)

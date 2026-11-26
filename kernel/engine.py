@@ -515,3 +515,10 @@ class InferenceEngine:
 
         with self.lock:
             return prove(self, subject, predicate, object, max_depth)
+
+    def proof_steps(self, subject: str, predicate: str, object: str, max_depth: int = 6):
+        """prove() as data: (rule, premise keys, conclusion key) steps, premises first; None if not shown."""
+        from kernel.prove import proof_steps
+
+        with self.lock:
+            return proof_steps(self, subject, predicate, object, max_depth)

@@ -85,8 +85,19 @@ class MemorySystem:
         self.lock = threading.RLock()
         self.startup: dict = {}
         self._stored_keys: set[str] | None = None  # cache of stored fact keys, loaded on first use
+        self.db_path = db_path
+        self._library = None
         if restore:
             self.restore()
+
+    def source_library(self):
+        """The source library on this store (Stage 4.2), opened on first use; None if the store keeps no
+        records (the original SQLite store)."""
+        with self.lock:
+            if self._library is None and self.fact_store.supports_records:
+                from memory.source_library import SourceLibrary, passages_path_for
+                self._library = SourceLibrary(self.fact_store, passages_path_for(self.db_path))
+            return self._library
 
     @property
     def exact(self) -> FactStore:
