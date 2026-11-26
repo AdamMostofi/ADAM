@@ -1,0 +1,35 @@
+{
+  "description": "Held-out sentences for EQ tone (Stage 4.4, #77), written on 2026-11-26 before any change to EQ in this stage and before its value was measured. They cover the four known misses' kinds (questions, litotes, sarcasm, context) with new wording, plus ordinary sentences. The score is recorded as is. Labels are a reader's; some are debatable, as noted.",
+  "items": [
+    {"text": "is this broken?", "tone": "neutral"},
+    {"text": "was that a bad idea?", "tone": "neutral"},
+    {"text": "why is it failing?", "tone": "neutral", "note": "debatable: could read as mild frustration"},
+    {"text": "does it hurt to ask?", "tone": "neutral"},
+    {"text": "not terrible", "tone": "neutral"},
+    {"text": "I don't dislike it", "tone": "neutral"},
+    {"text": "it's not awful", "tone": "neutral"},
+    {"text": "not the worst", "tone": "neutral"},
+    {"text": "wonderful, another crash", "tone": "negative"},
+    {"text": "oh great, it failed again", "tone": "negative"},
+    {"text": "perfect, now nothing loads", "tone": "negative"},
+    {"text": "love how it keeps breaking", "tone": "negative"},
+    {"text": "this works well", "tone": "positive"},
+    {"text": "I'm really happy with it", "tone": "positive"},
+    {"text": "brilliant work", "tone": "positive"},
+    {"text": "this is a disaster", "tone": "negative"},
+    {"text": "I hate this error", "tone": "negative"},
+    {"text": "it's okay I guess", "tone": "neutral"},
+    {"text": "the file has three lines", "tone": "neutral"},
+    {"text": "please show me the facts", "tone": "neutral"},
+    {"text": "not good", "tone": "negative"},
+    {"text": "never been better", "tone": "positive"},
+    {"text": "can't stand it", "tone": "negative"},
+    {"text": "is it good?", "tone": "neutral"}
+  ],
+  "sequences": [
+    {"turns": ["it failed", "still broken", "it broke again", "fine."], "last_tone": "negative",
+     "note": "context: 'fine.' after repeated failures"},
+    {"turns": ["it works", "thanks, great", "fine."], "last_tone": "neutral",
+     "note": "context: 'fine.' after good news stays neutral"}
+  ]
+}
