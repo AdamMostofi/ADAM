@@ -1,0 +1,563 @@
+<meta charset="utf-8">
+<title>ADAM System Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a stacked schematic of ADAM's layers (what you see → core → reasoning → memory → disk), with a detail
+   pane beside it; below it, one chat turn, the roadmap, every decision, open questions and this map's changelog. */
+:root {
+  --bg: oklch(97.6% 0.006 245);
+  --surface: oklch(99.6% 0.002 245);
+  --sunken: oklch(94.5% 0.009 245);
+  --ink: oklch(24% 0.025 255);
+  --muted: oklch(48% 0.022 255);
+  --line: oklch(87% 0.012 250);
+  --accent: oklch(50% 0.13 252);
+  --accent-soft: oklch(93% 0.035 252);
+  --new: oklch(55% 0.13 155);
+  --new-soft: oklch(94% 0.045 155);
+  --changed: oklch(60% 0.13 70);
+  --changed-soft: oklch(95% 0.05 80);
+  --retired: oklch(55% 0.16 25);
+  --retired-soft: oklch(95% 0.03 25);
+  --pending: oklch(54% 0.14 300);
+  --pending-soft: oklch(95% 0.035 300);
+  --font-display: "Oswald", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: oklch(17.5% 0.014 255); --surface: oklch(21.5% 0.016 255); --sunken: oklch(15% 0.012 255);
+    --ink: oklch(93% 0.01 250); --muted: oklch(70% 0.018 250); --line: oklch(32% 0.02 255);
+    --accent: oklch(74% 0.12 250); --accent-soft: oklch(30% 0.05 252);
+    --new: oklch(76% 0.13 155); --new-soft: oklch(29% 0.05 155);
+    --changed: oklch(80% 0.12 80); --changed-soft: oklch(31% 0.05 75);
+    --retired: oklch(72% 0.14 25); --retired-soft: oklch(30% 0.05 25);
+    --pending: oklch(76% 0.12 300); --pending-soft: oklch(30% 0.05 300);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: oklch(17.5% 0.014 255); --surface: oklch(21.5% 0.016 255); --sunken: oklch(15% 0.012 255);
+  --ink: oklch(93% 0.01 250); --muted: oklch(70% 0.018 250); --line: oklch(32% 0.02 255);
+  --accent: oklch(74% 0.12 250); --accent-soft: oklch(30% 0.05 252);
+  --new: oklch(76% 0.13 155); --new-soft: oklch(29% 0.05 155);
+  --changed: oklch(80% 0.12 80); --changed-soft: oklch(31% 0.05 75);
+  --retired: oklch(72% 0.14 25); --retired-soft: oklch(30% 0.05 25);
+  --pending: oklch(76% 0.12 300); --pending-soft: oklch(30% 0.05 300);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: 0.02em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 4vw, 2.9rem); text-transform: uppercase; letter-spacing: 0.05em; }
+h2 { font-size: 1.45rem; text-transform: uppercase; letter-spacing: 0.06em; }
+h3 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; }
+p { margin: 0; }
+.mono { font-family: var(--font-mono); font-size: 0.84em; }
+.muted { color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 20px; }
+.section-head { display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; align-items: flex-end; }
+.kicker { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.lede { max-width: 66ch; color: var(--muted); margin-top: 8px; }
+.theme-toggle {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 0.8rem;
+}
+.now {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;
+}
+.now > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.now .label { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.now .value { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.02em; }
+
+/* legend + chips */
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 0.85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: var(--line); }
+.dot.new { background: var(--new); } .dot.changed { background: var(--changed); }
+.dot.retired { background: var(--retired); } .dot.pending { background: var(--pending); } .dot.stable { background: var(--muted); opacity: .45; }
+
+/* architecture */
+.arch { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .arch { grid-template-columns: 1fr; } }
+.layers { display: flex; flex-direction: column; gap: 0; }
+.layer { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px dashed var(--line); }
+.layer:first-child { border-top: 0; }
+@media (max-width: 560px) { .layer { grid-template-columns: 1fr; gap: 8px; } }
+.layer-name { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.92rem; color: var(--muted); padding-top: 8px; }
+.layer-name small { display: block; font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--muted);
+  border-radius: 8px; padding: 8px 12px; max-width: 100%;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.chip:hover { transform: translateY(-1px); box-shadow: 0 2px 10px oklch(0% 0 0 / .08); }
+.chip[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chip .name { font-weight: 600; font-size: 0.92rem; }
+.chip .file { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); overflow-wrap: anywhere; }
+.chip.new { border-left-color: var(--new); } .chip.changed { border-left-color: var(--changed); }
+.chip.retired { border-left-color: var(--retired); opacity: .8; } .chip.pending { border-left-color: var(--pending); }
+.chip.stable { border-left-color: color-mix(in oklch, var(--muted) 45%, transparent); }
+.tag { font-family: var(--font-mono); font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; align-self: flex-start; }
+.tag.new { background: var(--new-soft); color: var(--new); } .tag.changed { background: var(--changed-soft); color: var(--changed); }
+.tag.retired { background: var(--retired-soft); color: var(--retired); } .tag.pending { background: var(--pending-soft); color: var(--pending); }
+.tag.stable { background: var(--sunken); color: var(--muted); }
+
+.detail {
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px;
+  display: flex; flex-direction: column; gap: 14px; min-width: 0;
+}
+@media (max-width: 900px) { .detail { position: static; } }
+.detail dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; font-size: 0.9rem; }
+.detail dt { color: var(--muted); font-family: var(--font-mono); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+.detail dd { margin: 0; overflow-wrap: anywhere; }
+.detail ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* one turn */
+.flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; counter-reset: step; }
+.flow li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.flow li::before { content: counter(step); font-family: var(--font-display); font-size: 1.4rem; color: var(--accent); line-height: 1; }
+.flow b { font-weight: 600; }
+.flow small { color: var(--muted); font-size: 0.82rem; }
+
+/* roadmap */
+.phases { display: flex; flex-direction: column; gap: 10px; }
+.phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.phase > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+.phase > summary::-webkit-details-marker { display: none; }
+.phase-title { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.02rem; }
+.bar { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: var(--sunken); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+.bar .done { background: var(--new); } .bar .wait { background: var(--pending); } .bar .no { background: var(--retired); }
+.count { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stages { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+.stage { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.stage .id { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
+.stage .what { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.stage .what b { font-weight: 600; }
+.stage .what span { color: var(--muted); font-size: 0.88rem; }
+.stage ul { margin: 4px 0 0; padding-left: 18px; font-size: 0.88rem; display: flex; flex-direction: column; gap: 3px; }
+@media (max-width: 560px) { .stage { grid-template-columns: 40px minmax(0, 1fr); } .stage .tag { grid-column: 2; } }
+
+/* decisions */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 0.85rem; }
+.filters button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.9rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; background: var(--sunken); }
+tr:last-child td { border-bottom: 0; }
+td.idc { font-family: var(--font-mono); white-space: nowrap; }
+.owner { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); white-space: nowrap; }
+
+/* ideas + changelog */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.card .kind { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.log li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+.log time { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .chip { transition: none; } .chip:hover { transform: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">ADAM · living map · updated <span id="updated"></span></div>
+      <h1>ADAM System Map</h1>
+      <p class="lede">Every part of ADAM, what changed in each stage, every decision and who made it, and what is
+        still open. Click any part of the architecture to see what it does and which stages touched it.</p>
+    </div>
+    <button class="theme-toggle" id="theme" type="button">Theme: system</button>
+  </header>
+
+  <div class="now" id="now"></div>
+
+  <section aria-labelledby="arch-h">
+    <div class="section-head">
+      <h2 id="arch-h">Architecture</h2>
+      <p class="muted">From what you see down to the files on disk. Colours show what Phase 4 changed.</p>
+    </div>
+    <div class="legend">
+      <span><i class="dot new"></i>New in Phase 4</span>
+      <span><i class="dot changed"></i>Changed in Phase 4</span>
+      <span><i class="dot pending"></i>Waiting for your merge</span>
+      <span><i class="dot retired"></i>Retired or unused</span>
+      <span><i class="dot stable"></i>Unchanged</span>
+    </div>
+    <div class="arch">
+      <div class="layers" id="layers"></div>
+      <aside class="detail" id="detail" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section aria-labelledby="turn-h">
+    <div class="section-head">
+      <h2 id="turn-h">One chat turn</h2>
+      <p class="muted">What happens between pressing Enter and seeing the answer, in order.</p>
+    </div>
+    <ol class="flow" id="flow"></ol>
+  </section>
+
+  <section aria-labelledby="road-h">
+    <div class="section-head">
+      <h2 id="road-h">Roadmap</h2>
+      <p class="muted">10 phases, 57 stages, done one at a time. Open a phase to see its stages and what each one changed.</p>
+    </div>
+    <div class="phases" id="phases"></div>
+  </section>
+
+  <section aria-labelledby="dec-h">
+    <div class="section-head">
+      <h2 id="dec-h">Decisions</h2>
+      <p class="muted">Every recorded decision. "Your call" marks the ones you made.</p>
+    </div>
+    <div class="filters" id="dec-filters" role="group" aria-label="Filter decisions"></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Stage</th><th>Decision</th><th>Outcome</th></tr></thead>
+        <tbody id="decisions"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="open-h">
+    <div class="section-head">
+      <h2 id="open-h">Open questions and known limits</h2>
+      <p class="muted">Ideas waiting for a decision, and the honest limits recorded along the way.</p>
+    </div>
+    <div class="cards" id="open"></div>
+  </section>
+
+  <section aria-labelledby="log-h">
+    <div class="section-head">
+      <h2 id="log-h">Map changelog</h2>
+      <p class="muted">This page is updated after every stage, decision or idea.</p>
+    </div>
+    <ul class="log" id="log"></ul>
+  </section>
+</div>
+
+<script>
+const UPDATED = "2026-11-27";
+
+const NOW = [
+  ["Current phase", "4 · The Citation Rite"],
+  ["Waiting for your merge", "Stage 4.6 · Trace the Thought"],
+  ["Next", "Stage 5.1 · Test the Reader"],
+  ["Tests", "828 passing"],
+  ["Memory engine", "Yewtree 0.3.0"],
+];
+
+const LAYERS = [
+  { id: "see", name: "What you see", note: "web, CLI, API" },
+  { id: "core", name: "Core", note: "each chat turn" },
+  { id: "reason", name: "Reasoning", note: "rules and proofs" },
+  { id: "memory", name: "Memory", note: "one storage contract" },
+  { id: "disk", name: "On disk", note: "files beside ADAM" },
+];
+
+const PARTS = [
+  { id: "web", layer: "see", name: "Web chat (Vox)", file: "interface/web/static/js/chat.js", status: "pending",
+    what: "The chat page. Shows each answer as plain text, a Data-Vault sources block under quoted answers, and a “How this answer was reached” panel. While ADAM works it says only “Working…”.",
+    stages: ["4.3", "4.5", "4.6"], links: ["api", "trace"] },
+  { id: "cli", layer: "see", name: "CLI", file: "interface/cli.py", status: "changed",
+    what: "Chat in a terminal. Shows ADAM [frustrated] with a red border when the frustration signal is on.",
+    stages: ["4.4"], links: ["core"] },
+  { id: "api", layer: "see", name: "JSON API", file: "interface/web/app.py", status: "pending",
+    what: "/api/chat keeps every old field and gained answer_source and evidence (4.3), frustration (4.4), citations (4.5), and trace_id and conversation (4.6). /api/traces/<id> returns a turn’s trace.",
+    stages: ["4.3", "4.4", "4.5", "4.6"], links: ["core", "trace"] },
+  { id: "core", layer: "core", name: "ADAMCore", file: "interface/core.py", status: "changed",
+    what: "Runs one chat turn: listens, reads frustration, recalls, infers, answers from evidence, attaches citations and records the trace.",
+    stages: ["4.1", "4.3", "4.4", "4.5", "4.6"], links: ["answerer", "frustration", "trace", "memsys", "kernel"] },
+  { id: "answerer", layer: "core", name: "Evidence answerer", file: "interface/evidence.py", status: "new",
+    what: "Routes each message (small talk, question, statement, chatter) and answers only from evidence: facts worded from proofs, passages quoted exactly, “I won’t guess” otherwise. Contested facts back nothing.",
+    stages: ["4.3", "4.4", "4.6"], links: ["kernel", "library", "mouth"] },
+  { id: "frustration", layer: "core", name: "Frustration signal", file: "learning/eq/frustration.py", status: "new",
+    what: "What is left of EQ: is the user frustrated? Two troubled turns of the last three. It adds an apology to ADAM’s own “can’t answer” wording and keeps the Mouth quiet. Per conversation, never saved.",
+    stages: ["4.4", "4.6"], links: ["core"] },
+  { id: "trace", layer: "core", name: "Thought trace", file: "memory/trace_log.py", status: "pending",
+    what: "One trace per turn: PERCEIVE, RECALL, INFER and ANSWER nodes, linked to the proof records and citations. English is written from them on request. Every trace is kept; conversations beyond the last 5,000 are compressed.",
+    stages: ["4.6"], links: ["f_traces", "kernel"] },
+  { id: "mouth", layer: "core", name: "Mouth (TinyChat15M)", file: "interface/mouth.py", status: "changed",
+    what: "The small language model. Since 4.3 it only answers chatter, and its words are shown only if they assert nothing. It could not restate a fact in 16 tries.",
+    stages: ["4.3", "4.4"], links: ["answerer"] },
+  { id: "ear", layer: "core", name: "Ear (Needle)", file: "interface/ear.py", status: "retired",
+    what: "Extracts an intent that is returned but no longer used for routing. It costs about 85 MB of the 400 MB budget. Removing it is your call (#33).",
+    stages: ["4.3"], links: [] },
+  { id: "eq_old", layer: "core", name: "Old EQ engine", file: "learning/eq/ (appraiser, adjuster, baseline…)", status: "retired",
+    what: "Removed in 4.4 after measuring that it changed nothing a user could see. About 520 lines and 42 tests.",
+    stages: ["4.4"], links: ["frustration"] },
+  { id: "kernel", layer: "reason", name: "Kernel", file: "kernel/", status: "changed",
+    what: "15 rules, inference that ignores fact order, goal-directed proof, contradictions and defaults. 4.3 added proof_steps(), the proof as data. Imports nothing from memory or the engine.",
+    stages: ["4.3"], links: [] },
+  { id: "skills", layer: "reason", name: "Skills", file: "learning/", status: "stable",
+    what: "Learned Layer 2 rules, loaded at startup. Learning from chat comes in Stage 5.7.",
+    stages: [], links: ["kernel"] },
+  { id: "memsys", layer: "memory", name: "Memory system", file: "memory/system.py", status: "changed",
+    what: "The one door to storage for the core and routes: store, recall, settle, supersede, stats, the source library and the trace log.",
+    stages: ["4.1", "4.2", "4.6"], links: ["contract", "library", "trace", "semantic"] },
+  { id: "contract", layer: "memory", name: "Storage contract", file: "memory/store_contract.py", status: "new",
+    what: "Every storage operation ADAM uses, held to one test suite on both stores. Gained records in batches (4.2) and id_of (4.6).",
+    stages: ["4.1", "4.2", "4.6"], links: ["enginestore", "exactstore"] },
+  { id: "enginestore", layer: "memory", name: "Engine store", file: "memory/engine_store.py", status: "new",
+    what: "The default store, on Yewtree records. The only module that imports the engine. Reads come from an in-memory index; writes are about 2.5× slower than SQLite.",
+    stages: ["4.1", "4.6"], links: ["f_engine", "yewtree"] },
+  { id: "exactstore", layer: "memory", name: "Original store", file: "memory/exact_store.py", status: "changed",
+    what: "The old SQLite store, still selectable with ADAM_STORE=exact. It keeps facts and proofs but not records, so no source library.",
+    stages: ["4.1"], links: ["f_old"] },
+  { id: "library", layer: "memory", name: "Source library", file: "memory/source_library.py", status: "new",
+    what: "Markdown ingested once, split into paragraphs with exact offsets and hashes, searched with SQLite FTS5. Command line only.",
+    stages: ["4.2"], links: ["f_passages", "enginestore"] },
+  { id: "semantic", layer: "memory", name: "Semantic index", file: "memory/semantic_index.py", status: "stable",
+    what: "MiniLM embeddings in SQLite, for recall when exact text search finds nothing.", stages: [], links: ["f_vectors"] },
+  { id: "graph", layer: "memory", name: "Graph and attention", file: "memory/connection_graph.py", status: "stable",
+    what: "Relationships between facts, and per-session ranking of what was recalled.", stages: ["4.1"], links: [] },
+  { id: "f_engine", layer: "disk", name: "adam_memory.engine/", file: "Yewtree store, encrypted", status: "new",
+    what: "Facts, derivations, sources and passages as engine records. Append-only: nothing is ever deleted or overwritten.",
+    stages: ["4.1", "4.2"], links: ["f_key"] },
+  { id: "f_key", layer: "disk", name: "adam.key", file: "outside the repository", status: "new",
+    what: "The key that encrypts the engine store. Backups don’t copy it, so a backup opens only on this machine unless you copy the key too.",
+    stages: ["4.1"], links: [] },
+  { id: "f_passages", layer: "disk", name: "adam_memory.passages.db", file: "FTS5 search index", status: "new",
+    what: "The passage search index, rebuilt from the records whenever needed. It holds passage text unencrypted, because full-text search needs readable text.",
+    stages: ["4.2"], links: [] },
+  { id: "f_traces", layer: "disk", name: "adam_memory.traces.db", file: "thought traces", status: "pending",
+    what: "One trace per message. The last 5,000 conversations as they are (about 1.75 KB a turn), older ones compressed (about 100 bytes a turn).",
+    stages: ["4.6"], links: [] },
+  { id: "f_vectors", layer: "disk", name: "adam_vectors.db", file: "embeddings", status: "stable",
+    what: "The semantic index’s vectors.", stages: [], links: [] },
+  { id: "f_old", layer: "disk", name: "adam_memory.db", file: "original SQLite store", status: "stable",
+    what: "Your pre-4.1 facts, left untouched. Used only with ADAM_STORE=exact; nothing migrates them into the engine store.",
+    stages: [], links: [] },
+  { id: "yewtree", layer: "disk", name: "Yewtree 0.3.0", file: "github.com/AdamMostofi/yewtree", status: "changed",
+    what: "The memory engine, its own project. 0.3.0 added generic records so ADAM can keep its own data in it (4.1).",
+    stages: ["4.1"], links: ["f_engine"] },
+];
+
+const FLOW = [
+  ["Listen", "The Ear extracts an intent. It is returned, but routing no longer uses it.", "interface/ear.py"],
+  ["Read frustration", "Is this turn troubled, and is the user frustrated in this conversation?", "learning/eq/frustration.py"],
+  ["Recall", "Facts from the store whose text matches; the semantic index if none.", "memory/system.py"],
+  ["Infer and store", "New conclusions are inferred and stored with their proofs, in one transaction.", "kernel/ · memory/"],
+  ["Answer from evidence", "Small talk, a proof worded as sentences, a quoted passage, or “I won’t guess”. The Mouth only for chatter, and only if it asserts nothing.", "interface/evidence.py"],
+  ["Cite", "Each quoted passage becomes a citation: source, character range, hash, snippet.", "interface/core.py"],
+  ["Trace", "PERCEIVE, RECALL, INFER and ANSWER nodes are saved under this conversation.", "memory/trace_log.py"],
+  ["Show", "The answer as text, the sources block, and the trace panel.", "chat.js"],
+];
+
+const PHASES = [
+  { n: 0, name: "Stabilize the Vault", stages: [
+    ["0.1", "Secure the Vault", "done"], ["0.2", "Seal the Wards", "done"], ["0.3", "Guard the Gates", "done"],
+    ["0.4", "Set the Budget", "done"], ["0.5", "Choose the Index", "done"], ["0.6", "Purge and Reforge", "done"]] },
+  { n: 1, name: "Repair the Floor", stages: [
+    ["1.1", "Mend the Rites", "done"], ["1.2", "Order the Agenda", "done"], ["1.3", "Name the Bonds", "done"],
+    ["1.4", "Keep the Chain", "done"], ["1.5", "Hold the Contradiction", "done"], ["1.6", "Wake with Memory", "done"],
+    ["1.7", "Steady the Appraisal", "done"], ["1.8", "Tell the Truth", "done"]] },
+  { n: 2, name: "Forge the Memory Engine", stages: [
+    ["2.1", "Prove the Reconciler", "done"], ["2.2", "Seal the Archive", "done"], ["2.3", "Grow the Tree", "done"],
+    ["2.4", "Map the Code", "done"], ["2.5", "Survive the Crash", "done"], ["2.6", "Plant the Four Trees", "done"],
+    ["2.7", "Map the Artifacts", "done"], ["2.8", "Shape the Knowledge", "done"], ["2.9", "Hold the Present", "done"],
+    ["2.10", "Mind the Context", "done"], ["2.11", "Burn the Leak", "done"]] },
+  { n: 3, name: "Carry the Memory", stages: [
+    ["3.1", "First Plugin", "done", "Claude Code plugin."],
+    ["3.2", "Weigh the Thesis", "no", "Not possible: the benchmark needed paid model access we don’t have (your call)."],
+    ["3.3", "OpenCode Plugin", "done"], ["3.4", "Pi Extension", "done"], ["3.5", "Other Agents", "done", "Codex and Gemini CLI built from their docs, untested."],
+    ["3.6", "Release the Engine", "done", "Became Yewtree, its own repository (your naming)."]] },
+  { n: 4, name: "The Citation Rite", open: true, stages: [
+    ["4.1", "Connect the Engine", "done", "ADAM’s storage behind one contract, on Yewtree.", [
+      "New storage contract; engine store by default, old store with ADAM_STORE=exact (your call)",
+      "Yewtree 0.3.0: generic records (your call)",
+      "Writes 2.5× slower, reads faster, 6× more disk; RAM 338 MB of 400"]],
+    ["4.2", "Open the Data-Vault", "done", "Markdown ingested once, exact passages, FTS5 search.", [
+      "Passages cut from the text as stored, after secret redaction",
+      "Search index is derived and unencrypted"]],
+    ["4.3", "Speak Only the Evidence", "done", "Answers only from proofs or quoted passages.", [
+      "You chose: the model may phrase, with zero hallucinations",
+      "TinyChat couldn’t restate a fact, so facts are worded from proofs; the model only for chatter, gated",
+      "Contested facts back nothing"]],
+    ["4.4", "Revisit the Appraisal", "done", "EQ reduced to one signal: frustration.", [
+      "Measured: EQ changed nothing visible through the Mouth",
+      "You chose: reduce to frustration; about 520 lines removed"]],
+    ["4.5", "Bear Witness", "done", "Exact citations under answers in the web chat.", [
+      "Found and fixed: replies rendered HTML from quoted books",
+      "Replies are now plain text"]],
+    ["4.6", "Trace the Thought", "wait", "A trace for every chat turn.", [
+      "Typed nodes linked to proofs and citations; English written on request",
+      "Fake rotating status labels removed",
+      "You chose: keep every trace; compress conversations beyond the last 5,000",
+      "Fixed: loading one save from several threads at once"]]] },
+  { n: 5, name: "The Book Study", stages: [
+    ["5.1", "Test the Reader", "next"], ["5.2", "Shape the Claim", "todo"], ["5.3", "Keep the Score", "todo"],
+    ["5.4", "Widen the Library", "todo"], ["5.5", "Extract and Review", "todo"], ["5.6", "Study and Reread", "todo"],
+    ["5.7", "Close the Learning Loop", "todo"]] },
+  { n: 6, name: "The Ontology Web", stages: [
+    ["6.1", "Name the Concepts", "todo"], ["6.2", "Build the Hierarchy", "todo"], ["6.3", "Find the Isomorphisms", "todo"]] },
+  { n: 7, name: "The Tool Rites", stages: [
+    ["7.1", "Raise the Shields", "todo"], ["7.2", "Register the Rites", "todo"], ["7.3", "Approve the Hands", "todo"],
+    ["7.4", "Remember the Procedures", "todo"]] },
+  { n: 8, name: "The Imperial Console", stages: [
+    ["8.1", "Library and Citations", "todo"], ["8.2", "Claim Review", "todo"], ["8.3", "Trace and Approvals", "todo"]] },
+  { n: 9, name: "Portable Release", stages: [
+    ["9.1", "Clear the Licenses", "todo"], ["9.2", "Portable Runtime", "todo"], ["9.3", "Clone the Mind", "todo"]] },
+];
+
+const DECISIONS = [
+  ["DSM.1", "4.1", "The engine stores; ADAM decides what facts mean.", "Adopted; built in 4.1", false],
+  ["DSM.2", "4.1", "Add a generic record type to Yewtree (0.3.0) rather than bend ADAM’s data into the engine’s existing kinds.", "Adopted", true],
+  ["DSM.3", "4.1", "The engine store is the default; the original SQLite store stays selectable.", "Adopted", true],
+  ["D3.1–D3.4", "4.2", "Markdown first, SQLite FTS5 search, command-line ingest only, console naming.", "Adopted; built in 4.2", false],
+  ["DV.1", "4.2", "Sources and passages are engine records; the search index is derived and rebuilt; passages follow the redacted text.", "Adopted", false],
+  ["DS.1", "4.3", "Templates before generation for facts.", "Settled differently: the model may phrase with zero hallucinations; in practice facts are worded from proofs", true],
+  ["DS.2", "4.3", "Route messages deterministically; the Ear is not used for routing.", "Adopted; removing the Ear is your call (#33)", false],
+  ["DE.2", "4.4", "Decide EQ’s value before adding sophistication.", "Settled: reduce EQ to one frustration signal", true],
+  ["D4.1–D4.4", "4.5", "Additive citations API, web chat only, console naming, evidence gate.", "Adopted; built in 4.5", false],
+  ["DT.1", "4.6", "Start the thought trace small; grow node types with use.", "Adopted; four node types, version 1", false],
+  ["DT.2", "4.6", "Keep every trace; conversations beyond the last 5,000 compressed, never deleted.", "Adopted (first ‘delete’, revised to ‘compress’)", true],
+  ["3.2", "3.2", "Run the benchmark that weighs the memory thesis.", "Closed as not possible within our limits", true],
+  ["Name", "3.6", "The memory engine is named Yewtree, with a four-branch forest-green logo.", "Adopted", true],
+];
+
+const OPEN = [
+  ["Your call", "Remove the Ear?", "It extracts intent that nothing uses and costs about 85 MB of the 400 MB budget. Recorded on #33."],
+  ["Known limit", "A few question shapes", "“Is X Y?”, “What/who is X?”, “Tell me about X” and statements are understood. “Does Tweety fly?” gets “I won’t guess”."],
+  ["Known limit", "Search by words, not meaning", "A question worded differently from its passage can miss it."],
+  ["Known limit", "Frustration misses words", "“disaster”, “useless”, “crash”, “can’t stand”, “tired” aren’t in the lexicon. Recorded, not added, so the tests stay fair."],
+  ["Known limit", "Engine store costs", "Writes about 2.5× slower and about 6× more disk than SQLite; reads are faster."],
+  ["Known limit", "No migration", "Facts in adam_memory.db stay there; the engine store started empty."],
+  ["Known limit", "Search index unencrypted", "adam_memory.passages.db holds passage text in plain SQLite."],
+  ["Later", "CLI citations", "Citations show in the web chat only (D4.2); the CLI waits."],
+  ["Later", "Audit the engine store", "scripts/audit_store.py checks only the SQLite files; use EngineStore.verify() for now."],
+  ["Next", "Stage 5.1 · Test the Reader", "Measure whether claims can be extracted from a book well enough, before building on it."],
+];
+
+const LOG = [
+  ["2026-11-27", "Map created. It covers Phases 0–9, Phase 4 in detail, every decision so far, and open items. Stage 4.6 shown as waiting for your merge, including the change to compress old traces instead of deleting them."],
+];
+
+/* ---------------------------------------------------------------- rendering (all text goes in as text) */
+const $ = (s) => document.querySelector(s);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") el.className = v; else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return el;
+}
+const STATUS = { new: "new", changed: "changed", pending: "awaiting merge", retired: "retired", stable: "unchanged" };
+
+$("#updated").textContent = UPDATED;
+for (const [label, value] of NOW) $("#now").append(h("div", {}, h("span", { class: "label", text: label }), h("span", { class: "value", text: value })));
+
+let selected = null;
+function show(id) {
+  const p = PARTS.find((x) => x.id === id);
+  selected = id;
+  document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === id)));
+  const d = $("#detail");
+  d.replaceChildren(
+    h("div", { class: "kicker", text: LAYERS.find((l) => l.id === p.layer).name }),
+    h("h3", { text: p.name }),
+    h("span", { class: `tag ${p.status}`, text: STATUS[p.status] }),
+    h("p", { text: p.what }),
+    h("dl", {},
+      h("dt", { text: "Where" }), h("dd", { class: "mono", text: p.file }),
+      h("dt", { text: "Stages" }), h("dd", { text: p.stages.length ? p.stages.join(", ") : "none in Phase 4" }),
+      h("dt", { text: "Talks to" }), h("dd", {}, ...(p.links.length ? p.links.map((l, i) => {
+        const q = PARTS.find((x) => x.id === l);
+        return [i ? ", " : "", h("a", { href: "#", onclick: (e) => { e.preventDefault(); show(l); }, text: q.name })];
+      }).flat() : ["—"]))));
+}
+for (const layer of LAYERS) {
+  const chips = h("div", { class: "chips" });
+  for (const p of PARTS.filter((x) => x.layer === layer.id)) {
+    chips.append(h("button", { class: `chip ${p.status}`, type: "button", "data-id": p.id, "aria-pressed": "false", onclick: () => show(p.id) },
+      h("span", { class: "name", text: p.name }), h("span", { class: "file", text: p.file }),
+      p.status !== "stable" ? h("span", { class: `tag ${p.status}`, text: STATUS[p.status] }) : null));
+  }
+  $("#layers").append(h("div", { class: "layer" }, h("div", { class: "layer-name" }, layer.name, h("small", { text: layer.note })), chips));
+}
+show("core");
+
+for (const [title, text, where] of FLOW) $("#flow").append(h("li", {}, h("b", { text: title }), h("span", { text: text }), h("small", { class: "mono", text: where })));
+
+const STAGE_TAG = { done: ["changed", "merged"], wait: ["pending", "awaiting merge"], no: ["retired", "not possible"],
+  next: ["new", "next"], todo: ["stable", "planned"] };
+for (const ph of PHASES) {
+  const total = ph.stages.length;
+  const done = ph.stages.filter((s) => s[2] === "done").length;
+  const wait = ph.stages.filter((s) => s[2] === "wait").length;
+  const no = ph.stages.filter((s) => s[2] === "no").length;
+  const bar = h("div", { class: "bar" },
+    h("i", { class: "done", style: `width:${(done / total) * 100}%` }), h("i", { class: "wait", style: `width:${(wait / total) * 100}%` }),
+    h("i", { class: "no", style: `width:${(no / total) * 100}%` }));
+  const list = h("div", { class: "stages" });
+  for (const [id, name, status, note, changes] of ph.stages) {
+    const [cls, label] = STAGE_TAG[status];
+    list.append(h("div", { class: "stage" },
+      h("span", { class: "id", text: id }),
+      h("div", { class: "what" }, h("b", { text: name }), note ? h("span", { text: note }) : null,
+        changes ? h("ul", {}, ...changes.map((c) => h("li", { text: c }))) : null),
+      h("span", { class: `tag ${cls}`, text: label })));
+  }
+  const det = h("details", { class: "phase" },
+    h("summary", {}, h("span", { class: "phase-title", text: `Phase ${ph.n} · ${ph.name}` }),
+      h("span", { class: "count", text: `${done}${wait ? ` + ${wait} waiting` : ""} / ${total}` }), bar), list);
+  if (ph.open) det.open = true;
+  $("#phases").append(det);
+}
+
+const FILTERS = [["all", "All"], ["owner", "Your calls"], ["4", "Phase 4"]];
+let filter = "all";
+function drawDecisions() {
+  const body = $("#decisions");
+  body.replaceChildren();
+  for (const [id, stage, text, outcome, owner] of DECISIONS) {
+    if (filter === "owner" && !owner) continue;
+    if (filter === "4" && !stage.startsWith("4")) continue;
+    body.append(h("tr", {}, h("td", { class: "idc", text: id }), h("td", { class: "mono", text: stage }),
+      h("td", { text: text }), h("td", {}, outcome, owner ? h("div", { class: "owner", text: "Your call" }) : null)));
+  }
+  document.querySelectorAll("#dec-filters button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === filter)));
+}
+for (const [f, label] of FILTERS) $("#dec-filters").append(h("button", { type: "button", "data-f": f, onclick: () => { filter = f; drawDecisions(); }, text: label }));
+drawDecisions();
+
+for (const [kind, title, text] of OPEN) $("#open").append(h("div", { class: "card" }, h("span", { class: "kind", text: kind }), h("h3", { text: title }), h("p", { text: text })));
+for (const [date, text] of LOG) $("#log").append(h("li", {}, h("time", { text: date }), h("span", { text: text })));
+
+const modes = ["system", "light", "dark"];
+let mode = "system";
+try { mode = localStorage.getItem("adam-map-theme") || "system"; } catch {}
+function applyTheme() {
+  if (mode === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", mode);
+  $("#theme").textContent = `Theme: ${mode}`;
+}
+$("#theme").addEventListener("click", () => {
+  mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+  try { localStorage.setItem("adam-map-theme", mode); } catch {}
+  applyTheme();
+});
+applyTheme();
+</script>
