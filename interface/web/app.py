@@ -42,8 +42,18 @@ def create_app(core: ADAMCore | None = None) -> Flask:
         if not data or "message" not in data:
             return jsonify({"error": "message required"}), 400
         mode = data.get("mode", "full")
-        result = get_core().chat(data["message"], mode=mode)
+        # Stage 4.6: the web chat names its conversation, so a trace knows which one it belongs to.
+        result = get_core().chat(data["message"], mode=mode, conversation=data.get("conversation"))
         return jsonify(result)
+
+    @app.route("/api/traces/<trace_id>", methods=["GET"])
+    def read_trace(trace_id):
+        """One turn's thought trace (Stage 4.6): its typed nodes, and English rendered from them."""
+        found = get_core().read_trace(trace_id)
+        if found is None:
+            return jsonify({"error": "no such trace: it never existed, or its conversation is older than the "
+                                     "last 5,000 and was deleted"}), 404
+        return jsonify(found)
 
     @app.route("/api/facts", methods=["GET"])
     def facts():

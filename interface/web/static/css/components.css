@@ -602,6 +602,17 @@
   line-height: 1.6;
 }
 
+/* ---------- Stage 4.6: the thought trace under an answer ---------- */
+.adam-answer-footer { display: flex; flex-direction: column; gap: var(--space-1); }
+.adam-trace {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Phase 9: Sources ---------- */
 .adam-sources {
   display: grid;

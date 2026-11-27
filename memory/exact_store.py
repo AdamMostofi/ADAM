@@ -212,6 +212,12 @@ class ExactStore(TraceMixin):
         with sqlite3.connect(self.db_path) as conn:
             return {r[0] for r in conn.execute("SELECT fact_key FROM facts")}
 
+    def id_of(self, fact: Fact) -> int | None:
+        """The id of this fact (same terms, ignoring case and spacing, and same source), or None."""
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute("SELECT id FROM facts WHERE fact_key = ?", (fact_key(fact),)).fetchone()
+        return row[0] if row else None
+
     def has(self, fact: Fact) -> bool:
         """Whether this fact (same terms, ignoring case and spacing, and same source) is stored."""
         with sqlite3.connect(self.db_path) as conn:

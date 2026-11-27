@@ -18,8 +18,9 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  chat: (message, mode) =>
-    request("/api/chat", { method: "POST", body: JSON.stringify({ message, mode }) }),
+  chat: (message, mode, conversation) =>
+    request("/api/chat", { method: "POST", body: JSON.stringify({ message, mode, conversation }) }),
+  trace: (id) => request(`/api/traces/${encodeURIComponent(id)}`),
   facts: (q) => request(`/api/facts${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   addFact: (subject, predicate, object) =>
     request("/api/facts", { method: "POST", body: JSON.stringify({ subject, predicate, object }) }),

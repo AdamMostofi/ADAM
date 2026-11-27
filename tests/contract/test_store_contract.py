@@ -66,6 +66,8 @@ def test_a_fact_is_stored_once_whatever_its_case_or_spacing(store):
     assert fact.subject == "Socrates"                             # the first spelling is kept
     assert store.origins_of(1) == ["plato", "xenophon"] and store.all_origins() == {1: ["plato", "xenophon"]}
     assert store.count() == 1 and store.has(given("SOCRATES", "is", "a man"))
+    assert store.id_of(given("socrates", "IS", "a man")) == 1 and store.id_of(given("plato", "is", "a man")) is None
+    assert store.id_of(given("socrates", "is", "a man", source=Source.LEARNED)) is None   # another source
     assert fact_key(given("socrates", "is", "a man")) in store.all_keys()
 
 

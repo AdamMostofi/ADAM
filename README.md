@@ -72,6 +72,7 @@ python -m interface.web.app             # web UI on http://localhost:7860
 | Learned skills run as Layer 2 rules, with fitness tracking | `learning/skill_compiler.py` | `tests/unit/test_rules_registry.py`, `tests/unit/test_skill_fitness.py` |
 | Answers only from evidence: facts worded from proofs, passages quoted with citations, no answer without evidence; the Mouth's text shown only when it asserts nothing | `interface/evidence.py`, [evidence-answers.md](docs/design/evidence-answers.md) | `tests/integration/test_evidence_answers.py` |
 | Exact citations in the web chat: `citations` in `/api/chat`, and a Data-Vault sources block (source, paragraph, character range, hash, snippet) rendered as text | `interface/core.py`, `interface/web/static/js/chat.js` | `tests/integration/test_citations.py` |
+| A thought trace for every chat turn: typed nodes (PERCEIVE, RECALL, INFER, ANSWER) linked to the proof records and citations, English rendered on request, `/api/traces/<id>`, and a "How this answer was reached" panel; kept for the last 5,000 conversations | `memory/trace_log.py`, [thought-trace.md](docs/design/thought-trace.md) | `tests/integration/test_thought_trace.py` |
 | Ear (Cactus Needle, with a keyword fallback) and Mouth (TinyChat15M via `llama-server`) | `interface/ear.py`, `interface/mouth.py` | `tests/integration/test_ear_mouth.py` |
 | EQ, reduced to one signal: is the user frustrated? Word matching with negation, yes/no questions, litotes, an obvious sarcasm cue and context; it softens ADAM's own wording only | `learning/eq/`, [eq-appraisal.md](docs/design/eq-appraisal.md) | `tests/unit/test_eq_appraisal_matching.py` |
 | Web UI and JSON API (Flask, vanilla HTML/CSS/JS, no build step) | `interface/web/` | `tests/integration/test_interface.py` |
@@ -235,6 +236,9 @@ proof's steps, or each passage with its source, offsets and hash. Since Stage
 `start`, `end`, `sha256` and a snippet. The list is empty when no passage
 answered. The web chat shows them in a **Data-Vault sources** block under the
 answer, as text ([evidence-answers.md](docs/design/evidence-answers.md#citations-in-the-web-chat)).
+Since Stage 4.6 every reply has a `trace_id` too: `GET /api/traces/<id>` returns
+the turn's thought trace and English rendered from it
+([thought-trace.md](docs/design/thought-trace.md)).
 
 The browser receives JSON and handles the word-by-word reveal locally.
 
@@ -392,6 +396,7 @@ ADAM/
 │   ├── engine_store.py     # the store on the Yewtree engine (default); the only engine import
 │   ├── exact_store.py      # the original SQLite store (ADAM_STORE=exact)
 │   ├── source_library.py   # Markdown sources, passages, FTS5 passage search
+│   ├── trace_log.py        # each chat turn's thought trace, and its English rendering
 │   ├── semantic_index.py   # MiniLM embeddings in SQLite
 │   ├── connection_graph.py # NetworkX
 │   └── attention.py        # STI/LTI ranking

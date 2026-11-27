@@ -12,6 +12,7 @@ function cleanTurn(turn) {
   if (!role || !text.trim()) return null;
   const clean = { role, text, ts: Number(turn.ts) || Date.now() };
   if (turn.plain === true) clean.plain = true;   // shown as text, not Markdown (Stage 4.5)
+  if (typeof turn.trace_id === "string" && /^[0-9a-f]{1,64}$/.test(turn.trace_id)) clean.trace_id = turn.trace_id;
   const citations = cleanCitations(turn.citations);
   if (citations.length) clean.citations = citations;
   return clean;
@@ -40,7 +41,41 @@ function trim(turns) {
   return kept;
 }
 
+const CONVERSATION_KEY = "adam-conversation";
+
+function freshConversationId() {
+  const hex = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`).replace(/[^0-9a-f-]/gi, "");
+  return `web-${hex}`.slice(0, 64);
+}
+
 export const store = {
+  // The conversation this transcript belongs to (Stage 4.6): ADAM files each turn's thought trace under it.
+  // "New" starts another; a new browser tab is another too.
+  conversation() {
+    try {
+      let id = sessionStorage.getItem(CONVERSATION_KEY);
+      if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
+        id = freshConversationId();
+        sessionStorage.setItem(CONVERSATION_KEY, id);
+      }
+      return id;
+    } catch {
+      this._conversation ??= freshConversationId();
+      return this._conversation;
+    }
+  },
+
+  newConversation() {
+    const id = freshConversationId();
+    this._conversation = id;
+    try {
+      sessionStorage.setItem(CONVERSATION_KEY, id);
+    } catch {
+      /* storage unavailable — the id stays in memory */
+    }
+    return id;
+  },
+
   loadTranscript() {
     try {
       const raw = sessionStorage.getItem(TRANSCRIPT_KEY);

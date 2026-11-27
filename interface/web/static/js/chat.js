@@ -1,4 +1,4 @@
-// Chat — conversation surface: persistence, thinking phases, reveal, retry.
+// Chat — conversation surface: persistence, a neutral working indicator, reveal, retry, sources and traces.
 
 import { api } from "./api.js";
 import { el } from "./dom.js";
@@ -12,6 +12,7 @@ import { Suggestions } from "./components/suggestion.js";
 import { ModelSelector } from "./components/model-selector.js";
 import { ThinkingIndicator } from "./components/shimmer.js";
 import { Sources } from "./components/sources.js";
+import { Reasoning } from "./components/reasoning.js";
 
 // Since Stage 4.3 a reply is ADAM's own wording, a passage quoted exactly, or the Mouth's checked words: never
 // Markdown. It is shown as text, so a quoted passage reads exactly as its source (Stage 4.5): "<img src=…>" in a
@@ -37,12 +38,38 @@ export function citationSources(citations) {
   return sources.el;
 }
 
-const PHASES = [
-  "Consulting the archives",
-  "Cross-checking the vaults",
-  "Testing propositions",
-  "Forming the response",
-];
+// While ADAM works, the indicator claims nothing it can't see (Stage 4.6): the request is one synchronous call,
+// so the page can't know which step is running. What actually happened is in the turn's trace, afterwards.
+const WORKING = "Working…";
+
+// How an answer was reached (Stage 4.6, #35): the turn's thought trace, fetched when the panel is first opened.
+// The English comes from the server, rendered from the trace's typed nodes; it goes in as text.
+export function tracePanel(traceId) {
+  if (typeof traceId !== "string" || !traceId) return null;
+  const panel = new Reasoning({ label: "How this answer was reached", defaultOpen: false });
+  let loaded = false;
+  panel.trigger.addEventListener("click", async () => {
+    if (loaded || !panel.isOpen) return;
+    loaded = true;
+    panel.setText("Loading the trace…");
+    try {
+      const trace = await api.trace(traceId);
+      const list = el("ol", { class: "adam-trace" });
+      for (const line of trace.text) list.append(el("li", { text: line }));
+      panel.setContent(list);
+    } catch (err) {
+      loaded = false;
+      panel.setText();
+    }
+  });
+  return panel.el;
+}
+
+// What goes under an answer: the passages it quotes, then how it was reached.
+export function answerFooter(citations, traceId) {
+  const parts = [citationSources(citations), tracePanel(traceId)].filter(Boolean);
+  return parts.length ? el("div", { class: "adam-answer-footer" }, parts) : null;
+}
 
 const SUGGESTIONS = ["Recite the Litany", "Status of the cogitator", "What is the Machine Spirit?"];
 
@@ -53,10 +80,9 @@ export class Chat {
     this.onToast = onToast;
     this.turns = store.loadTranscript();
     this.busy = false;
-    this._phaseTimer = null;
 
     this.conversation = new Conversation({ onDownload: () => this.download() });
-    this.thinking = new ThinkingIndicator({ text: PHASES[0] });
+    this.thinking = new ThinkingIndicator({ text: WORKING });
     this.thinking.el.classList.add("hidden");
 
     const mode = store.loadMode();
@@ -106,7 +132,7 @@ export class Chat {
     this._startThinking();
 
     try {
-      const result = await api.chat(text, this.mode.value);
+      const result = await api.chat(text, this.mode.value, store.conversation());
       this._stopThinking();
 
       const assistant = new Message({ from: "assistant" });
@@ -125,14 +151,15 @@ export class Chat {
       this.conversation.addMessage("assistant", assistant.el);
       const citations = Array.isArray(result.citations) ? result.citations : [];
       const plain = typeof result.answer_source === "string";
-      this._record({ role: "assistant", text: result.response, citations, plain });
+      const traceId = typeof result.trace_id === "string" ? result.trace_id : null;
+      this._record({ role: "assistant", text: result.response, citations, plain, trace_id: traceId });
 
       const reveal = new Reveal({ mode: "word", speed: 16 });
       assistant.setBusy(true);
       assistant.content.replaceChildren(reveal.container);
       await reveal.show(plain ? plainHtml(result.response) : renderMarkdown(result.response));
       assistant.setBusy(false);
-      assistant.setFooter(citationSources(citations));
+      assistant.setFooter(answerFooter(citations, traceId));
       this.conversation.scrollToBottom();
 
       this.onChange?.();
@@ -153,6 +180,7 @@ export class Chat {
     if (!confirm("Clear this transcript? This cannot be undone.")) return false;
     this.turns = [];
     store.clearTranscript();
+    store.newConversation();
     this.conversation.clear();
     this._syncSuggestions();
     return true;
@@ -192,7 +220,7 @@ export class Chat {
       }
       const msg = new Message({ from: "assistant" });
       msg.setContent(turn.plain ? el("p", { text: turn.text }) : markdownToNode(turn.text));
-      msg.setFooter(citationSources(turn.citations));
+      msg.setFooter(answerFooter(turn.citations, turn.trace_id));
       msg.addAction({
         icon: "copy",
         label: "Copy",
@@ -249,19 +277,11 @@ export class Chat {
   }
 
   _startThinking() {
-    this._stopThinking();
-    let i = 0;
-    this.thinking.setText(PHASES[0]);
+    this.thinking.setText(WORKING);
     this.thinking.el.classList.remove("hidden");
-    this._phaseTimer = setInterval(() => {
-      i = (i + 1) % PHASES.length;
-      this.thinking.setText(PHASES[i]);
-    }, 1400);
   }
 
   _stopThinking() {
-    if (this._phaseTimer) clearInterval(this._phaseTimer);
-    this._phaseTimer = null;
     this.thinking.el.classList.add("hidden");
   }
 

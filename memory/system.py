@@ -87,8 +87,27 @@ class MemorySystem:
         self._stored_keys: set[str] | None = None  # cache of stored fact keys, loaded on first use
         self.db_path = db_path
         self._library = None
+        self._trace_log = None
         if restore:
             self.restore()
+
+    def trace_log(self):
+        """The thought-trace log beside this store (Stage 4.6): adam_memory.db -> adam_memory.traces.db."""
+        with self.lock:
+            if self._trace_log is None:
+                from memory.trace_log import TraceLog
+                self._trace_log = TraceLog(Path(self.db_path).with_suffix(".traces.db"))
+            return self._trace_log
+
+    def fact_link(self, subject: str, predicate: str, obj: str) -> dict:
+        """The stored fact for a triple, whatever its source, and its derivation records' ids (Stage 1.4, #30):
+        {"fact_id": id or None, "derivation_ids": [...]}, for linking a trace to what it rests on."""
+        with self.lock:
+            for source in Source:
+                fid = self.fact_store.id_of(Fact(subject, predicate, obj, source=source))
+                if fid is not None:
+                    return {"fact_id": fid, "derivation_ids": [d["id"] for d in self.fact_store.derivations_of(fid)]}
+            return {"fact_id": None, "derivation_ids": []}
 
     def source_library(self):
         """The source library on this store (Stage 4.2), opened on first use; None if the store keeps no

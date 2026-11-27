@@ -103,7 +103,8 @@ Outcomes are as follows:
 | #34 | DS.2 | Route messages deterministically; the Ear's intent is returned but not used. Removing the Ear (about 85 MB) is recorded under #33 as the owner's call. | Adopted. |
 | #77 | DE.2 | Decide EQ's value before adding sophistication. | Settled (owner's call, 2026-11-26): reduce EQ to one signal, frustration. Measured: through the Mouth EQ changed nothing visible (7 vs 5 of 128 replies shown, the same lines) ([eq-appraisal.md](design/eq-appraisal.md)). |
 | #25 | D4.1–D4.4 | Additive citations API, web chat only, console naming, evidence gate. | Adopted; built in Stage 4.5 ([evidence-answers.md](design/evidence-answers.md#citations-in-the-web-chat)). Phase 4 doesn't close here: Stage 4.6 (#35) is still in it. |
-| #35 | DT.1 | Start the thought trace small; grow node types with use. | Adopted. |
+| #35 | DT.1 | Start the thought trace small; grow node types with use. | Adopted; built in Stage 4.6 with PERCEIVE, RECALL, INFER and ANSWER, version 1 ([thought-trace.md](design/thought-trace.md)). |
+| #35 | DT.2 | Keep traces per conversation: no limit within one, the last 5,000 conversations kept, in their own file because the engine never deletes. | Adopted (owner's call, 2026-11-27). |
 | #38 | DD.1, DD.2 | Test the reader before building around it, with a human-authored gold set. | Adopted. |
 | #39 | DC.1 | Claims sit above facts, rather than rewriting `Fact`. | Proposed. |
 | #40 | DE2.1 | Compare against a simple baseline. | Adopted. |

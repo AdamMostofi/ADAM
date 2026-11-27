@@ -74,6 +74,9 @@ class Answer:
     text: str
     answer_source: str
     evidence: list[dict] = field(default_factory=list)
+    # How the message was read, and whether the source library was searched (for the thought trace, Stage 4.6).
+    route: str = ""
+    library_searched: bool = False
 
 
 # ------------------------------------------------------------ words
@@ -277,22 +280,27 @@ class Answerer:
     def answer(self, message: str, params: dict | None = None, frustrated: bool = False) -> Answer:
         """The reply to `message`. When the user seems frustrated (Stage 4.4), ADAM's own fixed wording for
         what it can't do starts with an apology, and the Mouth isn't used; facts and passages are unchanged."""
+        self._route, self._searched = "", False
         found = self._answer(message, params or {}, frustrated)
         if frustrated and found.answer_source in (NO_EVIDENCE, ACKNOWLEDGEMENT):
             found.text = f"{_pick(_SORRY, message)} {found.text}"
+        found.route, found.library_searched = self._route, self._searched
         return found
 
     def _answer(self, message: str, params: dict, frustrated: bool) -> Answer:
         self._disputed_keys = None   # conflicts are read once per answer
         reply = self.small_talk(message) if self.small_talk else None
         if reply is not None:
+            self._route = "small_talk"
             return Answer(reply, SMALL_TALK)
         ws = words(message)
         if not ws:
+            self._route = "empty"
             return Answer(_pick(_INVITE, message), ACKNOWLEDGEMENT)
         terms = terms_of(self.engine)
         wording = Wording(terms)
         question = message.strip().endswith("?") or ws[0] in _QUESTION_START
+        self._route = "question" if question else "chatter"
         if question:
             found = self._fact_question(ws, terms, wording, message)
             if found is not None and found.answer_source == PROOF:
@@ -305,6 +313,7 @@ class Answerer:
             return Answer(self._nothing(ws, terms), NO_EVIDENCE)
         statement = self._statement(ws, terms, wording, message)
         if statement is not None:
+            self._route = "statement"
             return statement
         if frustrated:   # no small-talk chatter from the Mouth at a frustrated user
             return Answer(_pick(_INVITE, message), ACKNOWLEDGEMENT)
@@ -350,7 +359,7 @@ class Answerer:
 
     def _evidence(self, steps, claim: Key) -> dict:
         origins = self.engine.attribution(*claim)
-        return {"type": "proof", "claim": " ".join(claim), "origins": origins,
+        return {"type": "proof", "claim": " ".join(claim), "key": list(claim), "origins": origins,
                 "steps": [{"rule": rule or "given", "premises": [" ".join(p) for p in premises],
                            "fact": " ".join(k)} for rule, premises, k in steps]}
 
@@ -460,6 +469,7 @@ class Answerer:
         wanted = {w for w in words(message) if w not in _STOP}
         if not wanted:
             return None
+        self._searched = True
         for p in self.library.search_passages(message, limit=5):
             have = {s for w in words(p.text) for s in _singulars(w)}
             matched = {w for w in wanted if any(s in have for s in _singulars(w))}

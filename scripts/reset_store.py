@@ -11,7 +11,8 @@ Steps:
    backup with scripts/backup_stores.py. Skipped only when the stores are
    already fresh and empty, since there is nothing to lose.
 3. Delete adam_memory.engine/ (the engine store), adam_memory.passages.db
-   (the passage index), adam_memory.db, adam_vectors.db, the old
+   (the passage index), adam_memory.traces.db (the thought traces),
+   adam_memory.db, adam_vectors.db, the old
    adam_vectors.lance folder, adam_save/ and skills/.
 4. Create an empty SQLite fact store (schema version 1, meta table) and an
    empty vector index (model and dimension recorded in its meta table). No
@@ -42,7 +43,8 @@ FACTS_DB = "adam_memory.db"
 VECTORS_DB = "adam_vectors.db"
 ENGINE_STORE = "adam_memory.engine"
 PASSAGE_INDEX = "adam_memory.passages.db"   # derived from the engine store (Stage 4.2)
-DELETE = (ENGINE_STORE, PASSAGE_INDEX, FACTS_DB, VECTORS_DB, "adam_vectors.lance", "adam_save", "skills")
+TRACE_LOG = "adam_memory.traces.db"         # the thought traces (Stage 4.6)
+DELETE = (ENGINE_STORE, PASSAGE_INDEX, TRACE_LOG, FACTS_DB, VECTORS_DB, "adam_vectors.lance", "adam_save", "skills")
 SQLITE_SIDECARS = ("-journal", "-wal", "-shm")
 
 
@@ -65,7 +67,7 @@ def adam_processes() -> list[str]:
 def is_fresh(root: str) -> bool:
     """True when the stores are exactly a fresh reset: no facts, no vectors, nothing else."""
     if any(os.path.exists(os.path.join(root, s))
-           for s in (ENGINE_STORE, PASSAGE_INDEX, "adam_vectors.lance", "adam_save", "skills")):
+           for s in (ENGINE_STORE, PASSAGE_INDEX, TRACE_LOG, "adam_vectors.lance", "adam_save", "skills")):
         return False
     facts, vectors = os.path.join(root, FACTS_DB), os.path.join(root, VECTORS_DB)
     if not (os.path.isfile(facts) and os.path.isfile(vectors)):

@@ -1,8 +1,11 @@
 """ADAMCore — facade wiring all 4 subsystems into a single API."""
 from __future__ import annotations
 
+import collections
+import hashlib
 import os
 import tempfile
+import uuid
 
 from kernel.engine import InferenceEngine
 from kernel.facts import Fact, Source
@@ -13,6 +16,7 @@ from interface.ear import Ear
 from interface.evidence import Answerer
 from interface.mouth import Mouth, small_talk
 from memory.source_library import SourceError
+from memory.trace_log import node as trace_node, render as render_trace, valid_conversation
 
 # Agenda entries one chat turn may process (Stage 1.2, #28). Inference is
 # incremental, so a turn only pays for consequences of what it added; work
@@ -51,8 +55,12 @@ class ADAMCore:
     def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.db", mouth=None, ear=None):
         self.memory = MemorySystem(db_path, lance_path)
         self.learning = LearningEngine(memory_system=self.memory)
-        # EQ is one signal since Stage 4.4 (#77): is the user frustrated? Per session, never saved.
+        # EQ is one signal since Stage 4.4 (#77): is the user frustrated? Per conversation, never saved.
         self.frustration = FrustrationReader()
+        self._readers: collections.OrderedDict[str, FrustrationReader] = collections.OrderedDict()
+        # The conversation a turn belongs to, for its thought trace (Stage 4.6): one per run unless the caller
+        # (the web chat) names its own.
+        self.conversation_id = "run-" + uuid.uuid4().hex[:16]
         self.engine = self.memory.engine
         for rule in self.learning.skill_compiler.rules():
             self.engine.add_rule(rule)
@@ -62,9 +70,11 @@ class ADAMCore:
         self.ear = ear if ear is not None else Ear()
         self.mouth = mouth if mouth is not None else Mouth()
 
-    def chat(self, message: str, mode: str = "full") -> dict:
+    def chat(self, message: str, mode: str = "full", conversation: str | None = None) -> dict:
+        conversation = conversation if valid_conversation(conversation) else self.conversation_id
         intent = self.ear.listen(message)
-        reading = self.frustration.read(message)
+        reading = self._reader(conversation).read(message)
+        stored = 0
 
         if mode == "simple":
             memories = self.memory.recall(message, limit=5)
@@ -77,7 +87,7 @@ class ADAMCore:
                     self.engine.add_fact(fact)
             # Store, with their derivations and in one transaction (Stage 1.4), every belief the
             # store doesn't have yet: this turn's conclusions and any found at startup (Stage 1.6).
-            self.memory.settle(self.engine, max_iterations=CHAT_INFERENCE_BUDGET)
+            stored = self.memory.settle(self.engine, max_iterations=CHAT_INFERENCE_BUDGET)
             memories = self.memory.recall(message, limit=10)
 
         # Stage 4.3 (#34): the reply comes from evidence. Facts are worded from proofs, passages are quoted,
@@ -85,6 +95,9 @@ class ADAMCore:
         answer = Answerer(self.engine, self._library(), self.mouth, small_talk).answer(
             message, NEUTRAL_PARAMS, frustrated=reading.frustrated)
         response = answer.text
+        cited = citations(answer.evidence)
+        trace_id = self.memory.trace_log().record(conversation, self._trace_nodes(
+            message, mode, reading, memories, stored, answer, cited))
 
         return {
             "response": response,
@@ -108,8 +121,62 @@ class ADAMCore:
             "evidence": answer.evidence,
             # Stage 4.5 (#25, D4.1): the passages the reply quotes, as exact citations. Empty unless a passage
             # answered: proofs are in `evidence`.
-            "citations": citations(answer.evidence),
+            "citations": cited,
+            # Stage 4.6 (#35): this turn's thought trace; read it at /api/traces/<trace_id>.
+            "trace_id": trace_id,
+            "conversation": conversation,
         }
+
+    def read_trace(self, trace_id: str) -> dict | None:
+        """A turn's trace with its English rendering, which is generated here and never stored (Stage 4.6)."""
+        if not isinstance(trace_id, str) or not trace_id.isalnum() or len(trace_id) > 64:
+            return None
+        trace = self.memory.trace_log().get(trace_id)
+        if trace is None:
+            return None
+        return {**trace, "text": render_trace(trace)}
+
+    def _reader(self, conversation: str) -> FrustrationReader:
+        """The frustration reader for a conversation (the run's own, or one the web chat names)."""
+        if conversation == self.conversation_id:
+            return self.frustration
+        reader = self._readers.pop(conversation, None) or FrustrationReader()
+        self._readers[conversation] = reader
+        while len(self._readers) > 100:
+            self._readers.popitem(last=False)
+        return reader
+
+    def _trace_nodes(self, message, mode, reading, memories, stored, answer, cited) -> list[dict]:
+        """The typed nodes of one turn (Stage 4.6): data only; English is rendered from them on request."""
+        proofs = []
+        for e in answer.evidence:
+            if e.get("type") != "proof":
+                continue
+            key = tuple(e["key"])
+            belief = self.engine.beliefs.get(key)
+            proofs.append({"claim": e["claim"], "key": list(key), "steps": e["steps"], "origins": e["origins"],
+                           "confidence": round(belief.confidence, 4) if belief else None,
+                           **self.memory.fact_link(*key)})
+        confidences = [p["confidence"] for p in proofs if p["confidence"] is not None]
+        return [
+            trace_node("PERCEIVE", {"message": message},
+                       {"route": answer.route, "troubled": reading.troubled, "frustrated": reading.frustrated,
+                        "cues": reading.cues}, None, ["user"]),
+            trace_node("RECALL", {"query": message, "mode": mode},
+                       {"facts": [str(f) for f in memories][:20], "facts_total": len(memories),
+                        "library_searched": answer.library_searched,
+                        "passages": [c["source"] + "#" + str(c["ordinal"]) for c in cited]},
+                       None, [f"store:{self.memory.backend}"] + (["source library"] if answer.library_searched else [])),
+            trace_node("INFER", {"mode": mode, "budget": CHAT_INFERENCE_BUDGET if mode != "simple" else 0},
+                       {"ran": mode != "simple", "stored": stored, "proofs": proofs},
+                       min(confidences) if confidences else None, sorted({s["rule"] for p in proofs for s in p["steps"]})),
+            trace_node("ANSWER", {"route": answer.route},
+                       {"answer_source": answer.answer_source, "response_chars": len(answer.text),
+                        "response_sha256": hashlib.sha256(answer.text.encode()).hexdigest(),
+                        "citations": [{k: c[k] for k in ("source", "name", "ordinal", "start", "end", "sha256")}
+                                      for c in cited]},
+                       None, [answer.answer_source]),
+        ]
 
     def _library(self):
         """The source library, or None when the store keeps no records or the library can't open."""

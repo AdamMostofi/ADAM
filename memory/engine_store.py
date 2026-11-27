@@ -161,6 +161,10 @@ class EngineStore(TraceMixin):
             return fact, self.render_trace(fact_id)
         return fact, list(fields.get("proof_chain") or [])
 
+    def id_of(self, fact: Fact) -> int | None:
+        fields = self._current(fact_key(fact))
+        return fields["id"] if fields else None
+
     def has(self, fact: Fact) -> bool:
         return self._current(fact_key(fact)) is not None
 
@@ -353,11 +357,33 @@ class EngineStore(TraceMixin):
 
     @classmethod
     def import_from(cls, archive: str | Path, path: str | Path) -> "EngineStore":
-        """Open a store from a backup, unpacking it into `path` first if that folder is new."""
+        """Open a store from a backup, unpacking it into `path` first if that folder is new.
+
+        The unpack is atomic: it goes into a private folder beside `path`, which is then renamed into place in
+        one step. Two loaders of the same save at once can't interleave their files; if another got there
+        first, its copy is used and this one is removed."""
+        import shutil
+        import uuid
+
         from agent_memory.storage import import_backup
         target = Path(path)
-        if not target.exists() or not any(p.name != ".gitignore" for p in target.iterdir()):
-            import_backup(archive, target)
+
+        def empty(folder: Path) -> bool:
+            return not folder.exists() or not any(p.name != ".gitignore" for p in folder.iterdir())
+
+        if empty(target):
+            staging = target.parent / f".{target.name}.unpacking-{uuid.uuid4().hex}"
+            try:
+                import_backup(archive, staging)
+                if target.exists() and empty(target):
+                    shutil.rmtree(target, ignore_errors=True)
+                try:
+                    staging.rename(target)
+                except OSError:
+                    if empty(target):
+                        raise          # not because another loader finished first
+            finally:
+                shutil.rmtree(staging, ignore_errors=True)
         return cls(target)
 
     def close(self) -> None:
