@@ -64,6 +64,7 @@ _CONFIRM = ("That's right.", "Yes, I know.", "That matches what I know.")
 _CONTRADICT = ("That doesn't match what I know.", "Actually, no.", "I have it the other way.")
 _PASSAGE = ("Here's what {name} says (paragraph {n}):", "From {name}, paragraph {n}:", "{name} has this, in paragraph {n}:")
 _ACK = ("I see.", "Okay.", "Noted.", "Got it.")
+_SORRY = ("Sorry, that's frustrating.", "Sorry about that.", "Sorry, I know this isn't going well.")
 _INVITE = ("Ask me something and I'll answer from what I know.", "If you have a question, I'll answer from what I know.",
            "Ask me a question, and I'll tell you what I can back up.")
 
@@ -273,8 +274,15 @@ class Answerer:
         self.mouth = mouth
         self.small_talk = small_talk
 
-    def answer(self, message: str, params: dict | None = None) -> Answer:
-        params = params or {}
+    def answer(self, message: str, params: dict | None = None, frustrated: bool = False) -> Answer:
+        """The reply to `message`. When the user seems frustrated (Stage 4.4), ADAM's own fixed wording for
+        what it can't do starts with an apology, and the Mouth isn't used; facts and passages are unchanged."""
+        found = self._answer(message, params or {}, frustrated)
+        if frustrated and found.answer_source in (NO_EVIDENCE, ACKNOWLEDGEMENT):
+            found.text = f"{_pick(_SORRY, message)} {found.text}"
+        return found
+
+    def _answer(self, message: str, params: dict, frustrated: bool) -> Answer:
         self._disputed_keys = None   # conflicts are read once per answer
         reply = self.small_talk(message) if self.small_talk else None
         if reply is not None:
@@ -298,6 +306,8 @@ class Answerer:
         statement = self._statement(ws, terms, wording, message)
         if statement is not None:
             return statement
+        if frustrated:   # no small-talk chatter from the Mouth at a frustrated user
+            return Answer(_pick(_INVITE, message), ACKNOWLEDGEMENT)
         return self._chatter(message, params)
 
     # ---------------------------------------------------- facts

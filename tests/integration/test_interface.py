@@ -67,7 +67,7 @@ def test_core_get_stats():
         assert "skills" in stats
         assert "nodes" in stats
         assert "edges" in stats
-        assert "baseline" in stats
+        assert "frustration" in stats and "frustrated" in stats   # EQ's one signal (Stage 4.4)
 
 
 def test_core_save_load():

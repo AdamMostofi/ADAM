@@ -1,153 +1,136 @@
-"""Appraisal matches words, not substrings, and each turn is recorded once (Stage 1.7, #37)."""
+"""EQ matches words, not substrings (Stage 1.7, #37), and reads one signal: frustration (Stage 4.4, #77).
+
+Updated in Stage 4.4, for a reason: EQ was reduced to a frustration signal (docs/design/eq-appraisal.md), so
+the tests of the retired parts (agency, novelty, the manual override, the saved mood baseline) went with them.
+The word-matching tests stay, now on what still decides something: whether a turn reads as trouble.
+"""
 from __future__ import annotations
 
-import sqlite3
+import json
+from pathlib import Path
 
 import pytest
 
 from interface.core import ADAMCore
-from learning.eq.appraiser import CognitiveAppraiser
-from learning.eq.engine import EQEngine
-from learning.eq.manual_override import ManualOverride
-from learning.eq.user_state import Agency, EmotionalTone
+from learning.eq.frustration import FrustrationReader, score
+
+DATA = Path(__file__).resolve().parents[1] / "data"
 
 
-@pytest.fixture
-def appraiser():
-    return CognitiveAppraiser()
+def troubled(text: str) -> bool:
+    return FrustrationReader().read(text).troubled
 
 
-# ------------------------------------------------- substring false matches
-
-
-def test_know_is_not_no(appraiser):
-    state = appraiser.appraise("I know how this works")
-    assert state.goal_congruence >= 0.5
-    assert state.emotional_tone != EmotionalTone.NEGATIVE
-
-
-def test_now_is_not_no(appraiser):
-    assert appraiser.appraise("Show me the answer now").goal_congruence == 0.5
+# ------------------------------------------------- substring false matches (Stage 1.7)
+@pytest.mark.parametrize("text", [
+    "I know how this works",          # "know" is not "no"
+    "Show me the answer now",         # "now" is not "no"
+    "tell me whatever you think",     # "whatever" is not "hate"
+    "that was helpful",               # "helpful" is not "help"
+    "is seven greater than five",     # "greater" is not "great" (and a question)
+    "I can't wait to try it",         # an idiom, not "I can't"
+])
+def test_a_word_inside_another_word_is_not_a_cue(text):
+    assert not troubled(text), score(text)
 
 
 def test_unhappy_is_not_happy():
-    state = ManualOverride().detect_override("I'm unhappy with this")
-    assert state is None or state.emotional_tone != EmotionalTone.POSITIVE
+    assert troubled("I'm unhappy with this")
 
 
-def test_whatever_is_not_hate():
-    assert ManualOverride().detect_override("tell me whatever you think") is None
-
-
-def test_i_cant_is_not_i_can(appraiser):
-    assert appraiser.appraise("I can't do this").coping == 0.0
-
-
-def test_economy_is_not_my(appraiser):
-    assert appraiser.appraise("the economy is growing").agency != Agency.SELF
-
-
-def test_with_is_not_it(appraiser):
-    assert appraiser.appraise("rain falls with wind").agency == Agency.CIRCUMSTANCE
-
-
-def test_knew_is_not_new(appraiser):
-    assert appraiser.appraise("I knew that already").novelty == 0.5
-
-
-def test_helpful_is_not_help(appraiser):
-    assert appraiser.appraise("that was helpful").coping >= 0.5
-
-
-def test_greater_is_not_great():
-    assert ManualOverride().detect_override("is seven greater than five") is None
+def test_i_cant_is_not_i_can():
+    assert troubled("I can't do this") and troubled("I can’t do this")   # curly apostrophes too
 
 
 # ---------------------------------------------------------------- negation
+def test_a_negated_positive_is_trouble():
+    assert troubled("this is not great") and troubled("not good")
 
 
-def test_not_great_is_not_positive():
-    state = EQEngine(":memory:").process_input("this is not great")[0]
-    assert state.emotional_tone != EmotionalTone.POSITIVE
+def test_phrases_that_contain_a_negation_keep_their_meaning():
+    assert troubled("it doesn't work") and troubled("I don't understand")
 
 
-def test_not_broken_is_not_negative(appraiser):
-    assert appraiser.appraise("it is not broken anymore").goal_congruence >= 0.5
+def test_real_signals_are_still_found():
+    assert troubled("No, that is wrong") and troubled("this is so annoying")
+    assert not troubled("Thanks, that worked") and not troubled("let's go!")
 
 
-def test_phrases_that_contain_a_negation_keep_their_meaning(appraiser):
-    assert appraiser.appraise("it doesn't work").goal_congruence == 0.0
-    assert appraiser.appraise("I don't understand").coping == 0.0
+# ------------------------------------------------- the four known misses (Stage 1.7), now handled
+def test_a_yes_no_question_is_asked_about_not_meant():
+    assert not troubled("is it wrong?") and not troubled("was that a bad idea?")
+    assert troubled("why does it fail?")                # other questions are read as usual
 
 
-def test_curly_apostrophes_are_read_like_straight_ones(appraiser):
-    assert appraiser.appraise("I can’t do this").coping == 0.0
+def test_litotes_is_weak_not_flipped():
+    for text in ("I don't hate it", "I'm not unhappy", "not bad"):
+        value, cues = score(text)
+        assert value == 0 and any(c.startswith("litotes") for c in cues), (text, value, cues)
 
 
-# --------------------------------------------------------- still matches
+def test_an_opening_exclamation_then_a_failure_reads_as_the_failure():
+    value, cues = score("great, it broke again")
+    assert value < 0 and any(c.startswith("sarcasm") for c in cues)
+    assert not troubled("great, thanks a lot") and not troubled("I knew you could do it, great")
 
 
-def test_real_signals_are_still_found(appraiser):
-    assert appraiser.appraise("No, that is wrong").goal_congruence == 0.0
-    assert appraiser.appraise("Thanks, that worked").goal_congruence == 1.0
-    assert appraiser.appraise("I did it myself, my code").agency == Agency.SELF
-    assert ManualOverride().detect_override("this is so annoying").emotional_tone == EmotionalTone.NEGATIVE
-    assert ManualOverride().detect_override("let's go!").emotional_tone == EmotionalTone.POSITIVE
+def test_a_terse_reply_after_repeated_trouble_is_frustration():
+    reader = FrustrationReader()
+    for text in ("it failed", "still broken", "it broke again"):
+        reader.read(text)
+    last = reader.read("fine.")
+    assert last.troubled and last.frustrated
+    calm = FrustrationReader()
+    for text in ("it works", "thanks, great"):
+        calm.read(text)
+    assert not calm.read("fine.").troubled
 
 
-# ------------------------------------------------------- one record per turn
+def test_frustration_needs_two_troubled_turns_of_the_last_three_and_fades():
+    reader = FrustrationReader()
+    assert not reader.read("it failed").frustrated
+    assert reader.read("still broken").frustrated
+    assert reader.read("is it a bug?").frustrated            # two of the last three
+    assert not reader.read("thanks, that worked").frustrated  # one of the last three
 
 
+# ------------------------------------------------------- per session, never saved
 class QuietMouth:
     def format_response(self, message, params, context=""):
         return "ok"
 
 
-def test_one_turn_adds_one_record(tmp_path):
+def test_frustration_is_per_session_and_writes_nothing(tmp_path):
     core = ADAMCore(db_path=str(tmp_path / "m.db"), lance_path=str(tmp_path / "v.db"), mouth=QuietMouth())
-    history, states = core.eq.baseline.get_history_size(), len(core.eq.tracker.get_history())
-    core.chat("hello there")
-    assert core.eq.baseline.get_history_size() == history + 1
-    assert len(core.eq.tracker.get_history()) == states + 1
+    for text in ("it failed", "still broken"):
+        result = core.chat(text)
+    assert result["frustration"]["frustrated"]
+    assert not (tmp_path / "m.db").exists()          # the original store's file is no longer written by EQ
+    again = ADAMCore(db_path=str(tmp_path / "m.db"), lance_path=str(tmp_path / "v.db"), mouth=QuietMouth())
+    assert not again.chat("hello")["frustration"]["frustrated"]
 
 
-def test_saving_keeps_one_row_and_the_history(tmp_path):
-    db = str(tmp_path / "m.db")
-    eq = EQEngine(db)
-    for text in ("thanks, that worked", "great, solved", "perfect"):
-        eq.process_input(text)
-        eq.save()
-    with sqlite3.connect(db) as conn:
-        assert conn.execute("SELECT COUNT(*) FROM eq_state").fetchone()[0] == 1
-    restored = EQEngine(db)
-    assert restored.baseline.get_history_size() == 3
-    baseline = restored.get_baseline()
-    restored.process_input("hello")  # one neutral turn must not reset the learned baseline
-    assert restored.get_baseline() == pytest.approx(baseline * 3 / 4)
-
-
-# ------------------------------------------------- labelled-set accuracy
-
-import json
-from pathlib import Path
-
-DATA = Path(__file__).resolve().parents[1] / "data"
-
-
+# ------------------------------------------------- set accuracy, on what the signal decides
 def accuracy(name: str) -> tuple[int, int, list[str]]:
     items = json.loads((DATA / name).read_text())["items"]
-    misses = [i["text"] for i in items
-              if EQEngine(":memory:").process_input(i["text"])[0].emotional_tone.value != i["tone"]]
+    misses = [i["text"] for i in items if troubled(i["text"]) != (i["tone"] == "negative")]
     return len(items) - len(misses), len(items), misses
 
 
 def test_labelled_set_accuracy_does_not_regress():
     correct, total, misses = accuracy("eq_labelled.json")
-    assert correct == total, misses  # 25/38 before Stage 1.7
+    assert correct == total, misses
 
 
-def test_held_out_probe_accuracy_does_not_regress():
+def test_old_held_out_probes():
     correct, total, misses = accuracy("eq_probe.json")
-    assert correct >= 20, misses
-    # Known limits of keyword appraisal, recorded rather than tuned away (docs/design/eq-appraisal.md).
-    assert set(misses) <= {"is it wrong?", "great, it broke again", "I don't hate it", "I'm not unhappy"}
+    assert correct == total, misses   # the four known misses are among them
+
+
+def test_new_held_out_probes_as_measured():
+    """Written before this stage's change; scored as is (docs/design/eq-appraisal.md). The misses are words
+    the Stage 1.7 lexicon doesn't have; they are recorded, not added, so the set stays held out."""
+    correct, total, misses = accuracy("eq_probe_4_4.json")
+    assert correct >= 19, misses
+    assert set(misses) <= {"wonderful, another crash", "perfect, now nothing loads", "love how it keeps breaking",
+                           "this is a disaster", "can't stand it"}

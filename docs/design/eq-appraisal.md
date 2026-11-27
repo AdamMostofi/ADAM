@@ -1,97 +1,123 @@
-# EQ appraisal: what it actually does
+# EQ: what it does
 
-**Status:** Current. Revisit: Stage 4.4 ([#77](https://github.com/AdamMostofi/ADAM/issues/77)).
+**Status:** Current. Stage 4.4, Revisit the Appraisal ([#77](https://github.com/AdamMostofi/ADAM/issues/77)),
+reduced EQ to one signal: **is the user frustrated?** Stage 1.7 ([#37](https://github.com/AdamMostofi/ADAM/issues/37))
+is kept below as history.
 
-Stage 1.7 (#37). DE.1: fix first, then question the value later. EQ currently
-only shapes the tone sent to the Mouth, and #34 narrows that further. Whether
-it earns its place gets reviewed once #34 lands.
+## Stage 4.4: measure first, then decide (DE.2)
 
-## Mechanism
+**What EQ changed once answers came from evidence.** Stage 4.3 made factual replies come only from proofs and
+quoted passages, so EQ's parameters (warmth, depth, tone) could reach a user only through the Mouth, for
+chatter. `scripts/measure_eq.py`, at commit ec2d2d3, measured this on a chat session written for the purpose
+(`tests/data/eq_session.json`, 36 turns, written before the measurement). Its report is
+[2026-11-26-eq-value.json](../measurements/2026-11-26-eq-value.json):
 
-The dimensions come from appraisal theory: novelty, goal relevance, goal
-congruence, coping potential and agency (Lazarus and Folkman; Scherer's
-Component Process Model). The mechanism is **keyword counting**, not a model
-of appraisal:
+| | |
+|---|---|
+| Turns whose reply could come from the Mouth (chatter) | 16 of 36 |
+| Turns where EQ's parameters differed from neutral | 8 of 36; 6 of the 16 Mouth turns |
+| Real TinyChat15M replies shown, 8 samples per Mouth turn, with EQ's parameters | 7 of 128 |
+| The same, with neutral parameters | 5 of 128 |
+| What those replies were | the same generic lines either way ("what do you think?") |
+| The CLI's tone label (`ADAM [negative]`), the only other thing a user saw | right on 27 of 36 turns |
+| New held-out probes, as is (three tones) | 11 of 24 |
 
-- **One lexicon per dimension.** Each dimension has a small word-and-phrase
-  lexicon (`learning/eq/appraiser.py`), and its score is the share of
-  positive matches.
-- **Tone** comes from congruence and coping.
-- **Manual override.** Explicit emotion words, un-negated, such as "annoying"
-  or "let's go", replace the appraisal for that turn
-  (`learning/eq/manual_override.py`).
+**No recorded real chat turns existed.**
+- The production store was reset on 2026-11-11.
+- EQ saved tone states, but not the text behind them.
+- The web UI keeps its transcript in the browser.
 
-It reads explicit wording. Sarcasm, context, and anything outside the
-lexicons are invisible to it.
+So the session was written for the purpose, before anything was measured.
 
-## Matching (`learning/eq/lexicon.py`)
+**The decision (DE.2, the owner's call, 2026-11-26): reduce.**
+- **Kept:** one signal, frustration, read better.
+- **Removed:** the appraisal dimensions (novelty, relevance, congruence, coping, agency), the response
+  parameters, the mood baseline, the manual override and the saved state. About 520 lines went, with the 42
+  tests that covered them.
 
-**Before:** every lexicon entry was matched with `entry in text`, a
-substring test:
+## The frustration signal (`learning/eq/frustration.py`)
+
+**A turn reads as troubled** when its negative cues outweigh its positive ones. The lexicon is the Stage 1.7
+one, unchanged: whole words, negation within three words, "but" contrast, "no" as a refusal. It includes the
+coping words ("I can't", "don't understand", "help"). Four rules, written as mechanisms rather than new words:
+
+| Rule | Example | Read as |
+|---|---|---|
+| A yes/no question is asked about, not meant | "is it wrong?", "was that a bad idea?" | nothing |
+| Litotes is weak, not flipped | "not bad", "I don't hate it", "I'm not unhappy" | nothing (a negated positive, "not good", is still trouble) |
+| An opening exclamation, then a failure | "great, it broke again" | the failure |
+| A terse reply after repeated trouble | "fine." after two troubled turns of the last three | trouble |
+
+**The user is frustrated** when two of the last three turns were troubled. It is per session, like
+attention: it describes this conversation, so it is never saved. EQ no longer writes `eq_state` to
+`adam_memory.db` on every turn; with the engine store, that file is no longer created at all.
+
+**What it changes:**
+- **ADAM's own wording.** Its fixed wording for what it can't do ("I won't guess", an acknowledgement) starts
+  with an apology: "Sorry about that. …"
+- **The Mouth.** It isn't used for chatter while the user is frustrated.
+- **The CLI.** It shows `ADAM [frustrated]` with a red border.
+- **The stats panel.** It shows the frustration level.
+- **Facts and passages never change.**
+
+`/api/chat` keeps its `state` and `params` keys for clients. `state.emotional_tone` is now "negative" for a
+troubled turn and "neutral" otherwise, and `params` is fixed. A new `frustration` key carries the signal and
+the cues that decided it.
+
+## Accuracy, on what the signal decides
+
+A turn is right when it reads as troubled exactly when its label is negative. Both readers are scored the same
+way, from `scripts/measure_eq.py` ([2026-11-27-eq-frustration.json](../measurements/2026-11-27-eq-frustration.json)):
+
+| Set | Old EQ (as negative) | Frustration reader |
+|---|---|---|
+| Labelled set (`eq_labelled.json`, 38) | 38/38 | 38/38 |
+| Stage 1.7 held-out probes (`eq_probe.json`, 24) | 22/24 | 24/24 |
+| Stage 4.4 held-out probes (`eq_probe_4_4.json`, 24, written before the change) | 16/24 | 19/24 |
+| "fine." after repeated failures (`eq_probe_4_4.json` sequences) | wrong | right |
+| The chat session (`eq_session.json`, 36) | 30/36 | 31/36 |
+
+**The four known misses from Stage 1.7 are fixed:** "is it wrong?", "great, it broke again", "I don't hate
+it" and "I'm not unhappy".
+
+**What it still misses.** Each of these is a word or form the Stage 1.7 lexicon doesn't have. They are recorded
+here, not added, so the held-out sets stay held out:
+- "wonderful, another crash" and "perfect, now nothing loads": neither "crash" nor "nothing loads" is a
+  failure word.
+- "love how it keeps breaking": "breaking" isn't in the lexicon ("broke" and "broken" are), and the sarcasm
+  isn't at the start.
+- "this is a disaster", "can't stand it", "that's useless", "I'm tired today", "that's not what I asked".
+- **Sarcasm beyond an opening exclamation is out of reach of word matching.**
+
+Because of these gaps, frustration never triggered in the 36-turn session.
+
+## Stage 1.7: matching words, not substrings (history)
+
+Stage 1.7 (#37, DE.1: fix first, question the value later) made the matching sound. It is the base the
+frustration reader uses (`learning/eq/lexicon.py`). **Before**, every entry was matched as a substring:
 
 | Text | Read as | Because |
 |---|---|---|
 | "I know how this works" | negative | "no" is inside "know" |
-| "My train leaves at noon" | negative | "no" is inside "noon" |
 | "Tell me about the economy of Spain" | negative | "no" is inside "economy" |
-| "I'm unhappy with this answer" | positive (override) | "happy" is inside "unhappy" |
-| "tell me whatever you think" | negative (override) | "hate" is inside "whatever" |
+| "I'm unhappy with this answer" | positive | "happy" is inside "unhappy" |
+| "tell me whatever you think" | negative | "hate" is inside "whatever" |
 | "I can't do this" | able and unable | "i can" is inside "i can't" |
-| "rain falls with wind" | another person's doing | "it" is inside "with" |
 | "This is not great" | positive | no negation |
 
-**Now:**
-- **Whole words.** Text is lowercased, curly apostrophes are straightened,
-  and the text is split into clauses at punctuation and then into word
+**After:**
+- **Whole words.** Matching is on word tokens, per clause, longest entry first, and a match uses up its
   tokens.
-- **Longest first.** Entries match as consecutive tokens, longest first, and
-  a match uses up its tokens. So "i don't know" is not also "know".
-- **Negation.** A negator ("not", "never", any "-n't" word) up to three
-  tokens before a match, in the same clause, flips it, unless the entry is
-  itself negative ("doesn't work").
-- **Refusals.** A clause that is only "no" is a refusal, so "No, that's
-  wrong" stays negative.
-- **Contrast.** In "X but Y", Y decides the appraisal. The manual override
-  ignores contrast: an explicit emotion word counts anywhere.
-- **Idioms.** These use up their tokens: "can't wait" is not "can't".
-- **Elongated words collapse:** "let's goooo" becomes "let's go".
-- **Bigger lexicons.** They gained common words that were missing: "bad",
-  "fail", "fails", "broke", the plurals "errors" and "problems", "helpful",
-  "useful", and the override's emotion words. A negated emotion word ("not
-  happy") goes to the appraisal instead of forcing an override.
+- **Negation.** A negator within three tokens negates a match.
+- **Refusals.** "no" on its own is a refusal.
+- **Contrast.** In "X but Y", Y decides.
+- **Idioms.** "can't wait" is not "can't".
+- **Elongation.** Elongated words collapse ("goooo" becomes "go").
 
-## One record per turn
+It also fixed double-recorded turns and an `eq_state` table that grew on every turn; both went with the
+saved state in Stage 4.4.
 
-`EQEngine.process_input` records the turn in the tracker and the baseline,
-and `ADAMCore.chat` recorded it again, so every turn counted twice and the
-baseline was skewed. `chat` now leaves the recording to `process_input`.
-
-The saved state had two problems as well:
-- **It grew forever.** `eq_state` gained a row on every chat turn, though only
-  the newest was ever read. There is now one row, replaced on each save.
-- **The history was lost.** It didn't include the interaction history, so
-  the first turn after a restart recomputed the baseline from that turn
-  alone (0 or 1). The history (at most 10 turns) is now saved too.
-
-## Accuracy
-
-`scripts/measure_eq.py` scores tone end to end (override, then appraisal).
-The results are in `docs/measurements/2026-11-13-eq-before.json` and
-`-after.json`.
-
-| Set | Before | After |
-|---|---|---|
-| Labelled set (`tests/data/eq_labelled.json`, 38 sentences) | 25/38 (65.8%) | 38/38 (100%) |
-| Held-out probes (`tests/data/eq_probe.json`, 24 sentences) | 10/24 (41.7%) | 20/24 (83.3%) |
-
-**Read the 100% with care.** The labelled set was written alongside the fix,
-so it shows the targeted defects are gone, not that EQ reads people
-correctly. The probe set was written afterwards to break it, and its score
-is recorded as is. Its remaining misses are the limits of keyword appraisal:
-
-- **Sarcasm:** "great, it broke again" reads as positive.
-- **Questions:** "is it wrong?" reads as negative.
-- **Litotes:** "I don't hate it" and "I'm not unhappy" read as positive (the
-  labels say neutral; this is debatable).
-
-Tests keep both scores from regressing (`tests/unit/test_eq_appraisal_matching.py`).
+Its scores (three tones, `docs/measurements/2026-11-13-eq-{before,after}.json`, from the Stage 1.7 version of
+`scripts/measure_eq.py`, in the history before commit ec2d2d3):
+- **Labelled set:** 25/38, then 38/38.
+- **Held-out probes:** 10/24, then 20/24.

@@ -48,9 +48,10 @@ def main():
             continue
 
         result = core.chat(user_input)
-        tone = result["state"]["emotional_tone"]
-        border = "green" if tone == "positive" else "red" if tone == "negative" else "yellow"
-        console.print(Panel(result["response"], title=f"ADAM [{tone}]", border_style=border))
+        # Stage 4.4: EQ's one signal. The panel says so when the user seems frustrated.
+        frustrated = result["frustration"]["frustrated"]
+        console.print(Panel(result["response"], title="ADAM [frustrated]" if frustrated else "ADAM",
+                            border_style="red" if frustrated else "yellow"))
 
 
 def _show_stats(core: ADAMCore):

@@ -72,7 +72,7 @@ python -m interface.web.app             # web UI on http://localhost:7860
 | Learned skills run as Layer 2 rules, with fitness tracking | `learning/skill_compiler.py` | `tests/unit/test_rules_registry.py`, `tests/unit/test_skill_fitness.py` |
 | Answers only from evidence: facts worded from proofs, passages quoted with citations, no answer without evidence; the Mouth's text shown only when it asserts nothing | `interface/evidence.py`, [evidence-answers.md](docs/design/evidence-answers.md) | `tests/integration/test_evidence_answers.py` |
 | Ear (Cactus Needle, with a keyword fallback) and Mouth (TinyChat15M via `llama-server`) | `interface/ear.py`, `interface/mouth.py` | `tests/integration/test_ear_mouth.py` |
-| EQ: keyword appraisal of tone, with word-boundary matching and negation | `learning/eq/`, [eq-appraisal.md](docs/design/eq-appraisal.md) | `tests/unit/test_eq_appraisal_matching.py`, `tests/integration/test_eq_comprehensive.py` |
+| EQ, reduced to one signal: is the user frustrated? Word matching with negation, yes/no questions, litotes, an obvious sarcasm cue and context; it softens ADAM's own wording only | `learning/eq/`, [eq-appraisal.md](docs/design/eq-appraisal.md) | `tests/unit/test_eq_appraisal_matching.py` |
 | Web UI and JSON API (Flask, vanilla HTML/CSS/JS, no build step) | `interface/web/` | `tests/integration/test_interface.py` |
 | CLI | `interface/cli.py` | `tests/integration/test_cli.py` |
 | Memory budget: 400 MB while idle or chatting, measured | [memory-budget.md](docs/design/memory-budget.md) | `tests/unit/test_memory_probe.py` |
@@ -94,9 +94,10 @@ suite in an environment without ADAM.
 - **The learning loop isn't connected to chat.** Pattern extraction and
   skill compilation work as a library and in tests; skills compiled earlier
   are loaded at startup. Learning from chat is Stage 5.7.
-- **EQ reads explicit wording only.** It misses sarcasm, questions and
-  litotes; its accuracy is recorded in
-  [eq-appraisal.md](docs/design/eq-appraisal.md). A revisit is Stage 4.4.
+- **EQ reads a few words.** Its frustration signal knows only the Stage 1.7
+  lexicon, so "this is a disaster" or "that's useless" go unnoticed, and
+  sarcasm beyond an opening "great, …" is out of reach. Its scores are in
+  [eq-appraisal.md](docs/design/eq-appraisal.md).
 - **The engine store is slower to write.** Since Stage 4.1, ADAM keeps
   its facts in the memory engine. Writing a fact there takes about two and
   a half times as long as in the original SQLite store, and the store is about six
@@ -175,8 +176,8 @@ affect. The Mouth renders the answer.*
   ranking.
 - **Learning** — pattern extraction and skill compilation; compiled skills run
   as Layer 2 rules.
-- **EQ** — keyword appraisal along appraisal-theory dimensions, producing a
-  tone, a goal status and response parameters.
+- **EQ** — one signal since Stage 4.4: whether the user seems frustrated, read
+  per session from the last three turns.
 - **Answers** — from evidence only (Stage 4.3): facts worded from their proofs,
   passages quoted with their source, and "I won't guess" when nothing backs an
   answer. Each reply carries its `answer_source` and `evidence`.
@@ -292,23 +293,21 @@ The Layer 1 rules remain the trust floor. Nothing learned can rewrite them.
 
 ## EQ
 
-![ADAM EQ appraisal process](docs/diagrams/eq-process.svg)
+Since Stage 4.4, EQ is one signal: **is the user frustrated?** Stage 4.4
+measured what the fuller EQ changed once answers came from evidence: through
+the Mouth, nothing a user could see. The owner chose to keep only this signal
+([eq-appraisal.md](docs/design/eq-appraisal.md)).
 
-*Affect is computed before the answer is written.*
-
-The EQ subsystem borrows its dimensions from Scherer's Component Process Model
-and Lazarus/Folkman appraisal. The mechanism itself is keyword counting: small
-word-and-phrase lexicons, matched on word boundaries with simple negation. It
-reads explicit wording, not sarcasm or context. On a 24-sentence held-out probe
-set it gets 83% of tones right ([eq-appraisal.md](docs/design/eq-appraisal.md)).
-
-- **Primary appraisal** — novelty, goal relevance, goal congruence.
-- **Secondary appraisal** — coping potential and agency.
-- **Output** — emotional tone, goal status, engagement, and confidence.
-- **Adjustment** — warmth, directness, depth, and caution flags.
-- **Baseline** — rolling interaction state and mood-shift detection.
-
-Manual override can replace the appraisal for a turn.
+- **A turn reads as troubled** when its negative cues outweigh its positive
+  ones. The lexicon is matched on word boundaries with negation. A yes/no
+  question ("is it wrong?") counts for nothing, and so does a negated negative
+  ("not bad"). An opening "great," followed by a failure reads as the failure.
+- **The user is frustrated** when two of the last three turns were troubled. A
+  terse "fine." after repeated trouble counts too.
+- **What it changes:** ADAM's own wording for what it can't do starts with an
+  apology, the Mouth isn't used, and the CLI shows `ADAM [frustrated]`. Facts
+  and passages never change.
+- **It is per session and never saved,** like attention.
 
 ---
 
@@ -395,7 +394,7 @@ ADAM/
 │   ├── engine.py           # LearningEngine
 │   ├── pattern_extractor.py
 │   ├── skill_compiler.py
-│   └── eq/                 # appraisal, lexicon, adjustment, baseline
+│   └── eq/                 # the frustration signal and its lexicon
 ├── interface/              # CLI, Ear, Mouth, Flask
 │   ├── core.py             # ADAMCore facade
 │   ├── ear.py

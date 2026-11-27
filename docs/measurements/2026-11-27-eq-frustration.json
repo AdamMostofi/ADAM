@@ -1,0 +1,435 @@
+{
+  "measured_at": "2026-11-27T13:34:29+0200",
+  "probes": {
+    "eq_labelled.json": {
+      "correct": 38,
+      "total": 38,
+      "misses": []
+    },
+    "eq_probe.json": {
+      "correct": 24,
+      "total": 24,
+      "misses": []
+    },
+    "eq_probe_4_4.json": {
+      "correct": 19,
+      "total": 24,
+      "misses": [
+        {
+          "text": "wonderful, another crash",
+          "label": "negative",
+          "cues": []
+        },
+        {
+          "text": "perfect, now nothing loads",
+          "label": "negative",
+          "cues": [
+            "perfect"
+          ]
+        },
+        {
+          "text": "love how it keeps breaking",
+          "label": "negative",
+          "cues": [
+            "love"
+          ]
+        },
+        {
+          "text": "this is a disaster",
+          "label": "negative",
+          "cues": []
+        },
+        {
+          "text": "can't stand it",
+          "label": "negative",
+          "cues": []
+        }
+      ],
+      "sequences": [
+        {
+          "turns": [
+            "it failed",
+            "still broken",
+            "it broke again",
+            "fine."
+          ],
+          "expected": "negative",
+          "read": "negative",
+          "right": true
+        },
+        {
+          "turns": [
+            "it works",
+            "thanks, great",
+            "fine."
+          ],
+          "expected": "neutral",
+          "read": "not negative",
+          "right": true
+        }
+      ]
+    }
+  },
+  "session": {
+    "turns": 36,
+    "troubled_matches_label": 31,
+    "frustrated_turns": [],
+    "rows": [
+      {
+        "text": "hello",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "small_talk",
+        "response": "Hello. I am ADAM. What shall we work on?"
+      },
+      {
+        "text": "what can you do?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "small_talk",
+        "response": "I answer questions from what I know: facts I can prove, and passages from the sources in my library. When I can't back an answer, I say so."
+      },
+      {
+        "text": "Is Socrates mortal?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "proof",
+        "response": "Yes, that's right. Socrates is a man and every man is a mortal, so Socrates is a mortal."
+      },
+      {
+        "text": "nice, that's exactly right",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "right"
+        ],
+        "answer_source": "acknowledgement",
+        "response": "Noted. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "who is mortal?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "proof",
+        "response": "Plato is a mortal, and so is Socrates. Every man is a mortal. Every mortal is an animal."
+      },
+      {
+        "text": "tell me about men",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "proof",
+        "response": "Every man is a mortal and an animal. Plato is a man, and so is Socrates."
+      },
+      {
+        "text": "Socrates is a man.",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "proof",
+        "response": "That's right. Socrates is a man."
+      },
+      {
+        "text": "Socrates was wise",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "no_evidence",
+        "response": "I can't confirm that: nothing I know shows it yet."
+      },
+      {
+        "text": "what did socrates say about the unexamined life?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "no_evidence",
+        "response": "I don't have anything that answers that, so I won't guess."
+      },
+      {
+        "text": "hmm, that's not what I asked",
+        "label": "negative",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "Got it. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "Is Plato a philosopher?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "no_evidence",
+        "response": "I don't have anything that answers that, so I won't guess."
+      },
+      {
+        "text": "why don't you know that?",
+        "label": "negative",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "no_evidence",
+        "response": "I don't know anything about that yet, so I won't guess."
+      },
+      {
+        "text": "ugh, this is annoying",
+        "label": "negative",
+        "troubled": true,
+        "frustrated": false,
+        "cues": [
+          "annoying"
+        ],
+        "answer_source": "acknowledgement",
+        "response": "Okay. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "fine.",
+        "label": "negative",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "Okay. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "ok let's try something else",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "Got it. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "Is a rock an animal?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "proof",
+        "response": "Actually, no. Rock isn't an animal."
+      },
+      {
+        "text": "good",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "good"
+        ],
+        "answer_source": "acknowledgement",
+        "response": "Noted. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "I like this answer style",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "Okay. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "Does Tweety fly?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "no_evidence",
+        "response": "I don't have anything that answers that, so I won't guess."
+      },
+      {
+        "text": "is tweety a flier?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "proof",
+        "response": "Yes, that's right. Tweety is a bird and a bird is typically a flier, so probably Tweety is a flier."
+      },
+      {
+        "text": "probably? why only probably?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "no_evidence",
+        "response": "I don't know anything about that yet, so I won't guess."
+      },
+      {
+        "text": "I'm tired today",
+        "label": "negative",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "Noted. Ask me something and I'll answer from what I know."
+      },
+      {
+        "text": "I like pizza",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "I see. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "the weather is awful here",
+        "label": "negative",
+        "troubled": true,
+        "frustrated": false,
+        "cues": [
+          "awful"
+        ],
+        "answer_source": "acknowledgement",
+        "response": "Okay. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "what is a fact?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "no_evidence",
+        "response": "I don't know anything about that yet, so I won't guess."
+      },
+      {
+        "text": "that's useless",
+        "label": "negative",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "I see. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "sorry, that was rude",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "I see. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "Are men animals?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "proof",
+        "response": "Yes, that's right. Every man is a mortal and every mortal is an animal, so every man is an animal."
+      },
+      {
+        "text": "great, thanks a lot",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "great",
+          "thanks"
+        ],
+        "answer_source": "acknowledgement",
+        "response": "I see. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "how are you?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "small_talk",
+        "response": "I'm well, thank you. What shall we look into?"
+      },
+      {
+        "text": "I finally got the tests passing!",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "Okay. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "the build broke again",
+        "label": "negative",
+        "troubled": true,
+        "frustrated": false,
+        "cues": [
+          "broke"
+        ],
+        "answer_source": "acknowledgement",
+        "response": "I see. Ask me a question, and I'll tell you what I can back up."
+      },
+      {
+        "text": "can you help me with it?",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "yes/no question"
+        ],
+        "answer_source": "no_evidence",
+        "response": "I don't know anything about that yet, so I won't guess."
+      },
+      {
+        "text": "never mind",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "acknowledgement",
+        "response": "I see. If you have a question, I'll answer from what I know."
+      },
+      {
+        "text": "thanks",
+        "label": "positive",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [
+          "thanks"
+        ],
+        "answer_source": "small_talk",
+        "response": "You are welcome."
+      },
+      {
+        "text": "bye",
+        "label": "neutral",
+        "troubled": false,
+        "frustrated": false,
+        "cues": [],
+        "answer_source": "small_talk",
+        "response": "Goodbye."
+      }
+    ]
+  },
+  "read_ms_median": 0.106,
+  "sqlite_written_by_eq": false
+}

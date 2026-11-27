@@ -8,7 +8,7 @@ from kernel.engine import InferenceEngine
 from kernel.facts import Fact, Source
 from memory.system import MemorySystem
 from learning.engine import LearningEngine
-from learning.eq.engine import EQEngine
+from learning.eq.frustration import FrustrationReader
 from interface.ear import Ear
 from interface.evidence import Answerer
 from interface.mouth import Mouth, small_talk
@@ -19,12 +19,18 @@ from memory.source_library import SourceError
 # left over stays queued and continues on the next turn.
 CHAT_INFERENCE_BUDGET = 2000
 
+# What the Mouth is told about tone: nothing (Stage 4.4, #77). EQ's parameters changed nothing visible.
+NEUTRAL_PARAMS = {"warmth": "medium", "depth": "detailed", "tone": "neutral"}
+LEGACY_PARAMS = {"warmth": "medium", "directness": "direct", "depth": "detailed", "caution_flag": False,
+                 "empathetic_opening": False, "encouraging_closing": False}
+
 
 class ADAMCore:
     def __init__(self, db_path: str = "adam_memory.db", lance_path: str = "adam_vectors.db", mouth=None, ear=None):
         self.memory = MemorySystem(db_path, lance_path)
         self.learning = LearningEngine(memory_system=self.memory)
-        self.eq = EQEngine(db_path)
+        # EQ is one signal since Stage 4.4 (#77): is the user frustrated? Per session, never saved.
+        self.frustration = FrustrationReader()
         self.engine = self.memory.engine
         for rule in self.learning.skill_compiler.rules():
             self.engine.add_rule(rule)
@@ -36,7 +42,7 @@ class ADAMCore:
 
     def chat(self, message: str, mode: str = "full") -> dict:
         intent = self.ear.listen(message)
-        user_state, params = self.eq.process_input(message)
+        reading = self.frustration.read(message)
 
         if mode == "simple":
             memories = self.memory.recall(message, limit=5)
@@ -54,15 +60,9 @@ class ADAMCore:
 
         # Stage 4.3 (#34): the reply comes from evidence. Facts are worded from proofs, passages are quoted,
         # and the Mouth speaks only where nothing factual is at stake (interface/evidence.py).
-        answer = Answerer(self.engine, self._library(), self.mouth, small_talk).answer(message, {
-            "warmth": params.warmth,
-            "depth": params.depth,
-            "tone": user_state.emotional_tone.value,
-        })
+        answer = Answerer(self.engine, self._library(), self.mouth, small_talk).answer(
+            message, NEUTRAL_PARAMS, frustrated=reading.frustrated)
         response = answer.text
-
-        # process_input() already recorded this turn in the tracker and the baseline (Stage 1.7, #37).
-        self.eq.save()
 
         return {
             "response": response,
@@ -71,20 +71,16 @@ class ADAMCore:
                 "topic": intent.topic,
                 "sentiment": intent.sentiment,
             },
+            # Kept for /api/chat clients (Stage 4.3 kept every key). Since Stage 4.4 they come from the frustration
+            # signal: the tone is "negative" for a troubled turn, else "neutral", and the parameters are fixed.
             "state": {
-                "goal_status": user_state.goal_status.value,
-                "emotional_tone": user_state.emotional_tone.value,
-                "engagement": user_state.engagement,
-                "confidence": user_state.confidence,
+                "goal_status": "unknown",
+                "emotional_tone": "negative" if reading.troubled else "neutral",
+                "engagement": 0.5,
+                "confidence": 0.5,
             },
-            "params": {
-                "warmth": params.warmth,
-                "directness": params.directness,
-                "depth": params.depth,
-                "caution_flag": params.caution_flag,
-                "empathetic_opening": params.empathetic_opening,
-                "encouraging_closing": params.encouraging_closing,
-            },
+            "params": dict(LEGACY_PARAMS),
+            "frustration": reading.to_dict(),
             "memories_used": len(memories),
             "answer_source": answer.answer_source,
             "evidence": answer.evidence,
@@ -183,8 +179,8 @@ class ADAMCore:
             "nodes": memory["nodes"],
             "edges": memory["edges"],
             "store": memory["store"],
-            "baseline": self.eq.get_baseline(),
-            "mood_shift": self.eq.detect_mood_shift(),
+            "frustration": self.frustration.level(),
+            "frustrated": self.frustration.frustrated(),
             "by_source": by_source,
             "deduced": by_source.get("deduced", 0),
             "contradictions": len(self.engine.conflicts()),
@@ -194,7 +190,6 @@ class ADAMCore:
 
     def save(self, path: str) -> None:
         self.memory.save(path)
-        self.eq.save()
 
     def load(self, path: str) -> None:
         self.memory = MemorySystem.load(path)

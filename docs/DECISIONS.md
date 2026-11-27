@@ -101,7 +101,7 @@ Outcomes are as follows:
 | #24 | DV.1 | Sources and passages are engine records (the truth); the FTS5 index is derived from them and rebuilt when it lacks a source. Passages are cut from the text as the engine keeps it, after secret redaction. | Adopted. |
 | #34 | DS.1 | Templates before generation for facts. | Settled differently by the owner (2026-11-25): the model may phrase, but with zero hallucinations. TinyChat15M couldn't restate a fact in 16 samples, so facts are worded from their proofs in varied phrasings, and the model's text is shown only when it asserts nothing ([evidence-answers.md](design/evidence-answers.md)). |
 | #34 | DS.2 | Route messages deterministically; the Ear's intent is returned but not used. Removing the Ear (about 85 MB) is recorded under #33 as the owner's call. | Adopted. |
-| #77 | DE.2 | Decide EQ's value before adding sophistication. | Adopted. |
+| #77 | DE.2 | Decide EQ's value before adding sophistication. | Settled (owner's call, 2026-11-26): reduce EQ to one signal, frustration. Measured: through the Mouth EQ changed nothing visible (7 vs 5 of 128 replies shown, the same lines) ([eq-appraisal.md](design/eq-appraisal.md)). |
 | #25 | D4.1–D4.4 | Additive citations API, web chat only, console naming, evidence gate. | Adopted. |
 | #35 | DT.1 | Start the thought trace small; grow node types with use. | Adopted. |
 | #38 | DD.1, DD.2 | Test the reader before building around it, with a human-authored gold set. | Adopted. |

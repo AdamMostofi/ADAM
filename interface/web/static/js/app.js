@@ -297,7 +297,7 @@ function setupStats() {
         ["Facts", s.facts], ["Deduced", s.deduced ?? 0], ["Skills", s.skills],
         ["Graph nodes", s.nodes], ["Graph edges", s.edges],
         ["Contradictions", s.contradictions ?? 0], ["Trace steps", s.trace_steps ?? 0],
-        ["EQ baseline", Number(s.baseline).toFixed(2)], ["Mood shift", s.mood_shift ? "Detected" : "None"],
+        ["Frustration", Number(s.frustration ?? 0).toFixed(2)], ["Frustrated", s.frustrated ? "Yes" : "No"],
       ];
       for (const [label, value] of rows) {
         panel.append(el("div", { class: "stat-row" }, [

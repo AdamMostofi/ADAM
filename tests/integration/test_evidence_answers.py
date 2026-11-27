@@ -149,6 +149,21 @@ def test_the_model_gate(text, ok):
     assert model_text_is_grounded(text, "I like pizza") is ok
 
 
+# ------------------------------------------------------------ frustration (Stage 4.4)
+def test_frustration_softens_only_adams_own_wording():
+    answerer = Answerer(engine_with(SOCRATES), mouth=LyingMouth("What do you think about that?"),
+                        small_talk=small_talk)
+    calm, upset = answerer.answer("Who won the 1998 World Cup?"), answerer.answer("Who won the 1998 World Cup?",
+                                                                                 frustrated=True)
+    assert upset.text.startswith("Sorry") and upset.text.endswith(calm.text)
+    fact = answerer.answer("Is Socrates mortal?", frustrated=True)
+    assert fact.text == answerer.answer("Is Socrates mortal?").text          # facts are never changed
+    before = answerer.mouth.calls
+    chatter = answerer.answer("I like pizza", frustrated=True)
+    assert chatter.answer_source == ACKNOWLEDGEMENT and answerer.mouth.calls == before   # no Mouth
+    assert answerer.answer("hello", frustrated=True).answer_source == SMALL_TALK
+
+
 # ------------------------------------------------------------ conflicts
 def test_contested_evidence_is_not_answered_either_way():
     engine = InferenceEngine()
