@@ -1,0 +1,854 @@
+{
+  "measured_at": "2026-11-26T20:33:56+0200",
+  "turns": 36,
+  "answer_sources": {
+    "small_talk": 5,
+    "proof": 7,
+    "acknowledgement": 16,
+    "no_evidence": 7,
+    "passage": 1
+  },
+  "turns_reaching_the_mouth": 16,
+  "params_differ_from_neutral": {
+    "all_turns": 8,
+    "mouth_turns": 6
+  },
+  "cli_tone_label_matches": 27,
+  "eq_appraise_ms_median": 0.321,
+  "sqlite_written_by_eq": true,
+  "probes": {
+    "eq_probe.json": {
+      "correct": 20,
+      "total": 24,
+      "misses": [
+        "is it wrong?",
+        "great, it broke again",
+        "I don't hate it",
+        "I'm not unhappy"
+      ]
+    },
+    "eq_probe_4_4.json": {
+      "correct": 11,
+      "total": 24,
+      "misses": [
+        "is this broken?",
+        "was that a bad idea?",
+        "not terrible",
+        "it's not awful",
+        "wonderful, another crash",
+        "oh great, it failed again",
+        "perfect, now nothing loads",
+        "love how it keeps breaking",
+        "brilliant work",
+        "this is a disaster",
+        "never been better",
+        "can't stand it",
+        "is it good?"
+      ],
+      "sequences": [
+        {
+          "turns": [
+            "it failed",
+            "still broken",
+            "it broke again",
+            "fine."
+          ],
+          "expected": "negative",
+          "read": "neutral"
+        },
+        {
+          "turns": [
+            "it works",
+            "thanks, great",
+            "fine."
+          ],
+          "expected": "neutral",
+          "read": "neutral"
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "text": "hello",
+      "label": "neutral",
+      "answer_source": "small_talk",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "what can you do?",
+      "label": "neutral",
+      "answer_source": "small_talk",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Is Socrates mortal?",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "nice, that's exactly right",
+      "label": "positive",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "positive"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "positive"
+    },
+    {
+      "text": "who is mortal?",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "tell me about men",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Socrates is a man.",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Socrates was wise",
+      "label": "neutral",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "what did socrates say about the unexamined life?",
+      "label": "neutral",
+      "answer_source": "passage",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "hmm, that's not what I asked",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Is Plato a philosopher?",
+      "label": "neutral",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "why don't you know that?",
+      "label": "negative",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "ugh, this is annoying",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "negative"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "negative"
+    },
+    {
+      "text": "fine.",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "ok let's try something else",
+      "label": "neutral",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Is a rock an animal?",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "good",
+      "label": "positive",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "positive"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "positive"
+    },
+    {
+      "text": "I like this answer style",
+      "label": "positive",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Does Tweety fly?",
+      "label": "neutral",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "is tweety a flier?",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "probably? why only probably?",
+      "label": "neutral",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "I'm tired today",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "I like pizza",
+      "label": "positive",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "the weather is awful here",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "negative"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "negative"
+    },
+    {
+      "text": "what is a fact?",
+      "label": "neutral",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "that's useless",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "sorry, that was rude",
+      "label": "neutral",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "Are men animals?",
+      "label": "neutral",
+      "answer_source": "proof",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "great, thanks a lot",
+      "label": "positive",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "high",
+        "depth": "summary",
+        "tone": "positive"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "positive"
+    },
+    {
+      "text": "how are you?",
+      "label": "neutral",
+      "answer_source": "small_talk",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "I finally got the tests passing!",
+      "label": "positive",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "the build broke again",
+      "label": "negative",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "very high",
+        "depth": "concise",
+        "tone": "negative"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "negative"
+    },
+    {
+      "text": "can you help me with it?",
+      "label": "neutral",
+      "answer_source": "no_evidence",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "very high",
+        "depth": "concise",
+        "tone": "negative"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "negative"
+    },
+    {
+      "text": "never mind",
+      "label": "neutral",
+      "answer_source": "acknowledgement",
+      "reaches_mouth": true,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    },
+    {
+      "text": "thanks",
+      "label": "positive",
+      "answer_source": "small_talk",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "positive"
+      },
+      "params_differ_from_neutral": true,
+      "cli_tone": "positive"
+    },
+    {
+      "text": "bye",
+      "label": "neutral",
+      "answer_source": "small_talk",
+      "reaches_mouth": false,
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "params_differ_from_neutral": false,
+      "cli_tone": "neutral"
+    }
+  ],
+  "mouth_effect": [
+    {
+      "text": "nice, that's exactly right",
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "positive"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "hmm, that's not what I asked",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think about that?"
+        ]
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "ugh, this is annoying",
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "negative"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think?"
+        ]
+      }
+    },
+    {
+      "text": "fine.",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "ok let's try something else",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "good",
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "positive"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think?"
+        ]
+      }
+    },
+    {
+      "text": "I like this answer style",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think?"
+        ]
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "I'm tired today",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "I like pizza",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "the weather is awful here",
+      "params": {
+        "warmth": "high",
+        "depth": "detailed",
+        "tone": "negative"
+      },
+      "eq": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "have you heard about it?"
+        ]
+      },
+      "neutral": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "have you heard about it?"
+        ]
+      }
+    },
+    {
+      "text": "that's useless",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 2,
+        "of": 8,
+        "examples": [
+          "what do you think about that?",
+          "what do you think?"
+        ]
+      },
+      "neutral": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think?"
+        ]
+      }
+    },
+    {
+      "text": "sorry, that was rude",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "great, thanks a lot",
+      "params": {
+        "warmth": "high",
+        "depth": "summary",
+        "tone": "positive"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "I finally got the tests passing!",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think?"
+        ]
+      },
+      "neutral": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "what do you think?"
+        ]
+      }
+    },
+    {
+      "text": "the build broke again",
+      "params": {
+        "warmth": "very high",
+        "depth": "concise",
+        "tone": "negative"
+      },
+      "eq": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    },
+    {
+      "text": "never mind",
+      "params": {
+        "warmth": "medium",
+        "depth": "detailed",
+        "tone": "neutral"
+      },
+      "eq": {
+        "shown": 1,
+        "of": 8,
+        "examples": [
+          "I heard that?"
+        ]
+      },
+      "neutral": {
+        "shown": 0,
+        "of": 8,
+        "examples": []
+      }
+    }
+  ]
+}
