@@ -4,8 +4,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a stacked schematic of ADAM's layers (what you see → core → reasoning → memory → disk), with a detail
-   pane beside it; below it, one chat turn, the roadmap, every decision, open questions and this map's changelog. */
+/* Layout: plain-language first. A "how to read" strip, then the layered architecture with a detail pane, the data
+   chain from code to disk, one chat turn, the roadmap, decisions, open items, a glossary and this map's changelog. */
 :root {
   --bg: oklch(97.6% 0.006 245);
   --surface: oklch(99.6% 0.002 245);
@@ -23,6 +23,8 @@
   --retired-soft: oklch(95% 0.03 25);
   --pending: oklch(54% 0.14 300);
   --pending-soft: oklch(95% 0.035 300);
+  --future: oklch(52% 0.11 220);
+  --future-soft: oklch(94% 0.035 220);
   --font-display: "Oswald", "Arial Narrow", sans-serif;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -37,6 +39,7 @@
     --changed: oklch(80% 0.12 80); --changed-soft: oklch(31% 0.05 75);
     --retired: oklch(72% 0.14 25); --retired-soft: oklch(30% 0.05 25);
     --pending: oklch(76% 0.12 300); --pending-soft: oklch(30% 0.05 300);
+    --future: oklch(76% 0.1 220); --future-soft: oklch(30% 0.045 220);
     color-scheme: dark;
   }
 }
@@ -48,20 +51,22 @@
   --changed: oklch(80% 0.12 80); --changed-soft: oklch(31% 0.05 75);
   --retired: oklch(72% 0.14 25); --retired-soft: oklch(30% 0.05 25);
   --pending: oklch(76% 0.12 300); --pending-soft: oklch(30% 0.05 300);
+  --future: oklch(76% 0.1 220); --future-soft: oklch(30% 0.045 220);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
-  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15.5px; line-height: 1.6;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 28px 64px;
+  padding-block: 28px 72px;
 }
-.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 60px; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: 0.02em; text-wrap: balance; margin: 0; }
 h1 { font-size: clamp(2rem, 4vw, 2.9rem); text-transform: uppercase; letter-spacing: 0.05em; }
 h2 { font-size: 1.45rem; text-transform: uppercase; letter-spacing: 0.06em; }
 h3 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; }
 p { margin: 0; }
+a { color: var(--accent); }
 .mono { font-family: var(--font-mono); font-size: 0.84em; }
 .muted { color: var(--muted); }
 section { display: flex; flex-direction: column; gap: 20px; }
@@ -72,30 +77,32 @@ button { font: inherit; color: inherit; }
 /* header */
 header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; align-items: flex-end; }
 .kicker { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-.lede { max-width: 66ch; color: var(--muted); margin-top: 8px; }
+.lede { max-width: 68ch; color: var(--muted); margin-top: 8px; }
 .theme-toggle {
   border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; cursor: pointer;
   font-family: var(--font-mono); font-size: 0.8rem;
 }
-.now {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;
-}
+.now { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
 .now > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .now .label { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.now .value { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.02em; }
+.now .value { font-family: var(--font-display); font-size: 1.2rem; letter-spacing: 0.02em; }
+
+/* how to read */
+.howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.howto > div { background: var(--accent-soft); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.howto b { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
 
 /* legend + chips */
 .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 0.85rem; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: var(--line); }
 .dot.new { background: var(--new); } .dot.changed { background: var(--changed); }
-.dot.retired { background: var(--retired); } .dot.pending { background: var(--pending); } .dot.stable { background: var(--muted); opacity: .45; }
+.dot.retired { background: var(--retired); } .dot.pending { background: var(--pending); }
+.dot.future { background: var(--future); } .dot.stable { background: var(--muted); opacity: .45; }
 
-/* architecture */
 .arch { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 900px) { .arch { grid-template-columns: 1fr; } }
-.layers { display: flex; flex-direction: column; gap: 0; }
-.layer { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px dashed var(--line); }
+.layer { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px dashed var(--line); }
 .layer:first-child { border-top: 0; }
 @media (max-width: 560px) { .layer { grid-template-columns: 1fr; gap: 8px; } }
 .layer-name { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.92rem; color: var(--muted); padding-top: 8px; }
@@ -110,44 +117,60 @@ header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20
 .chip:hover { transform: translateY(-1px); box-shadow: 0 2px 10px oklch(0% 0 0 / .08); }
 .chip[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
 .chip .name { font-weight: 600; font-size: 0.92rem; }
-.chip .file { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); overflow-wrap: anywhere; }
+.chip .short { font-size: 0.8rem; color: var(--muted); max-width: 30ch; }
 .chip.new { border-left-color: var(--new); } .chip.changed { border-left-color: var(--changed); }
 .chip.retired { border-left-color: var(--retired); opacity: .8; } .chip.pending { border-left-color: var(--pending); }
+.chip.future { border-left-color: var(--future); border-left-style: dashed; }
 .chip.stable { border-left-color: color-mix(in oklch, var(--muted) 45%, transparent); }
 .tag { font-family: var(--font-mono); font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; align-self: flex-start; }
 .tag.new { background: var(--new-soft); color: var(--new); } .tag.changed { background: var(--changed-soft); color: var(--changed); }
 .tag.retired { background: var(--retired-soft); color: var(--retired); } .tag.pending { background: var(--pending-soft); color: var(--pending); }
-.tag.stable { background: var(--sunken); color: var(--muted); }
+.tag.future { background: var(--future-soft); color: var(--future); } .tag.stable { background: var(--sunken); color: var(--muted); }
 
 .detail {
   position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px);
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px;
-  display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0;
 }
 @media (max-width: 900px) { .detail { position: static; } }
+.detail .plain { font-size: 1.02rem; }
+.detail .more { color: var(--muted); font-size: 0.9rem; }
 .detail dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; font-size: 0.9rem; }
-.detail dt { color: var(--muted); font-family: var(--font-mono); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+.detail dt { color: var(--muted); font-family: var(--font-mono); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
 .detail dd { margin: 0; overflow-wrap: anywhere; }
-.detail ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* data chain */
+.chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.link { display: flex; align-items: stretch; min-width: 0; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; width: 190px; max-width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.box .role { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.box b { font-weight: 600; }
+.box small { color: var(--muted); font-size: 0.82rem; }
+.box.data { background: var(--sunken); border-style: dashed; }
+.arrow { display: flex; align-items: center; padding: 0 8px; color: var(--muted); font-size: 1.3rem; }
+@media (max-width: 700px) { .chain { flex-direction: column; } .link { flex-direction: column; } .arrow { padding: 4px 0 4px 24px; transform: rotate(90deg); align-self: flex-start; } .box { width: 100%; } }
+.side { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+.side .box { width: auto; flex: 1 1 260px; }
 
 /* one turn */
 .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; counter-reset: step; }
 .flow li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .flow li::before { content: counter(step); font-family: var(--font-display); font-size: 1.4rem; color: var(--accent); line-height: 1; }
 .flow b { font-weight: 600; }
-.flow small { color: var(--muted); font-size: 0.82rem; }
+.flow small { color: var(--muted); font-size: 0.8rem; }
 
 /* roadmap */
 .phases { display: flex; flex-direction: column; gap: 10px; }
 .phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
-.phase > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+.phase > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; align-items: center; }
 .phase > summary::-webkit-details-marker { display: none; }
 .phase-title { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.02rem; }
+.phase-goal { grid-column: 1 / -1; color: var(--muted); font-size: 0.88rem; }
 .bar { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: var(--sunken); overflow: hidden; display: flex; }
 .bar i { display: block; height: 100%; }
 .bar .done { background: var(--new); } .bar .wait { background: var(--pending); } .bar .no { background: var(--retired); }
 .count { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.stages { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+.stages { padding: 0 16px 14px; display: flex; flex-direction: column; }
 .stage { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: baseline; }
 .stage .id { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
 .stage .what { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -168,12 +191,17 @@ tr:last-child td { border-bottom: 0; }
 td.idc { font-family: var(--font-mono); white-space: nowrap; }
 .owner { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); white-space: nowrap; }
 
-/* ideas + changelog */
+/* cards, glossary, log */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .card .kind { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 28px; margin: 0; }
+.glossary div { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); min-width: 0; }
+.glossary dt { font-weight: 600; }
+.glossary dd { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .log li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+@media (max-width: 560px) { .log li { grid-template-columns: 1fr; gap: 2px; } }
 .log time { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .chip { transition: none; } .chip:hover { transform: none; } }
 </style>
@@ -183,30 +211,51 @@ td.idc { font-family: var(--font-mono); white-space: nowrap; }
     <div>
       <div class="kicker">ADAM · living map · updated <span id="updated"></span></div>
       <h1>ADAM System Map</h1>
-      <p class="lede">Every part of ADAM, what changed in each stage, every decision and who made it, and what is
-        still open. Click any part of the architecture to see what it does and which stages touched it.</p>
+      <p class="lede">ADAM is a small AI that runs entirely on your laptop. It reasons over facts it can prove,
+        answers only from evidence, and remembers everything. This page shows every part of it in plain words,
+        what each stage changed, every decision and who made it, and what is still open.</p>
     </div>
     <button class="theme-toggle" id="theme" type="button">Theme: system</button>
   </header>
 
   <div class="now" id="now"></div>
 
+  <section aria-labelledby="how-h">
+    <h2 id="how-h">How to read this map</h2>
+    <div class="howto">
+      <div><b>Parts are boxes</b><p>Each box in the architecture is one part of ADAM. Click it to see what it does, in plain words first and in technical terms after.</p></div>
+      <div><b>Colours are recent changes</b><p>Green is new in Phase 4, amber changed in Phase 4, grey unchanged, blue dashed kept for a future job, red removed.</p></div>
+      <div><b>Code versus data</b><p>Boxes above “On disk” are programs. Boxes in “On disk” are the files those programs write: your actual data.</p></div>
+      <div><b>New words</b><p>The glossary near the bottom explains every technical term used here.</p></div>
+    </div>
+  </section>
+
   <section aria-labelledby="arch-h">
     <div class="section-head">
       <h2 id="arch-h">Architecture</h2>
-      <p class="muted">From what you see down to the files on disk. Colours show what Phase 4 changed.</p>
+      <p class="muted">From what you see at the top down to the files on disk at the bottom.</p>
     </div>
     <div class="legend">
       <span><i class="dot new"></i>New in Phase 4</span>
       <span><i class="dot changed"></i>Changed in Phase 4</span>
+      <span><i class="dot future"></i>Kept for a future job</span>
       <span><i class="dot pending"></i>Waiting for your merge</span>
-      <span><i class="dot retired"></i>Retired or unused</span>
+      <span><i class="dot retired"></i>Removed</span>
       <span><i class="dot stable"></i>Unchanged</span>
     </div>
     <div class="arch">
       <div class="layers" id="layers"></div>
       <aside class="detail" id="detail" aria-live="polite"></aside>
     </div>
+  </section>
+
+  <section aria-labelledby="chain-h">
+    <div class="section-head">
+      <h2 id="chain-h">Where your data lives</h2>
+      <p class="muted">How a fact travels from ADAM’s code to the file on your disk. Each arrow is one hand-off.</p>
+    </div>
+    <div class="chain" id="chain"></div>
+    <div class="side" id="side"></div>
   </section>
 
   <section aria-labelledby="turn-h">
@@ -220,7 +269,7 @@ td.idc { font-family: var(--font-mono); white-space: nowrap; }
   <section aria-labelledby="road-h">
     <div class="section-head">
       <h2 id="road-h">Roadmap</h2>
-      <p class="muted">10 phases, 57 stages, done one at a time. Open a phase to see its stages and what each one changed.</p>
+      <p class="muted">10 phases and 57 stages, done one at a time. Each stage is built on a branch, checked, and merged by you. Open a phase to see its stages.</p>
     </div>
     <div class="phases" id="phases"></div>
   </section>
@@ -228,7 +277,7 @@ td.idc { font-family: var(--font-mono); white-space: nowrap; }
   <section aria-labelledby="dec-h">
     <div class="section-head">
       <h2 id="dec-h">Decisions</h2>
-      <p class="muted">Every recorded decision. "Your call" marks the ones you made.</p>
+      <p class="muted">Every recorded decision. “Your call” marks the ones you made.</p>
     </div>
     <div class="filters" id="dec-filters" role="group" aria-label="Filter decisions"></div>
     <div class="table-scroll">
@@ -242,15 +291,23 @@ td.idc { font-family: var(--font-mono); white-space: nowrap; }
   <section aria-labelledby="open-h">
     <div class="section-head">
       <h2 id="open-h">Open questions and known limits</h2>
-      <p class="muted">Ideas waiting for a decision, and the honest limits recorded along the way.</p>
+      <p class="muted">Ideas waiting for a decision, and the limits recorded honestly along the way.</p>
     </div>
     <div class="cards" id="open"></div>
+  </section>
+
+  <section aria-labelledby="gloss-h">
+    <div class="section-head">
+      <h2 id="gloss-h">Glossary</h2>
+      <p class="muted">The terms used on this page and in the issues.</p>
+    </div>
+    <dl class="glossary" id="glossary"></dl>
   </section>
 
   <section aria-labelledby="log-h">
     <div class="section-head">
       <h2 id="log-h">Map changelog</h2>
-      <p class="muted">This page is updated after every stage, decision or idea.</p>
+      <p class="muted">Updated after every stage, phase and decision, and when an issue closes.</p>
     </div>
     <ul class="log" id="log"></ul>
   </section>
@@ -260,197 +317,260 @@ td.idc { font-family: var(--font-mono); white-space: nowrap; }
 const UPDATED = "2026-11-27";
 
 const NOW = [
-  ["Current phase", "4 · The Citation Rite"],
-  ["Waiting for your merge", "Stage 4.6 · Trace the Thought"],
+  ["Just finished", "Phase 4 · The Citation Rite"],
+  ["Waiting for your merge", "This map’s update"],
   ["Next", "Stage 5.1 · Test the Reader"],
   ["Tests", "828 passing"],
   ["Memory engine", "Yewtree 0.3.0"],
 ];
 
 const LAYERS = [
-  { id: "see", name: "What you see", note: "web, CLI, API" },
-  { id: "core", name: "Core", note: "each chat turn" },
+  { id: "see", name: "What you see", note: "web chat, CLI, API" },
+  { id: "core", name: "Core", note: "runs each message" },
   { id: "reason", name: "Reasoning", note: "rules and proofs" },
-  { id: "memory", name: "Memory", note: "one storage contract" },
-  { id: "disk", name: "On disk", note: "files beside ADAM" },
+  { id: "memory", name: "Memory", note: "code that stores things" },
+  { id: "disk", name: "On disk", note: "your actual data" },
 ];
 
+// plain: one sentence in everyday words. more: the technical detail.
 const PARTS = [
-  { id: "web", layer: "see", name: "Web chat (Vox)", file: "interface/web/static/js/chat.js", status: "pending",
-    what: "The chat page. Shows each answer as plain text, a Data-Vault sources block under quoted answers, and a “How this answer was reached” panel. While ADAM works it says only “Working…”.",
+  { id: "web", layer: "see", name: "Web chat (Vox)", file: "interface/web/static/js/chat.js", status: "changed",
+    plain: "The chat page in your browser.",
+    more: "Shows each answer as plain text, a Data-Vault sources block under answers that quote a book, and a “How this answer was reached” panel. While ADAM works it says only “Working…”, because the page can’t see which step is running.",
     stages: ["4.3", "4.5", "4.6"], links: ["api", "trace"] },
   { id: "cli", layer: "see", name: "CLI", file: "interface/cli.py", status: "changed",
-    what: "Chat in a terminal. Shows ADAM [frustrated] with a red border when the frustration signal is on.",
+    plain: "Chat with ADAM in a terminal instead of a browser.",
+    more: "Shows ADAM [frustrated] with a red border when the frustration signal is on.",
     stages: ["4.4"], links: ["core"] },
-  { id: "api", layer: "see", name: "JSON API", file: "interface/web/app.py", status: "pending",
-    what: "/api/chat keeps every old field and gained answer_source and evidence (4.3), frustration (4.4), citations (4.5), and trace_id and conversation (4.6). /api/traces/<id> returns a turn’s trace.",
+  { id: "api", layer: "see", name: "JSON API", file: "interface/web/app.py", status: "changed",
+    plain: "The door other programs use to talk to ADAM; the web chat uses it too.",
+    more: "/api/chat kept every old field and gained answer_source and evidence (4.3), frustration (4.4), citations (4.5), and trace_id and conversation (4.6). /api/traces/<id> returns a turn’s trace.",
     stages: ["4.3", "4.4", "4.5", "4.6"], links: ["core", "trace"] },
   { id: "core", layer: "core", name: "ADAMCore", file: "interface/core.py", status: "changed",
-    what: "Runs one chat turn: listens, reads frustration, recalls, infers, answers from evidence, attaches citations and records the trace.",
-    stages: ["4.1", "4.3", "4.4", "4.5", "4.6"], links: ["answerer", "frustration", "trace", "memsys", "kernel"] },
+    plain: "The conductor: it runs every step of answering one message, in order.",
+    more: "Listens, reads frustration, recalls, infers, answers from evidence, attaches citations and records the trace. See “One chat turn” below.",
+    stages: ["4.1", "4.3", "4.4", "4.5", "4.6"], links: ["answerer", "frustration", "trace", "memsys", "kernel", "ear"] },
   { id: "answerer", layer: "core", name: "Evidence answerer", file: "interface/evidence.py", status: "new",
-    what: "Routes each message (small talk, question, statement, chatter) and answers only from evidence: facts worded from proofs, passages quoted exactly, “I won’t guess” otherwise. Contested facts back nothing.",
+    plain: "Decides what kind of message you sent and answers only with what ADAM can back up.",
+    more: "Routes small talk, questions, statements and chatter. Facts are worded from their proofs, book passages are quoted exactly, and otherwise it says “I won’t guess”. Facts that two sources disagree on back nothing.",
     stages: ["4.3", "4.4", "4.6"], links: ["kernel", "library", "mouth"] },
   { id: "frustration", layer: "core", name: "Frustration signal", file: "learning/eq/frustration.py", status: "new",
-    what: "What is left of EQ: is the user frustrated? Two troubled turns of the last three. It adds an apology to ADAM’s own “can’t answer” wording and keeps the Mouth quiet. Per conversation, never saved.",
+    plain: "Notices when you seem frustrated, so ADAM can apologise instead of chatting.",
+    more: "What is left of EQ (emotional reading). Frustrated means two troubled messages out of the last three. It adds an apology to ADAM’s own “can’t answer” wording and keeps the Mouth quiet. Per conversation, never saved.",
     stages: ["4.4", "4.6"], links: ["core"] },
-  { id: "trace", layer: "core", name: "Thought trace", file: "memory/trace_log.py", status: "pending",
-    what: "One trace per turn: PERCEIVE, RECALL, INFER and ANSWER nodes, linked to the proof records and citations. English is written from them on request. Every trace is kept; conversations beyond the last 5,000 are compressed.",
+  { id: "trace", layer: "core", name: "Thought trace", file: "memory/trace_log.py", status: "new",
+    plain: "A record of how each answer was reached, so you can check it.",
+    more: "One trace per message: PERCEIVE, RECALL, INFER and ANSWER steps, linked to the exact facts, proofs and book passages used. English is written from them when you open the panel. Every trace is kept; conversations beyond the last 5,000 are compressed (about 13× smaller), never deleted.",
     stages: ["4.6"], links: ["f_traces", "kernel"] },
+  { id: "ear", layer: "core", name: "Ear (Needle)", file: "interface/ear.py", status: "future",
+    plain: "Will turn your commands into exact instructions for tools, like “read this file” or “edit that one”.",
+    more: "Your decision (DS.3): it stays, for the tools of Phase 7. Today it runs on every message but nothing uses its output, because it is asked with a generic form instead of a list of tools. Probed with real tools, it answered in 0.2–0.3 s but picked the right tool for 1 of 5 commands, so it will need training on ADAM’s own examples, argument checks, and your approval before anything runs. Costs about 85 MB of the 400 MB budget.",
+    stages: ["4.3"], links: ["core"] },
   { id: "mouth", layer: "core", name: "Mouth (TinyChat15M)", file: "interface/mouth.py", status: "changed",
-    what: "The small language model. Since 4.3 it only answers chatter, and its words are shown only if they assert nothing. It could not restate a fact in 16 tries.",
+    plain: "The small language model, used only for friendly chatter.",
+    more: "Since 4.3 it never states facts: it could not restate one in 16 tries. Its words are shown only if they claim nothing (“what do you think about that?”).",
     stages: ["4.3", "4.4"], links: ["answerer"] },
-  { id: "ear", layer: "core", name: "Ear (Needle)", file: "interface/ear.py", status: "retired",
-    what: "Extracts an intent that is returned but no longer used for routing. It costs about 85 MB of the 400 MB budget. Removing it is your call (#33).",
-    stages: ["4.3"], links: [] },
   { id: "eq_old", layer: "core", name: "Old EQ engine", file: "learning/eq/ (appraiser, adjuster, baseline…)", status: "retired",
-    what: "Removed in 4.4 after measuring that it changed nothing a user could see. About 520 lines and 42 tests.",
+    plain: "The old emotional-reading system, removed.",
+    more: "Measured in 4.4: it changed nothing you could see. You chose to keep only the frustration signal; about 520 lines and 42 tests went.",
     stages: ["4.4"], links: ["frustration"] },
   { id: "kernel", layer: "reason", name: "Kernel", file: "kernel/", status: "changed",
-    what: "15 rules, inference that ignores fact order, goal-directed proof, contradictions and defaults. 4.3 added proof_steps(), the proof as data. Imports nothing from memory or the engine.",
+    plain: "ADAM’s logic: works out what follows from what it knows, and proves it.",
+    more: "15 rules, inference that ignores the order facts arrive in, goal-directed proof, contradictions and defaults (“birds typically fly”). 4.3 added proof_steps(), a proof as data. It never touches memory or the engine.",
     stages: ["4.3"], links: [] },
   { id: "skills", layer: "reason", name: "Skills", file: "learning/", status: "stable",
-    what: "Learned Layer 2 rules, loaded at startup. Learning from chat comes in Stage 5.7.",
+    plain: "Extra rules ADAM learns, loaded at startup.",
+    more: "Layer 2 rules. Learning them from chat comes in Stage 5.7.",
     stages: [], links: ["kernel"] },
   { id: "memsys", layer: "memory", name: "Memory system", file: "memory/system.py", status: "changed",
-    what: "The one door to storage for the core and routes: store, recall, settle, supersede, stats, the source library and the trace log.",
+    plain: "The front desk of memory: every request to store or find something goes through it.",
+    more: "The rest of ADAM asks it to store a fact, recall facts, save conclusions, or reach the source library and the trace log; it passes each request to the right place. Nothing else touches storage directly.",
     stages: ["4.1", "4.2", "4.6"], links: ["contract", "library", "trace", "semantic"] },
   { id: "contract", layer: "memory", name: "Storage contract", file: "memory/store_contract.py", status: "new",
-    what: "Every storage operation ADAM uses, held to one test suite on both stores. Gained records in batches (4.2) and id_of (4.6).",
+    plain: "Not a store: the rulebook any store must follow.",
+    more: "It lists every operation ADAM needs (store a fact, find by subject, keep a proof…), and the same tests run on every store that claims to follow it. That is why the storage underneath can be swapped without changing the rest of ADAM.",
     stages: ["4.1", "4.2", "4.6"], links: ["enginestore", "exactstore"] },
   { id: "enginestore", layer: "memory", name: "Engine store", file: "memory/engine_store.py", status: "new",
-    what: "The default store, on Yewtree records. The only module that imports the engine. Reads come from an in-memory index; writes are about 2.5× slower than SQLite.",
-    stages: ["4.1", "4.6"], links: ["f_engine", "yewtree"] },
+    plain: "The translator between ADAM and Yewtree.",
+    more: "It follows the contract by turning ADAM’s facts, proofs, books and passages into Yewtree records and back. It is the default, and the only code in ADAM that talks to Yewtree. Writes are about 2.5× slower than plain SQLite; reads are faster.",
+    stages: ["4.1", "4.6"], links: ["yewtree", "f_engine"] },
+  { id: "yewtree", layer: "memory", name: "Yewtree 0.3.0 (the engine)", file: "installed library · github.com/AdamMostofi/yewtree", status: "changed",
+    plain: "The memory engine itself: the part that actually keeps things safe.",
+    more: "A separate project ADAM installs, like a library. It handles encryption, keeps every version, checks integrity with a hash chain, and stores records and links. 0.3.0 added generic records so ADAM can keep its facts in it. It writes to adam_memory.engine/.",
+    stages: ["4.1"], links: ["enginestore", "f_engine"] },
   { id: "exactstore", layer: "memory", name: "Original store", file: "memory/exact_store.py", status: "changed",
-    what: "The old SQLite store, still selectable with ADAM_STORE=exact. It keeps facts and proofs but not records, so no source library.",
+    plain: "ADAM’s old storage, kept only as a fallback.",
+    more: "A plain SQLite file, used only if you set ADAM_STORE=exact. It follows the same contract for facts and proofs, but can’t hold books, so the source library needs the engine store.",
     stages: ["4.1"], links: ["f_old"] },
   { id: "library", layer: "memory", name: "Source library", file: "memory/source_library.py", status: "new",
-    what: "Markdown ingested once, split into paragraphs with exact offsets and hashes, searched with SQLite FTS5. Command line only.",
+    plain: "ADAM’s bookshelf: books you give it, split into paragraphs it can quote exactly.",
+    more: "Markdown files ingested once, each paragraph stored with its exact position and a fingerprint (hash), and searched by words. Command line only for now.",
     stages: ["4.2"], links: ["f_passages", "enginestore"] },
   { id: "semantic", layer: "memory", name: "Semantic index", file: "memory/semantic_index.py", status: "stable",
-    what: "MiniLM embeddings in SQLite, for recall when exact text search finds nothing.", stages: [], links: ["f_vectors"] },
+    plain: "Finds facts by meaning when the exact words don’t match.",
+    more: "MiniLM embeddings stored in SQLite.", stages: [], links: ["f_vectors"] },
   { id: "graph", layer: "memory", name: "Graph and attention", file: "memory/connection_graph.py", status: "stable",
-    what: "Relationships between facts, and per-session ranking of what was recalled.", stages: ["4.1"], links: [] },
-  { id: "f_engine", layer: "disk", name: "adam_memory.engine/", file: "Yewtree store, encrypted", status: "new",
-    what: "Facts, derivations, sources and passages as engine records. Append-only: nothing is ever deleted or overwritten.",
-    stages: ["4.1", "4.2"], links: ["f_key"] },
+    plain: "Remembers which facts are related, and which matter most right now.",
+    more: "A NetworkX graph, plus per-session ranking of recalled facts.", stages: ["4.1"], links: [] },
+  { id: "f_engine", layer: "disk", name: "adam_memory.engine/", file: "folder · encrypted", status: "new",
+    plain: "Your actual memory: the folder where Yewtree keeps facts, proofs and books.",
+    more: "The engine store (in Memory) is the code; this folder is the data it writes, encrypted with adam.key. Append-only: nothing is ever deleted or overwritten.",
+    stages: ["4.1", "4.2"], links: ["yewtree", "f_key"] },
   { id: "f_key", layer: "disk", name: "adam.key", file: "outside the repository", status: "new",
-    what: "The key that encrypts the engine store. Backups don’t copy it, so a backup opens only on this machine unless you copy the key too.",
+    plain: "The key that unlocks your encrypted memory.",
+    more: "Kept outside the project folder. Backups don’t copy it, so a backup opens only on this laptop unless you copy the key too.",
     stages: ["4.1"], links: [] },
-  { id: "f_passages", layer: "disk", name: "adam_memory.passages.db", file: "FTS5 search index", status: "new",
-    what: "The passage search index, rebuilt from the records whenever needed. It holds passage text unencrypted, because full-text search needs readable text.",
-    stages: ["4.2"], links: [] },
-  { id: "f_traces", layer: "disk", name: "adam_memory.traces.db", file: "thought traces", status: "pending",
-    what: "One trace per message. The last 5,000 conversations as they are (about 1.75 KB a turn), older ones compressed (about 100 bytes a turn).",
-    stages: ["4.6"], links: [] },
-  { id: "f_vectors", layer: "disk", name: "adam_vectors.db", file: "embeddings", status: "stable",
-    what: "The semantic index’s vectors.", stages: [], links: [] },
-  { id: "f_old", layer: "disk", name: "adam_memory.db", file: "original SQLite store", status: "stable",
-    what: "Your pre-4.1 facts, left untouched. Used only with ADAM_STORE=exact; nothing migrates them into the engine store.",
-    stages: [], links: [] },
-  { id: "yewtree", layer: "disk", name: "Yewtree 0.3.0", file: "github.com/AdamMostofi/yewtree", status: "changed",
-    what: "The memory engine, its own project. 0.3.0 added generic records so ADAM can keep its own data in it (4.1).",
-    stages: ["4.1"], links: ["f_engine"] },
+  { id: "f_passages", layer: "disk", name: "adam_memory.passages.db", file: "search index for books", status: "new",
+    plain: "The index at the back of a book, for ADAM’s whole bookshelf.",
+    more: "It lets ADAM find which paragraph contains your words in milliseconds. The books themselves live encrypted in adam_memory.engine/; this file is a copy arranged for fast word search (SQLite FTS5). Delete it and ADAM rebuilds it. Its text is not encrypted, because word search needs readable text.",
+    stages: ["4.2"], links: ["library", "f_engine"] },
+  { id: "f_traces", layer: "disk", name: "adam_memory.traces.db", file: "thought traces", status: "new",
+    plain: "The notes on how each answer was reached.",
+    more: "One trace per message. The last 5,000 conversations as they are (about 1.75 KB a message); older ones compressed (about 100 bytes a message), never deleted.",
+    stages: ["4.6"], links: ["trace"] },
+  { id: "f_vectors", layer: "disk", name: "adam_vectors.db", file: "meaning index", status: "stable",
+    plain: "The semantic index’s data.", more: "One vector per fact.", stages: [], links: ["semantic"] },
+  { id: "f_old", layer: "disk", name: "adam_memory.db", file: "old SQLite file", status: "stable",
+    plain: "Your facts from before Phase 4, left untouched.",
+    more: "Used only with ADAM_STORE=exact. Nothing moved them into the engine store.", stages: [], links: ["exactstore"] },
+];
+
+const CHAIN = [
+  ["asks", "Memory system", "The front desk: “store this fact”.", "memsys"],
+  ["follows", "Storage contract", "The rulebook every store obeys.", "contract"],
+  ["translates", "Engine store", "Turns ADAM’s fact into a Yewtree record.", "enginestore"],
+  ["keeps", "Yewtree", "Encrypts it, versions it, chains it.", "yewtree"],
+  ["your data", "adam_memory.engine/", "The folder on your disk.", "f_engine", true],
+];
+const SIDE = [
+  ["books", "Source library → adam_memory.passages.db", "Books are stored in the engine like everything else; this extra file is only a fast word-search index over them, rebuilt whenever needed.", "f_passages"],
+  ["notes", "Thought trace → adam_memory.traces.db", "How each answer was reached. In its own file because the engine never deletes or repacks, and old traces get compressed.", "f_traces"],
 ];
 
 const FLOW = [
-  ["Listen", "The Ear extracts an intent. It is returned, but routing no longer uses it.", "interface/ear.py"],
-  ["Read frustration", "Is this turn troubled, and is the user frustrated in this conversation?", "learning/eq/frustration.py"],
-  ["Recall", "Facts from the store whose text matches; the semantic index if none.", "memory/system.py"],
-  ["Infer and store", "New conclusions are inferred and stored with their proofs, in one transaction.", "kernel/ · memory/"],
-  ["Answer from evidence", "Small talk, a proof worded as sentences, a quoted passage, or “I won’t guess”. The Mouth only for chatter, and only if it asserts nothing.", "interface/evidence.py"],
-  ["Cite", "Each quoted passage becomes a citation: source, character range, hash, snippet.", "interface/core.py"],
-  ["Trace", "PERCEIVE, RECALL, INFER and ANSWER nodes are saved under this conversation.", "memory/trace_log.py"],
-  ["Show", "The answer as text, the sources block, and the trace panel.", "chat.js"],
+  ["Listen", "The Ear reads the message. Its output isn’t used yet; it is kept for tools (Phase 7).", "interface/ear.py"],
+  ["Read frustration", "Is this message troubled, and is the user frustrated in this conversation?", "learning/eq/frustration.py"],
+  ["Recall", "Find stored facts whose words match; fall back to meaning.", "memory/system.py"],
+  ["Infer and store", "Work out what follows, and store new conclusions with their proofs, in one step.", "kernel/ · memory/"],
+  ["Answer from evidence", "Small talk, a proof put into sentences, a quoted passage, or “I won’t guess”. The Mouth only for chatter.", "interface/evidence.py"],
+  ["Cite", "Each quoted passage gets a citation: book, character range, fingerprint, snippet.", "interface/core.py"],
+  ["Trace", "PERCEIVE, RECALL, INFER and ANSWER steps are saved for this conversation.", "memory/trace_log.py"],
+  ["Show", "The answer as text, the sources under it, and the trace panel.", "chat.js"],
 ];
 
 const PHASES = [
-  { n: 0, name: "Stabilize the Vault", stages: [
+  { n: 0, name: "Stabilize the Vault", goal: "Back up, protect and clean the stores before changing anything.", stages: [
     ["0.1", "Secure the Vault", "done"], ["0.2", "Seal the Wards", "done"], ["0.3", "Guard the Gates", "done"],
-    ["0.4", "Set the Budget", "done"], ["0.5", "Choose the Index", "done"], ["0.6", "Purge and Reforge", "done"]] },
-  { n: 1, name: "Repair the Floor", stages: [
+    ["0.4", "Set the Budget", "done", "400 MB of memory while idle or chatting."], ["0.5", "Choose the Index", "done"],
+    ["0.6", "Purge and Reforge", "done"]] },
+  { n: 1, name: "Repair the Floor", goal: "Fix the logic so its conclusions are sound and traceable.", stages: [
     ["1.1", "Mend the Rites", "done"], ["1.2", "Order the Agenda", "done"], ["1.3", "Name the Bonds", "done"],
-    ["1.4", "Keep the Chain", "done"], ["1.5", "Hold the Contradiction", "done"], ["1.6", "Wake with Memory", "done"],
-    ["1.7", "Steady the Appraisal", "done"], ["1.8", "Tell the Truth", "done"]] },
-  { n: 2, name: "Forge the Memory Engine", stages: [
+    ["1.4", "Keep the Chain", "done", "Every conclusion stores its proof."], ["1.5", "Hold the Contradiction", "done"],
+    ["1.6", "Wake with Memory", "done"], ["1.7", "Steady the Appraisal", "done"], ["1.8", "Tell the Truth", "done"]] },
+  { n: 2, name: "Forge the Memory Engine", goal: "Build the memory engine that became Yewtree.", stages: [
     ["2.1", "Prove the Reconciler", "done"], ["2.2", "Seal the Archive", "done"], ["2.3", "Grow the Tree", "done"],
     ["2.4", "Map the Code", "done"], ["2.5", "Survive the Crash", "done"], ["2.6", "Plant the Four Trees", "done"],
     ["2.7", "Map the Artifacts", "done"], ["2.8", "Shape the Knowledge", "done"], ["2.9", "Hold the Present", "done"],
     ["2.10", "Mind the Context", "done"], ["2.11", "Burn the Leak", "done"]] },
-  { n: 3, name: "Carry the Memory", stages: [
+  { n: 3, name: "Carry the Memory", goal: "Give coding agents the memory engine, then release it on its own.", stages: [
     ["3.1", "First Plugin", "done", "Claude Code plugin."],
     ["3.2", "Weigh the Thesis", "no", "Not possible: the benchmark needed paid model access we don’t have (your call)."],
-    ["3.3", "OpenCode Plugin", "done"], ["3.4", "Pi Extension", "done"], ["3.5", "Other Agents", "done", "Codex and Gemini CLI built from their docs, untested."],
+    ["3.3", "OpenCode Plugin", "done"], ["3.4", "Pi Extension", "done"],
+    ["3.5", "Other Agents", "done", "Codex and Gemini CLI built from their docs, untested."],
     ["3.6", "Release the Engine", "done", "Became Yewtree, its own repository (your naming)."]] },
-  { n: 4, name: "The Citation Rite", open: true, stages: [
-    ["4.1", "Connect the Engine", "done", "ADAM’s storage behind one contract, on Yewtree.", [
-      "New storage contract; engine store by default, old store with ADAM_STORE=exact (your call)",
+  { n: 4, name: "The Citation Rite", goal: "Answer only from evidence, show the sources, and record how each answer was reached.", open: true, stages: [
+    ["4.1", "Connect the Engine", "done", "ADAM’s storage moved onto Yewtree, behind one rulebook.", [
+      "Engine store by default, old store still selectable (your call)",
       "Yewtree 0.3.0: generic records (your call)",
-      "Writes 2.5× slower, reads faster, 6× more disk; RAM 338 MB of 400"]],
-    ["4.2", "Open the Data-Vault", "done", "Markdown ingested once, exact passages, FTS5 search.", [
-      "Passages cut from the text as stored, after secret redaction",
-      "Search index is derived and unencrypted"]],
+      "Writes 2.5× slower, reads faster, 6× more disk; memory 338 of 400 MB"]],
+    ["4.2", "Open the Data-Vault", "done", "Books ingested once, quotable to the exact character.", [
+      "Passages are cut from the text as stored, after secrets are blanked out",
+      "The search index is rebuildable and unencrypted"]],
     ["4.3", "Speak Only the Evidence", "done", "Answers only from proofs or quoted passages.", [
       "You chose: the model may phrase, with zero hallucinations",
-      "TinyChat couldn’t restate a fact, so facts are worded from proofs; the model only for chatter, gated",
-      "Contested facts back nothing"]],
+      "TinyChat couldn’t restate a fact, so facts are worded from proofs; the model only chats",
+      "Facts that sources disagree on back nothing"]],
     ["4.4", "Revisit the Appraisal", "done", "EQ reduced to one signal: frustration.", [
-      "Measured: EQ changed nothing visible through the Mouth",
-      "You chose: reduce to frustration; about 520 lines removed"]],
+      "Measured: EQ changed nothing you could see",
+      "You chose: keep only frustration; about 520 lines removed"]],
     ["4.5", "Bear Witness", "done", "Exact citations under answers in the web chat.", [
-      "Found and fixed: replies rendered HTML from quoted books",
+      "Found and fixed: replies turned HTML in quoted books into real images",
       "Replies are now plain text"]],
-    ["4.6", "Trace the Thought", "wait", "A trace for every chat turn.", [
-      "Typed nodes linked to proofs and citations; English written on request",
+    ["4.6", "Trace the Thought", "done", "A record of how each answer was reached.", [
+      "Typed steps linked to proofs and citations; English written on request",
       "Fake rotating status labels removed",
       "You chose: keep every trace; compress conversations beyond the last 5,000",
       "Fixed: loading one save from several threads at once"]]] },
-  { n: 5, name: "The Book Study", stages: [
+  { n: 5, name: "The Book Study", goal: "Read a real book into reviewed claims, measure against plain search, and learn from chat.", stages: [
     ["5.1", "Test the Reader", "next"], ["5.2", "Shape the Claim", "todo"], ["5.3", "Keep the Score", "todo"],
     ["5.4", "Widen the Library", "todo"], ["5.5", "Extract and Review", "todo"], ["5.6", "Study and Reread", "todo"],
     ["5.7", "Close the Learning Loop", "todo"]] },
-  { n: 6, name: "The Ontology Web", stages: [
+  { n: 6, name: "The Ontology Web", goal: "A shared vocabulary and concept hierarchies across sources.", stages: [
     ["6.1", "Name the Concepts", "todo"], ["6.2", "Build the Hierarchy", "todo"], ["6.3", "Find the Isomorphisms", "todo"]] },
-  { n: 7, name: "The Tool Rites", stages: [
+  { n: 7, name: "The Tool Rites", goal: "Tools that read and write files and more, audited and approved by you. The Ear’s job.", stages: [
     ["7.1", "Raise the Shields", "todo"], ["7.2", "Register the Rites", "todo"], ["7.3", "Approve the Hands", "todo"],
     ["7.4", "Remember the Procedures", "todo"]] },
-  { n: 8, name: "The Imperial Console", stages: [
+  { n: 8, name: "The Imperial Console", goal: "Review sources, claims, traces and tool approvals in the console.", stages: [
     ["8.1", "Library and Citations", "todo"], ["8.2", "Claim Review", "todo"], ["8.3", "Trace and Approvals", "todo"]] },
-  { n: 9, name: "Portable Release", stages: [
+  { n: 9, name: "Portable Release", goal: "Licences, a USB runtime, and agent clones.", stages: [
     ["9.1", "Clear the Licenses", "todo"], ["9.2", "Portable Runtime", "todo"], ["9.3", "Clone the Mind", "todo"]] },
 ];
 
 const DECISIONS = [
   ["DSM.1", "4.1", "The engine stores; ADAM decides what facts mean.", "Adopted; built in 4.1", false],
   ["DSM.2", "4.1", "Add a generic record type to Yewtree (0.3.0) rather than bend ADAM’s data into the engine’s existing kinds.", "Adopted", true],
-  ["DSM.3", "4.1", "The engine store is the default; the original SQLite store stays selectable.", "Adopted", true],
-  ["D3.1–D3.4", "4.2", "Markdown first, SQLite FTS5 search, command-line ingest only, console naming.", "Adopted; built in 4.2", false],
-  ["DV.1", "4.2", "Sources and passages are engine records; the search index is derived and rebuilt; passages follow the redacted text.", "Adopted", false],
+  ["DSM.3", "4.1", "The engine store is the default; the old SQLite store stays selectable.", "Adopted", true],
+  ["D3.1–D3.4", "4.2", "Markdown first, word search with SQLite FTS5, command-line ingest only, console naming.", "Adopted; built in 4.2", false],
+  ["DV.1", "4.2", "Books and passages are engine records; the search index is rebuildable; passages follow the stored (redacted) text.", "Adopted", false],
   ["DS.1", "4.3", "Templates before generation for facts.", "Settled differently: the model may phrase with zero hallucinations; in practice facts are worded from proofs", true],
-  ["DS.2", "4.3", "Route messages deterministically; the Ear is not used for routing.", "Adopted; removing the Ear is your call (#33)", false],
-  ["DE.2", "4.4", "Decide EQ’s value before adding sophistication.", "Settled: reduce EQ to one frustration signal", true],
-  ["D4.1–D4.4", "4.5", "Additive citations API, web chat only, console naming, evidence gate.", "Adopted; built in 4.5", false],
-  ["DT.1", "4.6", "Start the thought trace small; grow node types with use.", "Adopted; four node types, version 1", false],
-  ["DT.2", "4.6", "Keep every trace; conversations beyond the last 5,000 compressed, never deleted.", "Adopted (first ‘delete’, revised to ‘compress’)", true],
+  ["DS.2", "4.3", "Decide what kind of message it is with fixed rules, not the Ear.", "Adopted", false],
+  ["DS.3", "4.6", "Keep the Ear as the future command-to-tool-call layer for Phase 7.", "Adopted; needs training, checks and approval first", true],
+  ["DE.2", "4.4", "Decide EQ’s value before making it smarter.", "Settled: keep only the frustration signal", true],
+  ["D4.1–D4.4", "4.5", "Add citations without breaking old clients, web chat only, console naming, prove it before closing.", "Adopted; built in 4.5", false],
+  ["DT.1", "4.6", "Start the thought trace small; add step types as they’re needed.", "Adopted; four step types, version 1", false],
+  ["DT.2", "4.6", "Keep every trace; compress conversations beyond the last 5,000, never delete.", "Adopted (first ‘delete’, revised to ‘compress’)", true],
   ["3.2", "3.2", "Run the benchmark that weighs the memory thesis.", "Closed as not possible within our limits", true],
   ["Name", "3.6", "The memory engine is named Yewtree, with a four-branch forest-green logo.", "Adopted", true],
 ];
 
 const OPEN = [
-  ["Your call", "Remove the Ear?", "It extracts intent that nothing uses and costs about 85 MB of the 400 MB budget. Recorded on #33."],
+  ["Phase 7", "Train the Ear for tools", "Needle answers fast, but picked the right tool for 1 of 5 commands. Before it runs anything it needs training on ADAM’s own examples, argument checks and your approval."],
   ["Known limit", "A few question shapes", "“Is X Y?”, “What/who is X?”, “Tell me about X” and statements are understood. “Does Tweety fly?” gets “I won’t guess”."],
   ["Known limit", "Search by words, not meaning", "A question worded differently from its passage can miss it."],
-  ["Known limit", "Frustration misses words", "“disaster”, “useless”, “crash”, “can’t stand”, “tired” aren’t in the lexicon. Recorded, not added, so the tests stay fair."],
-  ["Known limit", "Engine store costs", "Writes about 2.5× slower and about 6× more disk than SQLite; reads are faster."],
-  ["Known limit", "No migration", "Facts in adam_memory.db stay there; the engine store started empty."],
-  ["Known limit", "Search index unencrypted", "adam_memory.passages.db holds passage text in plain SQLite."],
-  ["Later", "CLI citations", "Citations show in the web chat only (D4.2); the CLI waits."],
+  ["Known limit", "Frustration misses words", "“disaster”, “useless”, “crash”, “can’t stand”, “tired” aren’t in its word list. Recorded, not added, so the tests stay fair."],
+  ["Known limit", "Engine store costs", "Writes about 2.5× slower and about 6× more disk than plain SQLite; reads are faster."],
+  ["Known limit", "Old facts not moved", "Facts in adam_memory.db stayed there; the engine store started empty."],
+  ["Known limit", "Search index unencrypted", "adam_memory.passages.db holds paragraph text in plain SQLite."],
+  ["Later", "CLI citations", "Citations show in the web chat only; the CLI waits."],
   ["Later", "Audit the engine store", "scripts/audit_store.py checks only the SQLite files; use EngineStore.verify() for now."],
-  ["Next", "Stage 5.1 · Test the Reader", "Measure whether claims can be extracted from a book well enough, before building on it."],
+  ["Next", "Stage 5.1 · Test the Reader", "Measure whether claims can be pulled from a book well enough, before building on it."],
+];
+
+const GLOSSARY = [
+  ["Phase / stage", "A phase is a big goal (like “answer only from evidence”); a stage is one piece of it, built and merged on its own."],
+  ["Branch and merge", "Each stage is built on a separate copy of the code (a branch). You merge it into master when you’re happy; only you do that."],
+  ["Fact", "One statement ADAM knows, as subject, relation, object: “socrates instance_of man”."],
+  ["Proof (derivation)", "The chain showing how a conclusion follows from given facts: “Socrates is a man and every man is mortal, so Socrates is mortal”."],
+  ["Inference", "Working out new facts from the ones ADAM has, using its rules."],
+  ["Passage", "One paragraph of a book in the source library, stored with its exact position."],
+  ["Citation", "A pointer to the exact passage an answer quotes: which book, which characters, and its fingerprint."],
+  ["Hash (fingerprint)", "A short code computed from text. If one character changes, the hash changes, so it proves a quote is exact."],
+  ["Trace", "The saved steps of how one answer was reached."],
+  ["Record", "A unit of data in Yewtree: a type, a key and fields, kept with every version."],
+  ["Append-only", "Data is only ever added, never changed or deleted; changes are new versions."],
+  ["Contract", "A rulebook of operations a store must support, checked by the same tests on every store."],
+  ["Engine", "Yewtree, the program that does the actual storing, encrypting and versioning."],
+  ["FTS5", "SQLite’s built-in word search, used for the book index."],
+  ["Mouth", "TinyChat15M, the tiny language model, used only for chatter."],
+  ["Ear", "Cactus Needle, a small model that turns language into structured JSON; meant for tool calls."],
+  ["EQ", "Emotional reading. Now only the frustration signal."],
+  ["CI", "Tests that run automatically on GitHub for every push."],
 ];
 
 const LOG = [
-  ["2026-11-27", "Map created. It covers Phases 0–9, Phase 4 in detail, every decision so far, and open items. Stage 4.6 shown as waiting for your merge, including the change to compress old traces instead of deleting them."],
+  ["2026-11-27", "Rewritten in plain language: every part now opens with one everyday sentence, then the details. Added “How to read this map”, “Where your data lives” and a glossary. The Ear is now “kept for a future job”: your decision (DS.3) to keep it as the command-to-tool-call layer for Phase 7, with the probe results."],
+  ["2026-11-27", "Stage 4.6 merged; Phase 4 complete and closed (#16). The Ear was relabelled: it was never removed. Memory parts reworded, and Yewtree moved into the Memory layer, where it works."],
+  ["2026-11-27", "Map created."],
 ];
 
 /* ---------------------------------------------------------------- rendering (all text goes in as text) */
@@ -464,40 +584,50 @@ function h(tag, attrs = {}, ...kids) {
   for (const kid of kids.flat()) if (kid != null) el.append(kid.nodeType ? kid : document.createTextNode(kid));
   return el;
 }
-const STATUS = { new: "new", changed: "changed", pending: "awaiting merge", retired: "retired", stable: "unchanged" };
+const STATUS = { new: "new", changed: "changed", pending: "awaiting merge", retired: "removed",
+  future: "kept for tools", stable: "unchanged" };
 
 $("#updated").textContent = UPDATED;
 for (const [label, value] of NOW) $("#now").append(h("div", {}, h("span", { class: "label", text: label }), h("span", { class: "value", text: value })));
 
-let selected = null;
-function show(id) {
+function show(id, scroll) {
   const p = PARTS.find((x) => x.id === id);
-  selected = id;
   document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === id)));
-  const d = $("#detail");
-  d.replaceChildren(
+  $("#detail").replaceChildren(
     h("div", { class: "kicker", text: LAYERS.find((l) => l.id === p.layer).name }),
     h("h3", { text: p.name }),
     h("span", { class: `tag ${p.status}`, text: STATUS[p.status] }),
-    h("p", { text: p.what }),
+    h("p", { class: "plain", text: p.plain }),
+    h("p", { class: "more", text: p.more }),
     h("dl", {},
       h("dt", { text: "Where" }), h("dd", { class: "mono", text: p.file }),
       h("dt", { text: "Stages" }), h("dd", { text: p.stages.length ? p.stages.join(", ") : "none in Phase 4" }),
-      h("dt", { text: "Talks to" }), h("dd", {}, ...(p.links.length ? p.links.map((l, i) => {
+      h("dt", { text: "Works with" }), h("dd", {}, ...(p.links.length ? p.links.map((l, i) => {
         const q = PARTS.find((x) => x.id === l);
         return [i ? ", " : "", h("a", { href: "#", onclick: (e) => { e.preventDefault(); show(l); }, text: q.name })];
       }).flat() : ["—"]))));
+  if (scroll) $("#arch-h").scrollIntoView({ behavior: "smooth" });
 }
 for (const layer of LAYERS) {
   const chips = h("div", { class: "chips" });
   for (const p of PARTS.filter((x) => x.layer === layer.id)) {
     chips.append(h("button", { class: `chip ${p.status}`, type: "button", "data-id": p.id, "aria-pressed": "false", onclick: () => show(p.id) },
-      h("span", { class: "name", text: p.name }), h("span", { class: "file", text: p.file }),
+      h("span", { class: "name", text: p.name }), h("span", { class: "short", text: p.plain }),
       p.status !== "stable" ? h("span", { class: `tag ${p.status}`, text: STATUS[p.status] }) : null));
   }
   $("#layers").append(h("div", { class: "layer" }, h("div", { class: "layer-name" }, layer.name, h("small", { text: layer.note })), chips));
 }
 show("core");
+
+CHAIN.forEach(([role, name, text, id, data], i) => {
+  const box = h("button", { class: `box${data ? " data" : ""} chip`, type: "button", onclick: () => show(id, true) },
+    h("span", { class: "role", text: role }), h("b", { text: name }), h("small", { text: text }));
+  $("#chain").append(h("div", { class: "link" }, box, i < CHAIN.length - 1 ? h("span", { class: "arrow", "aria-hidden": "true", text: "→" }) : null));
+});
+for (const [role, name, text, id] of SIDE) {
+  $("#side").append(h("button", { class: "box data chip", type: "button", onclick: () => show(id, true) },
+    h("span", { class: "role", text: role }), h("b", { text: name }), h("small", { text: text })));
+}
 
 for (const [title, text, where] of FLOW) $("#flow").append(h("li", {}, h("b", { text: title }), h("span", { text: text }), h("small", { class: "mono", text: where })));
 
@@ -505,9 +635,8 @@ const STAGE_TAG = { done: ["changed", "merged"], wait: ["pending", "awaiting mer
   next: ["new", "next"], todo: ["stable", "planned"] };
 for (const ph of PHASES) {
   const total = ph.stages.length;
-  const done = ph.stages.filter((s) => s[2] === "done").length;
-  const wait = ph.stages.filter((s) => s[2] === "wait").length;
-  const no = ph.stages.filter((s) => s[2] === "no").length;
+  const n = (s) => ph.stages.filter((x) => x[2] === s).length;
+  const done = n("done"), wait = n("wait"), no = n("no");
   const bar = h("div", { class: "bar" },
     h("i", { class: "done", style: `width:${(done / total) * 100}%` }), h("i", { class: "wait", style: `width:${(wait / total) * 100}%` }),
     h("i", { class: "no", style: `width:${(no / total) * 100}%` }));
@@ -520,9 +649,10 @@ for (const ph of PHASES) {
         changes ? h("ul", {}, ...changes.map((c) => h("li", { text: c }))) : null),
       h("span", { class: `tag ${cls}`, text: label })));
   }
+  const status = done + no === total ? "complete" : `${done}${wait ? ` + ${wait} waiting` : ""} / ${total}`;
   const det = h("details", { class: "phase" },
     h("summary", {}, h("span", { class: "phase-title", text: `Phase ${ph.n} · ${ph.name}` }),
-      h("span", { class: "count", text: `${done}${wait ? ` + ${wait} waiting` : ""} / ${total}` }), bar), list);
+      h("span", { class: "count", text: status }), h("span", { class: "phase-goal", text: ph.goal }), bar), list);
   if (ph.open) det.open = true;
   $("#phases").append(det);
 }
@@ -544,6 +674,7 @@ for (const [f, label] of FILTERS) $("#dec-filters").append(h("button", { type: "
 drawDecisions();
 
 for (const [kind, title, text] of OPEN) $("#open").append(h("div", { class: "card" }, h("span", { class: "kind", text: kind }), h("h3", { text: title }), h("p", { text: text })));
+for (const [term, text] of GLOSSARY) $("#glossary").append(h("div", {}, h("dt", { text: term }), h("dd", { text: text })));
 for (const [date, text] of LOG) $("#log").append(h("li", {}, h("time", { text: date }), h("span", { text: text })));
 
 const modes = ["system", "light", "dark"];
