@@ -116,19 +116,57 @@ def test_no_ui_status_claims_work_that_did_not_occur():
     assert 'el("li", { text: line })' in panel and "innerHTML" not in panel and "html:" not in panel
 
 
-# ------------------------------------------------------------ retention: the last 5,000 conversations
-def test_traces_are_kept_for_the_last_conversations_without_a_limit_per_conversation(tmp_path):
+# ------------------------------------------------------------ retention: the last 5,000 as they are, older packed
+def test_old_conversations_are_packed_never_deleted(tmp_path):
     log = TraceLog(tmp_path / "t.db", keep=3)
     n = [node("PERCEIVE", {"message": "x"}, {"route": "chatter"}, None, ["user"])]
     long_conversation = [log.record("c1", n) for _ in range(50)]          # no limit within a conversation
     others = {c: log.record(c, n) for c in ("c2", "c3")}
-    assert log.counts() == {"conversations": 3, "traces": 52}
-    newest = log.record("c4", n)                                          # a fourth conversation pushes out c1
-    assert log.counts() == {"conversations": 3, "traces": 3}
-    assert log.get(long_conversation[0]) is None and log.get(newest) and log.get(others["c2"])
+    before = log.get(long_conversation[7])
+    log.record("c4", n)                                                   # a fourth conversation packs c1
+    assert log.counts() == {"conversations": 3, "traces": 3, "packed_conversations": 1, "packed_traces": 50}
+    packed = log.get(long_conversation[7])                                # still readable by its id
+    assert packed["packed"] and {k: packed[k] for k in before if k != "packed"} == \
+        {k: before[k] for k in before if k != "packed"}
+    assert all(log.get(i) for i in long_conversation)
     log.record("c2", n)                                                   # c2 is used again: now the most recent
-    log.record("c5", n)                                                   # so c3 goes, not c2
-    assert log.get(others["c3"]) is None and log.get(others["c2"])
+    log.record("c5", n)                                                   # so c3 is packed, not c2
+    assert log.get(others["c3"])["packed"] and not log.get(others["c2"])["packed"]
+
+
+def test_a_packed_conversation_that_resumes_is_unpacked_and_carries_on(tmp_path):
+    log = TraceLog(tmp_path / "t.db", keep=1)
+    n = [node("PERCEIVE", {"message": "x"}, {"route": "chatter"}, None, ["user"])]
+    first = [log.record("old", n) for _ in range(3)]
+    log.record("new", n)                                                  # packs "old"
+    assert log.get(first[0])["packed"]
+    again = log.record("old", n)                                          # "old" resumes: unpacked, turn 4
+    assert log.get(again)["turn"] == 4 and not log.get(first[0])["packed"]
+    assert log.get(again)["conversation"] == "old" and log.counts()["packed_conversations"] == 1   # "new" packed
+
+
+def test_packing_saves_most_of_the_space(tmp_path):
+    import os
+    nodes = [node(t, {"message": "Is Socrates mortal?", "mode": "full"},
+                  {"route": "question", "facts": ["socrates instance_of man", "man subclass_of mortal"] * 3,
+                   "answer_source": "proof"}, None, ["user"]) for t in NODE_TYPES]
+    log = TraceLog(tmp_path / "t.db", keep=1)
+    for _ in range(300):
+        log.record("big", nodes)
+    log.record("next", nodes)                                             # packs the 300-turn conversation
+    with sqlite3.connect(tmp_path / "t.db") as conn:
+        conn.execute("VACUUM")
+        blob = conn.execute("SELECT length(traces) FROM packed").fetchone()[0]
+    raw = 300 * len(json.dumps(nodes))
+    assert blob * 5 < raw, (blob, raw)                                    # measured about 13 times smaller
+    assert os.path.getsize(tmp_path / "t.db") < raw
+
+
+def test_a_trace_id_starts_with_its_conversations_tag(tmp_path):
+    from memory.trace_log import conversation_tag
+    log = TraceLog(tmp_path / "t.db")
+    tid = log.record("web-abc", [])
+    assert tid.startswith(conversation_tag("web-abc")) and len(tid) == 32 and tid.isalnum()
 
 
 def test_the_default_is_five_thousand_conversations(tmp_path):

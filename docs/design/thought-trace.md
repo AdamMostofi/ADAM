@@ -49,8 +49,8 @@ and a trace says what happened rather than tidying it.
 - **`POST /api/chat`** takes an optional `conversation` (1 to 64 letters, digits, `-` or `_`; anything else is
   ignored). It adds `trace_id` and `conversation` to the reply. Every earlier key is kept.
 - **`GET /api/traces/<id>`** returns the trace's nodes, its conversation, turn number and version, and `text`,
-  the rendered English. It answers 404 for an unknown id, or for one whose conversation was deleted (see
-  Retention).
+  the rendered English, plus `packed`, which says whether its conversation is compressed (see Retention). It
+  answers 404 for an unknown id.
 
 ## In the web chat
 
@@ -65,19 +65,28 @@ and a trace says what happened rather than tidying it.
   `trace_id`.
 - **The frustration signal is read per conversation** (Stage 4.4), so "New" starts it afresh.
 
-## Retention (the owner's call, 2026-11-27)
+## Retention (the owner's call, 2026-11-27, revised the same day)
 
-Traces are kept **per conversation**:
+**Every trace is kept; old conversations are compressed, never deleted.** The first rule deleted conversations
+beyond the last 5,000; the owner asked to compress them instead.
 - **No limit on the turns in a conversation.**
-- **The last 5,000 conversations are kept.** When a new conversation starts, the traces of any beyond the
-  5,000 most recently active are deleted.
+- **The last 5,000 conversations are kept as they are.**
+- **Older conversations are packed.** When a new conversation starts, each conversation beyond the 5,000 most
+  recently active is packed into one zlib block.
 - **What a conversation is.** One web chat, or one run of the CLI or of the web app for callers that don't
   name one.
-- **The size.** About 4 KB per turn, measured as an engine record.
+- **The size, measured on 360 realistic turns:**
+  - 1.75 KB a turn on disk as it is;
+  - about 100 bytes a turn packed, 13 times smaller (lzma was barely better, at 13.5 times, and slower).
+- **An old trace still opens by its id** (`"packed": true` in the response). Its id starts with 8 hex digits
+  of its conversation's fingerprint, so it is found through its conversation without a per-trace index, which
+  would eat most of the saving.
+- **A packed conversation that resumes is unpacked first,** and carries on from its last turn.
+- **The trade-off:** the file still grows, about 100 bytes per old turn, forever, and opening a packed trace
+  unpacks its whole conversation (milliseconds).
 
-**The facts and proofs a trace points to are never deleted;** only the notes about old conversations go. So
-traces live in their own SQLite file beside the store, `adam_memory.traces.db`: the engine store never
-deletes anything. The file is in the store guard, backups and reset.
+Traces live in their own SQLite file beside the store, `adam_memory.traces.db`, because the engine store is
+append-only and can't repack anything. The file is in the store guard, backups and reset.
 
 ## Also fixed: loading one save from several threads
 

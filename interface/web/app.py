@@ -51,8 +51,7 @@ def create_app(core: ADAMCore | None = None) -> Flask:
         """One turn's thought trace (Stage 4.6): its typed nodes, and English rendered from them."""
         found = get_core().read_trace(trace_id)
         if found is None:
-            return jsonify({"error": "no such trace: it never existed, or its conversation is older than the "
-                                     "last 5,000 and was deleted"}), 404
+            return jsonify({"error": "no such trace"}), 404
         return jsonify(found)
 
     @app.route("/api/facts", methods=["GET"])

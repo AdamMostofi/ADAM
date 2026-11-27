@@ -12,20 +12,32 @@ English is never stored, so it can never drift from what happened.
   their derivation records (Stage 1.4, #30) by id.
 - `ANSWER`: where the reply came from (`answer_source`), its citations, and the hash of its text.
 
-**Retention** (the owner's call, 2026-11-27): traces are kept per conversation, with no limit on the turns in a
-conversation, for the last 5,000 conversations. Older conversations' traces are deleted. A conversation is one
-web chat ("New" starts another) or one run of the CLI. The facts and proofs a trace points to live in the
-store and are never deleted; only the notes about old conversations go. So traces live in their own small
-SQLite file beside the store (`adam_memory.traces.db`): the engine store never deletes.
+**Retention** (the owner's call, 2026-11-27, revised the same day): every trace is kept, with no limit on
+the turns in a conversation.
+- **The last 5,000 conversations stay as they are.**
+- **Older ones are compressed, not deleted.** Each conversation's traces are packed into one zlib block,
+  about 13 times smaller (measured: 1.75 KB a turn as it is, about 100 bytes packed).
+- **Nothing becomes unreachable.** An old trace still opens by its id, and a conversation that resumes is
+  unpacked first.
+
+A conversation is one web chat ("New" starts another) or one run of the CLI. Traces live in their own SQLite
+file beside the store (`adam_memory.traces.db`), because the engine store is append-only and can't repack
+anything.
+
+**Finding a packed trace.** A trace id starts with 8 hex digits of its conversation's fingerprint
+(`conversation_tag`). A packed trace is found through its conversation, without an index per trace, which
+would eat most of the saving.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sqlite3
 import threading
 import time
 import uuid
+import zlib
 from pathlib import Path
 
 TRACE_VERSION = 1
@@ -43,6 +55,11 @@ CREATE TABLE IF NOT EXISTS traces (
 );
 CREATE INDEX IF NOT EXISTS idx_traces_conversation ON traces(conversation, turn);
 CREATE INDEX IF NOT EXISTS idx_conversations_last ON conversations(last);
+CREATE TABLE IF NOT EXISTS packed (
+    id TEXT PRIMARY KEY, tag TEXT NOT NULL, started REAL NOT NULL, last REAL NOT NULL, turns INTEGER NOT NULL,
+    packed REAL NOT NULL, traces BLOB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_packed_tag ON packed(tag);
 """
 
 
@@ -58,8 +75,13 @@ def valid_conversation(conversation_id: str | None) -> bool:
     return isinstance(conversation_id, str) and bool(_SESSION.match(conversation_id))
 
 
+def conversation_tag(conversation_id: str) -> str:
+    """8 hex digits of a conversation's fingerprint; every trace id in it starts with them."""
+    return hashlib.sha256(conversation_id.encode()).hexdigest()[:8]
+
+
 class TraceLog:
-    """Traces, one per turn, grouped by conversation, kept for the last `keep` conversations."""
+    """Traces, one per turn, by conversation: the last `keep` conversations as they are, older ones packed."""
 
     def __init__(self, path: str | Path, keep: int = KEEP_CONVERSATIONS):
         self.path = Path(path)
@@ -74,15 +96,16 @@ class TraceLog:
         return conn
 
     def record(self, conversation_id: str, nodes: list[dict]) -> str:
-        """Store one turn's trace and return its id. A new conversation may push the oldest one out."""
+        """Store one turn's trace and return its id. A new conversation may pack the oldest active one."""
         if not valid_conversation(conversation_id):
             raise ValueError("a conversation id is 1 to 64 letters, digits, '-' or '_'")
         for n in nodes:
             if n.get("type") not in NODE_TYPES:
                 raise ValueError(f"node type must be one of {NODE_TYPES}")
-        trace_id = uuid.uuid4().hex
+        trace_id = conversation_tag(conversation_id) + uuid.uuid4().hex[:24]
         now = time.time()
         with self._lock, self._connect() as conn:
+            self._unpack(conn, conversation_id)          # a packed conversation that resumes is unpacked first
             new = conn.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone() is None
             if new:
                 conn.execute("INSERT INTO conversations (id, started, last, turns) VALUES (?, ?, ?, 0)",
@@ -96,26 +119,60 @@ class TraceLog:
         return trace_id
 
     def _prune(self, conn: sqlite3.Connection) -> int:
-        """Delete the traces of every conversation but the `keep` most recent ones."""
+        """Pack every conversation but the `keep` most recent ones. Nothing is deleted."""
         old = [r[0] for r in conn.execute("SELECT id FROM conversations ORDER BY last DESC, started DESC "
                                           "LIMIT -1 OFFSET ?", (self.keep,))]
         for cid in old:
-            conn.execute("DELETE FROM conversations WHERE id = ?", (cid,))   # its traces go with it
+            self._pack(conn, cid)
         return len(old)
 
+    @staticmethod
+    def _pack(conn: sqlite3.Connection, cid: str) -> None:
+        started, last, turns = conn.execute("SELECT started, last, turns FROM conversations WHERE id = ?",
+                                            (cid,)).fetchone()
+        rows = conn.execute("SELECT id, turn, created, version, nodes FROM traces WHERE conversation = ? "
+                            "ORDER BY turn", (cid,)).fetchall()
+        blob = zlib.compress(json.dumps([[i, t, c, v, json.loads(n)] for i, t, c, v, n in rows]).encode(), 9)
+        conn.execute("INSERT OR REPLACE INTO packed (id, tag, started, last, turns, packed, traces) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?)", (cid, conversation_tag(cid), started, last, turns, time.time(), blob))
+        conn.execute("DELETE FROM conversations WHERE id = ?", (cid,))   # its rows now live in the packed block
+
+    @staticmethod
+    def _unpacked(blob: bytes) -> list:
+        return json.loads(zlib.decompress(blob))
+
+    def _unpack(self, conn: sqlite3.Connection, cid: str) -> None:
+        row = conn.execute("SELECT started, last, turns, traces FROM packed WHERE id = ?", (cid,)).fetchone()
+        if row is None:
+            return
+        started, last, turns, blob = row
+        conn.execute("INSERT INTO conversations (id, started, last, turns) VALUES (?, ?, ?, ?)",
+                     (cid, started, last, turns))
+        conn.executemany("INSERT INTO traces (id, conversation, turn, created, version, nodes) VALUES (?, ?, ?, ?, ?, ?)",
+                         [(i, cid, t, c, v, json.dumps(n)) for i, t, c, v, n in self._unpacked(blob)])
+        conn.execute("DELETE FROM packed WHERE id = ?", (cid,))
+
     def get(self, trace_id: str) -> dict | None:
+        """A trace by id, whether its conversation is active or packed."""
         with self._connect() as conn:
             row = conn.execute("SELECT id, conversation, turn, created, version, nodes FROM traces WHERE id = ?",
                                (trace_id,)).fetchone()
-        if row is None:
-            return None
-        return {"id": row[0], "conversation": row[1], "turn": row[2], "created": row[3], "version": row[4],
-                "nodes": json.loads(row[5])}
+            if row is not None:
+                return {"id": row[0], "conversation": row[1], "turn": row[2], "created": row[3], "version": row[4],
+                        "nodes": json.loads(row[5]), "packed": False}
+            for cid, blob in conn.execute("SELECT id, traces FROM packed WHERE tag = ?", (trace_id[:8],)).fetchall():
+                for i, t, c, v, n in self._unpacked(blob):
+                    if i == trace_id:
+                        return {"id": i, "conversation": cid, "turn": t, "created": c, "version": v, "nodes": n,
+                                "packed": True}
+        return None
 
     def counts(self) -> dict:
         with self._connect() as conn:
+            packed = conn.execute("SELECT COUNT(*), COALESCE(SUM(turns), 0) FROM packed").fetchone()
             return {"conversations": conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0],
-                    "traces": conn.execute("SELECT COUNT(*) FROM traces").fetchone()[0]}
+                    "traces": conn.execute("SELECT COUNT(*) FROM traces").fetchone()[0],
+                    "packed_conversations": packed[0], "packed_traces": packed[1]}
 
 
 # ------------------------------------------------------------ English, generated from a trace, never stored
