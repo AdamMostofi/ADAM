@@ -105,7 +105,7 @@ class TraceLog:
         trace_id = conversation_tag(conversation_id) + uuid.uuid4().hex[:24]
         now = time.time()
         with self._lock, self._connect() as conn:
-            self._unpack(conn, conversation_id)          # a packed conversation that resumes is unpacked first
+            resumed = self._unpack(conn, conversation_id)   # a packed conversation that resumes is unpacked first
             new = conn.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone() is None
             if new:
                 conn.execute("INSERT INTO conversations (id, started, last, turns) VALUES (?, ?, ?, 0)",
@@ -114,7 +114,7 @@ class TraceLog:
             turn = conn.execute("SELECT turns FROM conversations WHERE id = ?", (conversation_id,)).fetchone()[0]
             conn.execute("INSERT INTO traces (id, conversation, turn, created, version, nodes) VALUES (?, ?, ?, ?, ?, ?)",
                          (trace_id, conversation_id, turn, now, TRACE_VERSION, json.dumps(nodes)))
-            if new:
+            if new or resumed:          # one more active conversation: the oldest beyond `keep` is packed
                 self._prune(conn)
         return trace_id
 
@@ -141,16 +141,18 @@ class TraceLog:
     def _unpacked(blob: bytes) -> list:
         return json.loads(zlib.decompress(blob))
 
-    def _unpack(self, conn: sqlite3.Connection, cid: str) -> None:
+    def _unpack(self, conn: sqlite3.Connection, cid: str) -> bool:
+        """Unpack a conversation back into the active tables; False if it wasn't packed."""
         row = conn.execute("SELECT started, last, turns, traces FROM packed WHERE id = ?", (cid,)).fetchone()
         if row is None:
-            return
+            return False
         started, last, turns, blob = row
         conn.execute("INSERT INTO conversations (id, started, last, turns) VALUES (?, ?, ?, ?)",
                      (cid, started, last, turns))
         conn.executemany("INSERT INTO traces (id, conversation, turn, created, version, nodes) VALUES (?, ?, ?, ?, ?, ?)",
                          [(i, cid, t, c, v, json.dumps(n)) for i, t, c, v, n in self._unpacked(blob)])
         conn.execute("DELETE FROM packed WHERE id = ?", (cid,))
+        return True
 
     def get(self, trace_id: str) -> dict | None:
         """A trace by id, whether its conversation is active or packed."""
