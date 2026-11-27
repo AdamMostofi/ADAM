@@ -86,6 +86,47 @@ Chat doesn't store what it is told, as before.
 - **`evidence`:** a list of what backs the reply:
   - each proof: `claim`, the `origins` of its given facts, and every `step` (rule, premises, fact);
   - each passage: its source key, name, ordinal, `start`, `end`, `sha256` and text.
+- **`citations`** (Stage 4.5, [#25](https://github.com/AdamMostofi/ADAM/issues/25), D4.1): the passages the reply
+  quotes, each with `source`, `name`, `ordinal`, `start`, `end`, `sha256`, a `snippet` and `truncated`.
+  - **The snippet** is the passage's first 280 characters. It is never altered, so it is always the start of
+    `text[start:end]`.
+  - **The list is empty** when no passage answered. A proof's support is in `evidence`.
+- **`frustration`** (Stage 4.4, [eq-appraisal.md](eq-appraisal.md)): EQ's one signal, and the cues behind it.
+
+## Citations in the web chat
+
+Stage 4.5 ([#25](https://github.com/AdamMostofi/ADAM/issues/25)) shows the citations under the answer, in the web
+chat only (D4.2: the CLI waits).
+- **A Data-Vault sources block** sits under an answer that quotes a passage. It uses the existing `Sources`
+  component, open by default and counted in passages, and the existing tokens; there is no new panel.
+- **Each citation** shows:
+  - the source's name, paragraph and character range ("apology.md · paragraph 2 · characters 11–396");
+  - the snippet;
+  - the first 16 characters of the passage's SHA-256.
+- **Everything is text.** Each field goes into the page through `textContent`, never HTML.
+- **Citations survive a reload.** They are kept with the turn in the session transcript; only their known
+  fields are kept, with their expected types.
+
+**Found in the browser check.** The reply itself went through the Markdown renderer. A quoted passage holding
+`<img src=x …>` became an image element: the sanitizer blocked the script, but it allows http(s) images. So:
+- the quote wasn't exact;
+- a book could have made the browser fetch an outside address.
+
+Since Stage 4.3 no reply is Markdown, so a reply that carries an `answer_source` is now shown as escaped text.
+Restored turns are too.
+
+**Verified on 2026-11-27,** in the built-in browser, on a throwaway store with one source (two passages, one
+holding HTML):
+
+| Check | Result |
+|---|---|
+| A passage question shows its citation | "apology.md · paragraph 2 · characters 11–396", the snippet, and "sha256 fae5c08f66e5e137" |
+| The passage holding `<img src=x onerror=alert(1)>` and `<b>` | shown as those characters, in the reply and in the citation; no image element, no alert |
+| A question with no match | no Sources block |
+| After a reload | both Sources blocks restored, as text |
+| Overflow at 1024 px (desktop) | none (page scroll width equals its width) |
+| Overflow at 390 × 844 | none; no citation element wider than its box; the widest citation ends at 344 px |
+| Dark theme | readable with the existing tokens |
 
 ## How it is tested
 

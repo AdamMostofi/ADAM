@@ -53,6 +53,14 @@ export class Message {
     return this;
   }
 
+  // A block under the answer, above the toolbar: the Data-Vault sources it quotes (Stage 4.5).
+  setFooter(node) {
+    this.footer?.remove();
+    this.footer = node || null;
+    if (node) this.el.insertBefore(node, this.toolbar);
+    return this;
+  }
+
   setBusy(busy) {
     this.content.setAttribute("aria-busy", String(busy));
     return this;

@@ -21,6 +21,28 @@ CHAT_INFERENCE_BUDGET = 2000
 
 # What the Mouth is told about tone: nothing (Stage 4.4, #77). EQ's parameters changed nothing visible.
 NEUTRAL_PARAMS = {"warmth": "medium", "depth": "detailed", "tone": "neutral"}
+SNIPPET_CHARS = 280
+
+
+def citations(evidence: list[dict]) -> list[dict]:
+    """Exact citations for the passages in a reply's evidence (Stage 4.5, #25).
+
+    Each one names its source (key and name), the passage's ordinal, its character offsets `start` and `end`
+    in the source's kept text, its SHA-256, and a snippet. The snippet is the passage's text, cut at
+    SNIPPET_CHARS characters when longer, with `truncated` saying so; the cut never changes a character, so
+    the snippet is always the start of text[start:end].
+    """
+    out = []
+    for e in evidence:
+        if e.get("type") != "passage":
+            continue
+        text = e["text"]
+        out.append({"source": e["source"], "name": e["name"], "ordinal": e["ordinal"], "start": e["start"],
+                    "end": e["end"], "sha256": e["sha256"], "snippet": text[:SNIPPET_CHARS],
+                    "truncated": len(text) > SNIPPET_CHARS})
+    return out
+
+
 LEGACY_PARAMS = {"warmth": "medium", "directness": "direct", "depth": "detailed", "caution_flag": False,
                  "empathetic_opening": False, "encouraging_closing": False}
 
@@ -84,6 +106,9 @@ class ADAMCore:
             "memories_used": len(memories),
             "answer_source": answer.answer_source,
             "evidence": answer.evidence,
+            # Stage 4.5 (#25, D4.1): the passages the reply quotes, as exact citations. Empty unless a passage
+            # answered: proofs are in `evidence`.
+            "citations": citations(answer.evidence),
         }
 
     def _library(self):

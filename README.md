@@ -71,6 +71,7 @@ python -m interface.web.app             # web UI on http://localhost:7860
 | Attention ranking of recalled facts (per session) | `memory/attention.py` | `tests/unit/test_attention.py` |
 | Learned skills run as Layer 2 rules, with fitness tracking | `learning/skill_compiler.py` | `tests/unit/test_rules_registry.py`, `tests/unit/test_skill_fitness.py` |
 | Answers only from evidence: facts worded from proofs, passages quoted with citations, no answer without evidence; the Mouth's text shown only when it asserts nothing | `interface/evidence.py`, [evidence-answers.md](docs/design/evidence-answers.md) | `tests/integration/test_evidence_answers.py` |
+| Exact citations in the web chat: `citations` in `/api/chat`, and a Data-Vault sources block (source, paragraph, character range, hash, snippet) rendered as text | `interface/core.py`, `interface/web/static/js/chat.js` | `tests/integration/test_citations.py` |
 | Ear (Cactus Needle, with a keyword fallback) and Mouth (TinyChat15M via `llama-server`) | `interface/ear.py`, `interface/mouth.py` | `tests/integration/test_ear_mouth.py` |
 | EQ, reduced to one signal: is the user frustrated? Word matching with negation, yes/no questions, litotes, an obvious sarcasm cue and context; it softens ADAM's own wording only | `learning/eq/`, [eq-appraisal.md](docs/design/eq-appraisal.md) | `tests/unit/test_eq_appraisal_matching.py` |
 | Web UI and JSON API (Flask, vanilla HTML/CSS/JS, no build step) | `interface/web/` | `tests/integration/test_interface.py` |
@@ -229,7 +230,11 @@ The Vox, Data-Vaults, and Rites names are interface labels, not separate service
 
 The JSON keeps every key it had and adds `answer_source` (`proof`, `passage`,
 `no_evidence`, `small_talk`, `model` or `acknowledgement`) and `evidence`: each
-proof's steps, or each passage with its source, offsets and hash.
+proof's steps, or each passage with its source, offsets and hash. Since Stage
+4.5 it also has `citations`: the passages a reply quotes, each with its source,
+`start`, `end`, `sha256` and a snippet. The list is empty when no passage
+answered. The web chat shows them in a **Data-Vault sources** block under the
+answer, as text ([evidence-answers.md](docs/design/evidence-answers.md#citations-in-the-web-chat)).
 
 The browser receives JSON and handles the word-by-word reveal locally.
 

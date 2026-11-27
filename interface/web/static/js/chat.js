@@ -11,6 +11,31 @@ import { Reveal } from "./components/reveal.js";
 import { Suggestions } from "./components/suggestion.js";
 import { ModelSelector } from "./components/model-selector.js";
 import { ThinkingIndicator } from "./components/shimmer.js";
+import { Sources } from "./components/sources.js";
+
+// Since Stage 4.3 a reply is ADAM's own wording, a passage quoted exactly, or the Mouth's checked words: never
+// Markdown. It is shown as text, so a quoted passage reads exactly as its source (Stage 4.5): "<img src=…>" in a
+// book stays those characters, and can't make the browser fetch anything.
+export function plainHtml(text) {
+  const escaped = String(text).replace(/[&<>"']/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  return `<p>${escaped}</p>`;
+}
+
+// The Data-Vault passages an answer quotes (Stage 4.5, #25): each names its source, paragraph and exact
+// character range, with the passage's hash. Every field goes into the page as text (textContent), never HTML.
+export function citationSources(citations) {
+  if (!Array.isArray(citations) || citations.length === 0) return null;
+  const sources = new Sources({ label: "Data-Vault sources", defaultOpen: true, unit: ["passage", "passages"] });
+  for (const c of citations) {
+    sources.add({
+      title: `${c.name} · paragraph ${Number(c.ordinal) + 1} · characters ${c.start}–${c.end}`,
+      description: c.truncated ? `${c.snippet}…` : c.snippet,
+      meta: `sha256 ${String(c.sha256).slice(0, 16)}`,
+    });
+  }
+  return sources.el;
+}
 
 const PHASES = [
   "Consulting the archives",
@@ -98,13 +123,16 @@ export class Chat {
         onClick: () => this._run(text),
       });
       this.conversation.addMessage("assistant", assistant.el);
-      this._record({ role: "assistant", text: result.response });
+      const citations = Array.isArray(result.citations) ? result.citations : [];
+      const plain = typeof result.answer_source === "string";
+      this._record({ role: "assistant", text: result.response, citations, plain });
 
       const reveal = new Reveal({ mode: "word", speed: 16 });
       assistant.setBusy(true);
       assistant.content.replaceChildren(reveal.container);
-      await reveal.show(renderMarkdown(result.response));
+      await reveal.show(plain ? plainHtml(result.response) : renderMarkdown(result.response));
       assistant.setBusy(false);
+      assistant.setFooter(citationSources(citations));
       this.conversation.scrollToBottom();
 
       this.onChange?.();
@@ -163,7 +191,8 @@ export class Chat {
         continue;
       }
       const msg = new Message({ from: "assistant" });
-      msg.setContent(markdownToNode(turn.text));
+      msg.setContent(turn.plain ? el("p", { text: turn.text }) : markdownToNode(turn.text));
+      msg.setFooter(citationSources(turn.citations));
       msg.addAction({
         icon: "copy",
         label: "Copy",

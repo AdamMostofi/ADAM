@@ -10,7 +10,28 @@ function cleanTurn(turn) {
   const role = turn.role === "user" || turn.role === "assistant" ? turn.role : null;
   const text = typeof turn.text === "string" ? turn.text : "";
   if (!role || !text.trim()) return null;
-  return { role, text, ts: Number(turn.ts) || Date.now() };
+  const clean = { role, text, ts: Number(turn.ts) || Date.now() };
+  if (turn.plain === true) clean.plain = true;   // shown as text, not Markdown (Stage 4.5)
+  const citations = cleanCitations(turn.citations);
+  if (citations.length) clean.citations = citations;
+  return clean;
+}
+
+// Citations kept with a turn (Stage 4.5): only the known fields, with their expected types.
+function cleanCitations(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((c) => c && typeof c === "object" && typeof c.name === "string" && typeof c.snippet === "string")
+    .map((c) => ({
+      source: String(c.source ?? ""),
+      name: c.name,
+      ordinal: Number(c.ordinal) || 0,
+      start: Number(c.start) || 0,
+      end: Number(c.end) || 0,
+      sha256: String(c.sha256 ?? ""),
+      snippet: c.snippet,
+      truncated: Boolean(c.truncated),
+    }));
 }
 
 function trim(turns) {

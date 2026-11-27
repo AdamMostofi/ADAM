@@ -27,7 +27,7 @@ const CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 </svg>`;
 
 export class Source {
-  constructor({ title, href, description } = {}) {
+  constructor({ title, href, description, meta } = {}) {
     const props = href
       ? { class: "adam-source", href, target: "_blank", rel: "noreferrer" }
       : { class: "adam-source", role: "listitem" };
@@ -36,14 +36,16 @@ export class Source {
       el("span", { class: "adam-source-text" }, [
         el("span", { class: "adam-source-title", text: title }),
         description ? el("span", { class: "adam-source-desc", text: description }) : null,
+        meta ? el("span", { class: "adam-source-meta", text: meta }) : null,
       ]),
     ]);
   }
 }
 
 export class Sources {
-  constructor({ label = "Archived data", defaultOpen = false, sources = [] } = {}) {
+  constructor({ label = "Archived data", defaultOpen = false, sources = [], unit = ["vault", "vaults"] } = {}) {
     this.items = [];
+    this._unit = unit;
     this._defaultOpen = defaultOpen;
     this.content = el("div", { class: "adam-sources-content", role: "list" });
 
@@ -84,7 +86,7 @@ export class Sources {
 
   _sync() {
     const count = this.trigger.querySelector(".adam-sources-count");
-    if (count) count.textContent = `${this.items.length} ${this.items.length === 1 ? "vault" : "vaults"}`;
+    if (count) count.textContent = `${this.items.length} ${this.items.length === 1 ? this._unit[0] : this._unit[1]}`;
     if (this.items.length === 0) this.setOpen(false);
   }
 }

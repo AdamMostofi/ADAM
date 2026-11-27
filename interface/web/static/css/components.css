@@ -676,7 +676,13 @@
   letter-spacing: 0.03em;
   overflow-wrap: anywhere;
 }
-.adam-source-desc { font-size: 0.68rem; color: var(--ash); font-weight: 300; }
+.adam-source-desc { font-size: 0.68rem; color: var(--ash); font-weight: 300; overflow-wrap: anywhere; }
+.adam-source-meta {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--ash);
+  overflow-wrap: anywhere;
+}
 
 /* ---------- Phase 10: Tool ---------- */
 .adam-tool {
